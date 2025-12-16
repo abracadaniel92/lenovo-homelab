@@ -425,7 +425,7 @@ This repository contains configuration files for personal use. Please review and
 
 ---
 
-**Last Updated**: December 2024
+**Last Updated**: December 2025
 **Pi Setup**: Raspberry Pi with ARM64 architecture
 **OS**: Linux (Raspberry Pi OS)
 
