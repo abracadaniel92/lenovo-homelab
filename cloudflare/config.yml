@@ -1,0 +1,29 @@
+tunnel: portfolio
+credentials-file: /home/goce/.cloudflared/df638884-0d3e-4799-8a98-60e844fcd164.json
+
+ingress:
+  # Main portfolio site
+  - hostname: gmojsoski.com
+    service: http://localhost:8080
+
+  - hostname: www.gmojsoski.com
+    service: http://localhost:8080
+
+  # GoatCounter (if still needed)
+  - hostname: analytics.gmojsoski.com
+    service: http://localhost:8080
+
+  # Gokapi
+  - hostname: files.gmojsoski.com
+    service: http://localhost:8080
+
+  # Nextcloud
+  - hostname: cloud.gmojsoski.com
+    service: http://localhost:8080
+
+  # Slack Bookmarks Server
+  - hostname: bookmarks.gmojsoski.com
+    service: http://localhost:8080
+
+  # Catch-all (must be last)
+  - service: http_status:404

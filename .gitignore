@@ -1,0 +1,44 @@
+# Sensitive credentials
+*.json
+!gokapi/config.json.template  # Keep gokapi config template
+!cloudflare/config.yml  # Keep cloudflare config (no sensitive data)
+credentials.json
+token.pickle
+*.key
+*.pem
+*.crt
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Cloudflare credentials
+**/cloudflared/*.json
+
+# Gokapi sensitive data - use config.json.template instead
+gokapi/config.json
+
+# Docker volumes and data
+**/data/
+**/uploads/
+**/temp/
+**/db/
+**/goatcounter-data/
+**/gokapi-data/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+

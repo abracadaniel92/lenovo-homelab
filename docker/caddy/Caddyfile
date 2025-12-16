@@ -1,0 +1,65 @@
+{
+	email contact@gmojsoski.com
+	auto_https off
+}
+
+# HTTP on port 80 (maps to host port 8080) - Cloudflare handles TLS
+:80 {
+	@gmojsoski host gmojsoski.com www.gmojsoski.com
+	handle @gmojsoski {
+		encode gzip
+		root * /srv/site
+		file_server
+	}
+	
+	@analytics host analytics.gmojsoski.com
+	handle @analytics {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8088 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	@files host files.gmojsoski.com
+	handle @files {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8091 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	@cloud host cloud.gmojsoski.com
+	handle @cloud {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8080 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	@bookmarks host bookmarks.gmojsoski.com
+	handle @bookmarks {
+		encode gzip
+		reverse_proxy http://172.17.0.1:5000 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	@tickets host tickets.gmojsoski.com
+	handle @tickets {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8000 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	handle {
+		encode gzip
+		root * /srv/site
+		file_server
+	}
+}
