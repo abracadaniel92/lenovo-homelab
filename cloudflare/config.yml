@@ -33,5 +33,9 @@ ingress:
   - hostname: poker.gmojsoski.com
     service: http://localhost:8080
 
+  # Travelsync (routed through Caddy)
+  - hostname: travelsync.gmojsoski.com
+    service: http://localhost:8080
+
   # Catch-all (must be last)
   - service: http_status:404

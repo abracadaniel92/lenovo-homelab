@@ -60,6 +60,24 @@
 		}
 	}
 	
+	@poker host poker.gmojsoski.com
+	handle @poker {
+		encode gzip
+		reverse_proxy http://172.17.0.1:3000 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	@travelsync host travelsync.gmojsoski.com
+	handle @travelsync {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8000 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
 	handle {
 		encode gzip
 		root * /srv/site
