@@ -45,7 +45,7 @@ maxretry = 5
 
 [sshd]
 enabled = true
-port = ssh,223
+port = ssh,222,223
 logpath = %(sshd_log)s
 backend = %(sshd_backend)s
 maxretry = 5
