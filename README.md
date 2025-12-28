@@ -318,10 +318,11 @@ docker compose up -d
 - `gmojsoski.com` / `www.gmojsoski.com` → Static site (port 8080)
 - `analytics.gmojsoski.com` → GoatCounter (port 8088)
 - `files.gmojsoski.com` → Gokapi (port 8091)
-- `cloud.gmojsoski.com` → Nextcloud (port 8081)
+- `cloud.gmojsoski.com` → Nextcloud (port 8081) - **Note**: Uses host IP (172.17.0.1:8081) due to different Docker networks
 - `bookmarks.gmojsoski.com` → Bookmarks server (port 5000)
 - `poker.gmojsoski.com` → Planning Poker (port 3000)
 - `tickets.gmojsoski.com` → Documents-to-Calendar (port 8000)
+- `travelsync.gmojsoski.com` → Travelsync/Documents-to-Calendar (port 8000)
 
 ### Cloudflare Tunnel Configuration
 
