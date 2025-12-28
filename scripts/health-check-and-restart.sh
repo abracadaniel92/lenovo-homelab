@@ -140,6 +140,16 @@ fi
 
 if [ "$DISK_USAGE" -gt 90 ]; then
     log "WARNING: High disk usage: ${DISK_USAGE}%"
+elif [ "$DISK_USAGE" -gt 80 ]; then
+    log "WARNING: Disk usage is ${DISK_USAGE}% (above 80%)"
+fi
+
+# Check /mnt/ssd if it exists
+if mountpoint -q /mnt/ssd 2>/dev/null; then
+    SSD_USAGE=$(df -h /mnt/ssd | awk 'NR==2 {print $5}' | sed 's/%//')
+    if [ "$SSD_USAGE" -gt 80 ]; then
+        log "WARNING: SSD usage is ${SSD_USAGE}% (above 80%)"
+    fi
 fi
 
 log "Health check completed. Memory: ${MEMORY_USAGE}%, Disk: ${DISK_USAGE}%"
