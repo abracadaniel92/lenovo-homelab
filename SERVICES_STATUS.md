@@ -53,6 +53,22 @@
 - **Auto-restart**: Enabled for all services
 - **Status**: ✅ Active and monitoring
 
+### Poker Frontend
+- **Issue**: CSS/JS files returning 404
+- **Fix**: Added Host header forwarding in Caddy route
+- **Status**: ✅ Fixed and working
+
+### Nextcloud Routing
+- **Issue**: 502 Bad Gateway via Caddy
+- **Fix**: Changed from container hostname to host IP (172.17.0.1:8081)
+- **Reason**: Caddy and Nextcloud on different Docker networks
+- **Status**: ✅ Fixed and working
+
+### Travelsync Route
+- **Issue**: Domain not configured
+- **Fix**: Added route to Caddyfile and Cloudflare config
+- **Status**: ✅ Fixed and working
+
 ## Monitoring
 
 ### Uptime Kuma Monitors

@@ -27,6 +27,26 @@
 - **Fix**: Updated DNS records to point to tunnel CNAME
 - **Status**: ✅ Fixed
 
+#### Poker Frontend (December 28, 2025)
+- **Issue**: Poker service was accessible but CSS/JS files weren't loading (404 errors)
+- **Root Cause**: Caddy reverse proxy wasn't forwarding Host header to Express server
+- **Fix**: Added `Host` and `X-Forwarded-Host` header forwarding to poker route in Caddyfile
+- **File Modified**: `docker/caddy/Caddyfile`
+- **Status**: ✅ Fixed
+
+#### Nextcloud Routing (December 28, 2025)
+- **Issue**: Nextcloud returning 502 Bad Gateway via Caddy
+- **Root Cause**: Caddy and Nextcloud containers on different Docker networks, couldn't resolve `nextcloud-app` hostname
+- **Fix**: Changed Caddy route from `http://nextcloud-app:80` to `http://172.17.0.1:8081` (host IP and port)
+- **File Modified**: `docker/caddy/Caddyfile`
+- **Status**: ✅ Fixed
+
+#### Travelsync Route (December 28, 2025)
+- **Issue**: Travelsync domain not configured
+- **Fix**: Added `travelsync.gmojsoski.com` route to Caddyfile and Cloudflare config
+- **File Modified**: `docker/caddy/Caddyfile`, `cloudflare/config.yml`
+- **Status**: ✅ Fixed
+
 ### Monitoring Improvements
 
 #### Uptime Kuma Setup (December 28, 2025)
@@ -74,6 +94,12 @@
 - `UPTIME_KUMA_SLACK_CLOUDFLARED.md` - Slack notifications guide
 - `CLOUDFLARED_TUNNEL_FIX.md` - Cloudflare tunnel troubleshooting
 - `BOOKMARKS_POKER_FIX.md` - Bookmarks and poker fix documentation
+- `POKER_FRONTEND_FIX.md` - Poker frontend CSS/JS loading fix
+- `POKER_GOKAPI_TRAVELSYNC_FIX.md` - Routing fixes for multiple services
+- `CONFIGURATION_AUDIT.md` - Configuration verification results
+- `QUICK_SSH_COMMANDS.md` - Quick reference for mobile SSH troubleshooting
+- `EMERGENCY_RESTORE.md` - Emergency service restore procedures
+- `WHAT_I_DID.md` - Explanation of service outage causes
 
 ### Scripts Created/Updated
 
@@ -86,6 +112,9 @@
 - `setup-uptime-kuma-services.sh` - Service monitor setup
 - `fix-bookmarks-poker.sh` - Diagnostics for bookmarks/poker
 - `fix-bookmarks-poker-complete.sh` - Complete fix script
+- `fix-poker-gokapi-travelsync.sh` - Fix routing for poker, gokapi, and travelsync
+- `fix-docker-restart-policies.sh` - Updates Docker restart policies to 'always'
+- `verify-configuration.sh` - Comprehensive configuration verification
 
 #### Updated Scripts
 - `health-check-and-restart.sh` - Added planning-poker monitoring
