@@ -11,6 +11,10 @@ This document provides a quick reference for setting up this Lenovo ThinkCentre 
 - ✅ **Uptime Kuma** - Monitoring (`docker/uptime-kuma/`)
 - ✅ **Documents-to-Calendar** - Document processing (`docker/documents-to-calendar/`)
 - ✅ **Pi-hole** - DNS/Ad blocking (`docker/pihole/`)
+- ✅ **Portainer** - Docker management UI (`docker/portainer/`)
+- ✅ **Homepage** - Service dashboard (`scripts/install-homepage.sh`)
+- ✅ **Watchtower** - Auto-update containers (`scripts/install-watchtower.sh`)
+- ✅ **FileBrowser** - Web file manager (`scripts/install-filebrowser.sh`)
 
 ### System Services
 - ✅ **Gokapi** - File sharing (`gokapi/`, `systemd/gokapi.service`)
@@ -51,6 +55,9 @@ This document provides a quick reference for setting up this Lenovo ThinkCentre 
 | Documents-to-Calendar | 8000 | tickets.gmojsoski.com |
 | Bookmarks | 5000 | bookmarks.gmojsoski.com |
 | Planning Poker | 3000 | poker.gmojsoski.com |
+| Homepage | 3002 | - |
+| FileBrowser | 8082 | - |
+| Portainer | 9000/9443 | - |
 | Pi-hole DNS | 53 | - |
 
 ## Next Steps

@@ -25,6 +25,10 @@ This Lenovo ThinkCentre serves as a self-hosted server running:
 - **Document Processing**: Documents-to-Calendar app
 - **Bookmarks**: Slack bookmarks Flask service
 - **Planning Poker**: Planning poker web application
+- **Docker Management**: Portainer (web UI)
+- **Service Dashboard**: Homepage
+- **Auto-Updates**: Watchtower
+- **File Manager**: FileBrowser
 
 ## 💻 System Requirements
 
@@ -61,6 +65,22 @@ This Lenovo ThinkCentre serves as a self-hosted server running:
 6. **Pi-hole** - DNS sinkhole and ad blocker
    - Network: Host mode
    - Location: Docker volume
+
+7. **Portainer** - Docker management UI
+   - Port: 9000 (HTTP), 9443 (HTTPS)
+   - Location: `/mnt/ssd/docker-projects/portainer`
+
+8. **Homepage** - Service dashboard
+   - Port: 3002
+   - Location: `/mnt/ssd/docker-projects/homepage`
+
+9. **Watchtower** - Auto-update Docker containers
+   - No web UI (runs in background)
+   - Location: `/mnt/ssd/docker-projects/watchtower`
+
+10. **FileBrowser** - Web file manager
+    - Port: 8082
+    - Location: `/mnt/ssd/docker-projects/filebrowser`
 
 ### System Services
 
@@ -311,6 +331,10 @@ docker compose up -d
 - **8000**: Documents-to-Calendar
 - **5000**: Bookmarks
 - **3000**: Planning Poker
+- **3002**: Homepage
+- **8082**: FileBrowser
+- **9000**: Portainer (HTTP)
+- **9443**: Portainer (HTTPS)
 - **53**: Pi-hole (DNS)
 
 ### Domain Routing (via Caddy)
