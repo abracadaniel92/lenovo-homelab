@@ -1,0 +1,22 @@
+[Unit]
+Description=Slack GoatCounter Weekly Analytics Timer (Every Sunday at 10 AM)
+Requires=slack-goatcounter-weekly.service
+
+[Timer]
+# Run every Sunday at 10:00 AM
+OnCalendar=Sun *-*-* 10:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
+
+
+
+
+
+
+
+
+
+

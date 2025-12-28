@@ -1,0 +1,18 @@
+[Unit]
+Description=Slack Bookmarks Flask Service
+After=network.target
+
+[Service]
+Type=simple
+User=goce
+WorkingDirectory=/mnt/ssd/apps/bookmarks
+# If using virtual environment, use: /mnt/ssd/apps/bookmarks/venv/bin/python3
+# If using system-wide install, use: /usr/bin/python3
+Environment="PATH=/mnt/ssd/apps/bookmarks/venv/bin:/usr/local/bin:/usr/bin:/bin:/home/goce/.local/bin"
+ExecStart=/mnt/ssd/apps/bookmarks/venv/bin/python3 /mnt/ssd/apps/bookmarks/secure_slack_bookmarks.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+

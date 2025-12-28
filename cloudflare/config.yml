@@ -2,27 +2,35 @@ tunnel: portfolio
 credentials-file: /home/goce/.cloudflared/df638884-0d3e-4799-8a98-60e844fcd164.json
 
 ingress:
-  # Main portfolio site
+  # Main portfolio site (routed through Caddy)
   - hostname: gmojsoski.com
     service: http://localhost:8080
 
   - hostname: www.gmojsoski.com
     service: http://localhost:8080
 
-  # GoatCounter (if still needed)
+  # GoatCounter (routed through Caddy)
   - hostname: analytics.gmojsoski.com
     service: http://localhost:8080
 
-  # Gokapi
+  # Gokapi (routed through Caddy)
   - hostname: files.gmojsoski.com
     service: http://localhost:8080
 
-  # Nextcloud
+  # Nextcloud (routed through Caddy)
   - hostname: cloud.gmojsoski.com
     service: http://localhost:8080
 
-  # Slack Bookmarks Server
+  # Slack Bookmarks Server (routed through Caddy)
   - hostname: bookmarks.gmojsoski.com
+    service: http://localhost:8080
+
+  # Documents-to-Calendar (routed through Caddy)
+  - hostname: tickets.gmojsoski.com
+    service: http://localhost:8080
+
+  # Planning Poker (routed through Caddy)
+  - hostname: poker.gmojsoski.com
     service: http://localhost:8080
 
   # Catch-all (must be last)

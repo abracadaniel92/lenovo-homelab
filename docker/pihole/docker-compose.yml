@@ -3,7 +3,7 @@ services:
     image: pihole/pihole:latest
     container_name: pihole
     network_mode: host
-    restart: unless-stopped
+    restart: always
     cap_add:
       - CAP_NET_ADMIN
     volumes:

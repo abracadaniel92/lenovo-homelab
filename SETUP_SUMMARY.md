@@ -1,6 +1,6 @@
 # Quick Setup Summary
 
-This document provides a quick reference for setting up this Pi configuration.
+This document provides a quick reference for setting up this Lenovo ThinkCentre configuration.
 
 ## Files Included
 
@@ -15,6 +15,8 @@ This document provides a quick reference for setting up this Pi configuration.
 ### System Services
 - ✅ **Gokapi** - File sharing (`gokapi/`, `systemd/gokapi.service`)
 - ✅ **Cloudflare Tunnel** - Secure tunnel (`cloudflare/config.yml`, `systemd/cloudflared.service`)
+- ✅ **Bookmarks** - Slack bookmarks Flask service (`systemd/bookmarks.service`)
+- ✅ **Planning Poker** - Planning poker web app (`systemd/planning-poker.service`)
 
 ## Quick Start Checklist
 
@@ -47,6 +49,8 @@ This document provides a quick reference for setting up this Pi configuration.
 | Nextcloud | 8081 | cloud.gmojsoski.com |
 | Uptime Kuma | 3001 | - |
 | Documents-to-Calendar | 8000 | tickets.gmojsoski.com |
+| Bookmarks | 5000 | bookmarks.gmojsoski.com |
+| Planning Poker | 3000 | poker.gmojsoski.com |
 | Pi-hole DNS | 53 | - |
 
 ## Next Steps
