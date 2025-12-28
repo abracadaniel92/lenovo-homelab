@@ -33,6 +33,8 @@ services:
     volumes:
       - ./config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=localhost:3002,127.0.0.1:3002,localhost,127.0.0.1
 EOF
 
 echo "3. Starting Homepage..."
