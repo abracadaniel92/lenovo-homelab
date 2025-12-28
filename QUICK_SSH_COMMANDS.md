@@ -188,6 +188,40 @@ sudo systemctl restart planning-poker.service
 sudo systemctl restart gokapi.service
 ```
 
+### Nextcloud 502 Bad Gateway
+```bash
+# Check if Nextcloud is running
+docker ps | grep nextcloud
+
+# Test direct access
+curl http://localhost:8081
+
+# Check Caddy routing
+curl -I http://localhost:8080 -H "Host: cloud.gmojsoski.com"
+
+# If 502, verify Caddyfile uses host IP (not container hostname)
+docker exec caddy cat /etc/caddy/Caddyfile | grep -A5 "@cloud"
+
+# Reload Caddy if needed
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+### Poker Frontend Not Loading (CSS/JS 404)
+```bash
+# Test if static files load directly
+curl http://localhost:3000/style.css
+curl http://localhost:3000/app.js
+
+# Test via Caddy
+curl -I http://localhost:8080/style.css -H "Host: poker.gmojsoski.com"
+
+# Check Caddy route has Host header forwarding
+docker exec caddy cat /etc/caddy/Caddyfile | grep -A5 "@poker"
+
+# Reload Caddy if needed
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
 ### Service Won't Start
 ```bash
 # Check why service failed
@@ -272,6 +306,12 @@ tail -30 /var/log/service-health-check.log
 
 # 8. Restart everything
 bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/ensure-services-running.sh"
+
+# 9. Fix Nextcloud 502 (if Caddy can't reach container)
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+
+# 10. Fix Poker frontend (reload Caddy after config change)
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
 ## 📝 Notes
@@ -280,6 +320,22 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/ensure-servi
 - Most services auto-restart on failure, but manual restart is faster
 - Health check runs every 2 minutes and will auto-restart services
 - Check logs if service won't start after restart
+
+## 🔧 Common Issues & Quick Fixes
+
+### Nextcloud 502 Error
+**Cause**: Caddy and Nextcloud on different Docker networks  
+**Quick Fix**: Caddyfile should use `http://172.17.0.1:8081` not `http://nextcloud-app:80`  
+**Verify**: `docker exec caddy cat /etc/caddy/Caddyfile | grep -A5 "@cloud"`
+
+### Poker CSS/JS Not Loading
+**Cause**: Missing Host header forwarding in Caddy  
+**Quick Fix**: Ensure Caddy route has `header_up Host {host}`  
+**Verify**: `docker exec caddy cat /etc/caddy/Caddyfile | grep -A5 "@poker"`
+
+### Service Running But Not Accessible Publicly
+**Cause**: Cloudflare tunnel not forwarding  
+**Quick Fix**: `sudo systemctl restart cloudflared.service`
 
 ## 🔗 Related Files
 
