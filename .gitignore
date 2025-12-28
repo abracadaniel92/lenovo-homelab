@@ -31,6 +31,10 @@ gokapi/config.json
 *.log
 logs/
 
+# Fail2ban installed configs (system-specific)
+# Keep jail.local.template in repo, but not installed configs
+/etc/fail2ban/jail.local
+
 # OS files
 .DS_Store
 Thumbs.db
