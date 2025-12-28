@@ -1,0 +1,62 @@
+[DEFAULT]
+# Ban IPs for 1 hour (3600 seconds) - first offense
+bantime = 3600
+# Extended ban for repeat offenders (24 hours)
+bantime.increment = true
+bantime.maxtime = 86400
+bantime.factor = 2
+
+# Time window to count failures (10 minutes)
+findtime = 600
+# Number of failures before ban
+maxretry = 5
+
+# Whitelist local network and localhost
+# Replace 192.168.1.0/24 with your actual local network range
+ignoreip = 127.0.0.1/8 ::1 192.168.1.0/24
+
+# Email notifications (uncomment and configure if needed)
+# destemail = your-email@example.com
+# sendername = Fail2Ban
+# action = %(action_mwl)s
+
+# Use systemd backend for better performance
+backend = systemd
+
+[sshd]
+enabled = true
+port = ssh,222,223
+logpath = %(sshd_log)s
+backend = %(sshd_backend)s
+maxretry = 5
+bantime = 3600
+# Ban for 24 hours after 3 bans
+bantime.increment = true
+bantime.maxtime = 86400
+bantime.factor = 2
+findtime = 600
+
+# Protect Nextcloud (if using Apache logs)
+[nextcloud]
+enabled = false
+port = http,https
+logpath = /var/log/nextcloud/access.log
+maxretry = 5
+bantime = 3600
+
+# Protect Caddy (if logging enabled)
+[caddy]
+enabled = false
+port = http,https
+logpath = /var/log/caddy/access.log
+maxretry = 10
+bantime = 3600
+
+# Protect Gokapi (if logging enabled)
+[gokapi]
+enabled = false
+port = http,https
+logpath = /var/log/gokapi/access.log
+maxretry = 5
+bantime = 3600
+
