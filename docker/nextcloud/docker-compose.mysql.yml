@@ -1,0 +1,54 @@
+# Alternative Nextcloud setup with MySQL 8
+# Use this if you prefer MySQL over PostgreSQL
+# To use: cp docker-compose.mysql.yml docker-compose.yml
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: nextcloud-mysql
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: change_me_strong
+      MYSQL_ROOT_PASSWORD: change_me_strong_root
+    volumes:
+      - ./db:/var/lib/mysql
+    networks:
+      - nextcloud-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "nextcloud", "-pchange_me_strong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: nextcloud:30-apache
+    container_name: nextcloud-app
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    environment:
+      MYSQL_HOST: db
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: change_me_strong
+      NEXTCLOUD_TRUSTED_DOMAINS: cloud.gmojsoski.com
+      NEXTCLOUD_OVERWRITEPROTOCOL: https
+    volumes:
+      - ./app:/var/www/html
+    ports:
+      - "8081:80"
+    networks:
+      - nextcloud-net
+
+networks:
+  nextcloud-net:
+    driver: bridge
+
+
+
+
+

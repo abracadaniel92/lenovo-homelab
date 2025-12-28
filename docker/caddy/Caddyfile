@@ -33,9 +33,12 @@
 	@cloud host cloud.gmojsoski.com
 	handle @cloud {
 		encode gzip
-		reverse_proxy http://172.17.0.1:8080 {
+		reverse_proxy http://nextcloud-app:80 {
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {remote_host}
+			header_up Host {host}
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-For {remote_host}
 		}
 	}
 	

@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:16
     container_name: nextcloud-postgres
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_DB: nextcloud
       POSTGRES_USER: nextcloud
@@ -17,7 +17,7 @@ services:
     container_name: nextcloud-app
     depends_on:
       - db
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_HOST: db
       POSTGRES_DB: nextcloud

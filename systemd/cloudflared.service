@@ -1,13 +1,17 @@
 [Unit]
 Description=Cloudflare Tunnel
-After=network.target
+After=network.target docker.service
+Wants=docker.service
 
 [Service]
 Type=simple
 User=goce
+ExecStartPre=/bin/sleep 10
+ExecStartPre=/bin/bash -c 'until docker ps | grep -q caddy; do sleep 2; done'
 ExecStart=/usr/local/bin/cloudflared tunnel --config /home/goce/.cloudflared/config.yml run
-Restart=on-failure
+Restart=always
 RestartSec=5s
+StartLimitInterval=0
 
 [Install]
 WantedBy=multi-user.target

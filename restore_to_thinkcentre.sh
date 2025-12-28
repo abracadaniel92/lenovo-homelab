@@ -34,37 +34,92 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Function to run docker commands (handles group membership issues)
+docker_cmd() {
+    # Try running docker directly first
+    if docker "$@" 2>/dev/null; then
+        return 0
+    fi
+    
+    # If permission denied, try with sudo
+    if sudo docker "$@" 2>/dev/null; then
+        return 0
+    fi
+    
+    # If still fails, try with sg docker
+    if sg docker -c "docker $*" 2>/dev/null; then
+        return 0
+    fi
+    
+    # Last resort: return failure
+    return 1
+}
+
+# Function to run docker compose commands (handles group membership issues)
+docker_compose_cmd() {
+    local compose_file="$1"
+    shift
+    local args="$*"
+    
+    # Try running docker compose directly first
+    if docker compose -f "$compose_file" $args 2>/dev/null; then
+        return 0
+    fi
+    
+    # If permission denied, try with sudo
+    if sudo docker compose -f "$compose_file" $args 2>/dev/null; then
+        return 0
+    fi
+    
+    # Last resort: return failure
+    return 1
+}
+
 # Function to detect backup directory
 detect_backup_dir() {
-    print_info "Detecting backup directory..."
-    
-    # Check common mount points
-    MOUNT_POINTS=("/mnt" "/media" "/mnt/backup_ssd")
-    
-    for mount_point in "${MOUNT_POINTS[@]}"; do
-        if [ -d "$mount_point" ]; then
-            BACKUP_CANDIDATES=$(find "$mount_point" -maxdepth 2 -type d -name "pi_backup_*" 2>/dev/null)
-            if [ -n "$BACKUP_CANDIDATES" ]; then
-                # Use the most recent backup
-                BACKUP_DIR=$(echo "$BACKUP_CANDIDATES" | sort -r | head -1)
-                print_success "Found backup: $BACKUP_DIR"
-                return 0
+    # If backup directory provided as argument, use it
+    if [ -n "$1" ]; then
+        BACKUP_DIR="$1"
+        print_info "Using provided backup directory: $BACKUP_DIR"
+    else
+        print_info "Detecting backup directory..."
+        
+        # Check common mount points
+        MOUNT_POINTS=("/mnt" "/media" "/mnt/backup_ssd")
+        
+        for mount_point in "${MOUNT_POINTS[@]}"; do
+            if [ -d "$mount_point" ]; then
+                BACKUP_CANDIDATES=$(find "$mount_point" -maxdepth 3 -type d -name "pi_backup_*" 2>/dev/null)
+                if [ -n "$BACKUP_CANDIDATES" ]; then
+                    # Use the most recent backup
+                    BACKUP_DIR=$(echo "$BACKUP_CANDIDATES" | sort -r | head -1)
+                    print_success "Found backup: $BACKUP_DIR"
+                    break
+                fi
             fi
+        done
+        
+        # If still not found, ask user
+        if [ -z "$BACKUP_DIR" ]; then
+            print_warning "Could not auto-detect backup directory"
+            read -p "Enter full path to backup directory: " BACKUP_DIR
         fi
-    done
+    fi
     
-    # If not found, ask user
-    print_warning "Could not auto-detect backup directory"
-    read -p "Enter full path to backup directory: " BACKUP_DIR
-    
+    # Validate backup directory
     if [ ! -d "$BACKUP_DIR" ]; then
         print_error "Backup directory does not exist: $BACKUP_DIR"
         exit 1
     fi
     
-    if [ ! -f "$BACKUP_DIR/manifest/backup_manifest.txt" ]; then
-        print_error "Invalid backup directory (missing manifest)"
-        exit 1
+    # Check for manifest (relaxed check - just verify it's a backup directory)
+    if [ ! -d "$BACKUP_DIR/manifest" ] && [ ! -d "$BACKUP_DIR/configs" ] && [ ! -d "$BACKUP_DIR/data" ]; then
+        print_warning "Backup directory may be invalid (missing expected subdirectories)"
+        read -p "Continue anyway? (y/n): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
     fi
 }
 
@@ -124,6 +179,11 @@ install_dependencies() {
     # Update package list
     sudo apt update
     
+    # Install basic utilities first (needed for Docker installation)
+    print_info "Installing basic utilities..."
+    sudo apt-get install -y wget curl tar gzip unzip
+    print_success "Basic utilities installed"
+    
     # Install Docker if not present
     if ! command -v docker &> /dev/null; then
         print_info "Installing Docker..."
@@ -144,9 +204,6 @@ install_dependencies() {
     else
         print_success "Docker Compose already installed"
     fi
-    
-    # Install other utilities
-    sudo apt-get install -y wget curl tar gzip
     
     print_success "Dependencies installed"
 }
@@ -194,15 +251,23 @@ setup_ssd_mount() {
         fi
     done
     
-    print_warning "Could not auto-mount SSD. Please mount it manually:"
-    print_info "  sudo mount /dev/sdX1 /mnt/ssd"
-    print_info "  Then add to /etc/fstab for permanent mounting"
-    read -p "Press Enter after mounting SSD, or 's' to skip: " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Ss]$ ]]; then
-        print_warning "Skipping SSD mount. You'll need to mount it manually later."
-        return 0
+    print_warning "Could not auto-mount external SSD."
+    print_info "Using internal storage - creating /mnt/ssd as regular directory..."
+    
+    # Create /mnt/ssd as a regular directory on internal storage
+    if [ ! -d /mnt/ssd ]; then
+        sudo mkdir -p /mnt/ssd
     fi
+    
+    # Set ownership
+    sudo chown -R "$RESTORE_USER:$RESTORE_USER" /mnt/ssd
+    
+    # Check available space
+    AVAILABLE_SPACE=$(df -h /mnt/ssd | tail -1 | awk '{print $4}')
+    print_success "Created /mnt/ssd on internal storage (Available: $AVAILABLE_SPACE)"
+    print_info "All services will use /mnt/ssd on the internal drive"
+    
+    return 0
 }
 
 # Function to restore network configuration
@@ -241,6 +306,10 @@ restore_network_config() {
         fi
         
         if [ -d "$BACKUP_DIR/network/netplan" ]; then
+            # Create /etc/netplan if it doesn't exist
+            if [ ! -d /etc/netplan ]; then
+                sudo mkdir -p /etc/netplan
+            fi
             sudo cp -r "$BACKUP_DIR/network/netplan"/* /etc/netplan/
             print_success "Restored Netplan configuration"
         fi
@@ -314,10 +383,10 @@ restore_docker_volumes() {
             print_info "Restoring volume: $VOLUME_NAME"
             
             # Create volume if it doesn't exist
-            docker volume create "$VOLUME_NAME" 2>/dev/null || true
+            docker_cmd volume create "$VOLUME_NAME" 2>/dev/null || true
             
             # Restore volume
-            docker run --rm -v "$VOLUME_NAME":/volume -v "$(dirname "$volume_backup")":/backup alpine \
+            docker_cmd run --rm -v "$VOLUME_NAME":/volume -v "$(dirname "$volume_backup")":/backup alpine \
                 sh -c "cd /volume && tar xzf /backup/$(basename "$volume_backup")"
             
             print_success "Restored volume: $VOLUME_NAME"
@@ -438,9 +507,25 @@ setup_gokapi() {
     # Download x86_64 binary
     print_info "Downloading Gokapi for x86_64..."
     cd /mnt/ssd/apps/gokapi
-    wget -q https://github.com/Forceu/Gokapi/releases/latest/download/gokapi-linux-amd64 -O gokapi
-    chmod +x gokapi
-    print_success "Gokapi binary downloaded"
+    
+    # Try new zip format first, fall back to old direct binary format
+    if wget -q https://github.com/Forceu/Gokapi/releases/latest/download/gokapi-linux_amd64.zip -O /tmp/gokapi.zip 2>/dev/null; then
+        unzip -q -o /tmp/gokapi.zip -d /mnt/ssd/apps/gokapi
+        # The zip might contain 'gokapi' or 'gokapi-linux_amd64' - find and rename
+        if [ -f gokapi-linux_amd64 ]; then
+            mv gokapi-linux_amd64 gokapi
+        fi
+        chmod +x gokapi
+        rm -f /tmp/gokapi.zip
+        print_success "Gokapi binary downloaded and extracted"
+    elif wget -q https://github.com/Forceu/Gokapi/releases/latest/download/gokapi-linux-amd64 -O gokapi 2>/dev/null; then
+        chmod +x gokapi
+        print_success "Gokapi binary downloaded"
+    else
+        print_error "Failed to download Gokapi binary"
+        print_info "You may need to download it manually from: https://github.com/Forceu/Gokapi/releases"
+        return 1
+    fi
     
     # Restore systemd service
     if [ -f "$BACKUP_DIR/systemd/gokapi.service" ]; then
@@ -497,43 +582,43 @@ start_docker_services() {
     if [ -f /mnt/ssd/docker-projects/caddy/docker-compose.yml ]; then
         print_info "Starting Caddy..."
         cd /mnt/ssd/docker-projects/caddy
-        docker compose up -d || print_warning "Failed to start Caddy"
+        docker_compose_cmd /mnt/ssd/docker-projects/caddy/docker-compose.yml up -d || print_warning "Failed to start Caddy"
     fi
     
     # Start GoatCounter
     if [ -f /mnt/ssd/docker-projects/goatcounter/docker-compose.yml ]; then
         print_info "Starting GoatCounter..."
         cd /mnt/ssd/docker-projects/goatcounter
-        docker compose up -d || print_warning "Failed to start GoatCounter"
+        docker_compose_cmd /mnt/ssd/docker-projects/goatcounter/docker-compose.yml up -d || print_warning "Failed to start GoatCounter"
     fi
     
     # Start Nextcloud
     if [ -f /mnt/ssd/apps/nextcloud/docker-compose.yml ]; then
         print_info "Starting Nextcloud..."
         cd /mnt/ssd/apps/nextcloud
-        docker compose up -d || print_warning "Failed to start Nextcloud"
+        docker_compose_cmd /mnt/ssd/apps/nextcloud/docker-compose.yml up -d || print_warning "Failed to start Nextcloud"
     fi
     
     # Start Uptime Kuma
     if [ -f /mnt/ssd/docker-projects/uptime-kuma/docker-compose.yml ]; then
         print_info "Starting Uptime Kuma..."
         cd /mnt/ssd/docker-projects/uptime-kuma
-        docker compose up -d || print_warning "Failed to start Uptime Kuma"
+        docker_compose_cmd /mnt/ssd/docker-projects/uptime-kuma/docker-compose.yml up -d || print_warning "Failed to start Uptime Kuma"
     fi
     
     # Start Documents-to-Calendar
     if [ -f /mnt/ssd/docker-projects/documents-to-calendar/docker-compose.yml ]; then
         print_info "Starting Documents-to-Calendar..."
         cd /mnt/ssd/docker-projects/documents-to-calendar
-        docker compose build || print_warning "Failed to build Documents-to-Calendar"
-        docker compose up -d || print_warning "Failed to start Documents-to-Calendar"
+        docker_compose_cmd /mnt/ssd/docker-projects/documents-to-calendar/docker-compose.yml build || print_warning "Failed to build Documents-to-Calendar"
+        docker_compose_cmd /mnt/ssd/docker-projects/documents-to-calendar/docker-compose.yml up -d || print_warning "Failed to start Documents-to-Calendar"
     fi
     
     # Start Pi-hole
     if [ -f /mnt/ssd/docker-projects/pihole/docker-compose.yml ]; then
         print_info "Starting Pi-hole..."
         cd /mnt/ssd/docker-projects/pihole
-        docker compose up -d || print_warning "Failed to start Pi-hole"
+        docker_compose_cmd /mnt/ssd/docker-projects/pihole/docker-compose.yml up -d || print_warning "Failed to start Pi-hole"
     fi
     
     print_success "Docker services started"
@@ -560,7 +645,7 @@ verify_restore() {
     
     echo ""
     echo "=== Docker Services Status ==="
-    docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+    docker_cmd ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || echo "Could not check Docker services"
     
     echo ""
     echo "=== Systemd Services Status ==="
@@ -578,8 +663,18 @@ main() {
     echo "=========================================="
     echo ""
     
-    # Detect backup directory
-    detect_backup_dir
+    # Check for command-line argument
+    if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        echo "Usage: $0 [backup_directory_path]"
+        echo ""
+        echo "If backup_directory_path is provided, it will be used directly."
+        echo "Otherwise, the script will attempt to auto-detect the backup."
+        echo ""
+        exit 0
+    fi
+    
+    # Detect backup directory (pass argument if provided)
+    detect_backup_dir "$1"
     
     # Check prerequisites
     check_prerequisites
@@ -631,6 +726,6 @@ main() {
     echo ""
 }
 
-# Run main function
-main
+# Run main function with command-line arguments
+main "$@"
 

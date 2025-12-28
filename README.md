@@ -1,6 +1,6 @@
-# Raspberry Pi Configuration & Setup
+# Lenovo ThinkCentre Configuration & Setup
 
-This repository contains all configuration files and setup instructions for replicating this Raspberry Pi setup. The Pi runs multiple services including Docker containers, reverse proxy (Caddy), Cloudflare Tunnel, and various applications.
+This repository contains all configuration files and setup instructions for replicating this self-hosted server setup. The server runs multiple services including Docker containers, reverse proxy (Caddy), Cloudflare Tunnel, and various applications.
 
 ## 📋 Table of Contents
 
@@ -14,7 +14,7 @@ This repository contains all configuration files and setup instructions for repl
 
 ## 🎯 Overview
 
-This Raspberry Pi serves as a self-hosted server running:
+This Lenovo ThinkCentre serves as a self-hosted server running:
 - **Reverse Proxy**: Caddy (handles HTTPS termination and routing)
 - **Tunnel**: Cloudflare Tunnel (exposes services securely to the internet)
 - **File Sharing**: Gokapi
@@ -23,10 +23,12 @@ This Raspberry Pi serves as a self-hosted server running:
 - **Monitoring**: Uptime Kuma
 - **DNS/Ad Blocking**: Pi-hole
 - **Document Processing**: Documents-to-Calendar app
+- **Bookmarks**: Slack bookmarks Flask service
+- **Planning Poker**: Planning poker web application
 
 ## 💻 System Requirements
 
-- Raspberry Pi (ARM64 architecture)
+- Lenovo ThinkCentre or similar x86_64 system
 - Docker and Docker Compose installed
 - SSD mounted at `/mnt/ssd` (recommended for better performance)
 - Cloudflare account with tunnel configured
@@ -71,10 +73,20 @@ This Raspberry Pi serves as a self-hosted server running:
    - Config: `/home/goce/.cloudflared/config.yml`
    - Service: `/etc/systemd/system/cloudflared.service`
 
+3. **Bookmarks** - Slack bookmarks Flask service
+   - Port: 5000
+   - Location: `/mnt/ssd/apps/bookmarks`
+   - Service: `/etc/systemd/system/bookmarks.service`
+
+4. **Planning Poker** - Planning poker web application
+   - Port: 3000
+   - Location: `/home/goce/Desktop/Cursor projects/planning poker/planning_poker`
+   - Service: `/etc/systemd/system/planning-poker.service`
+
 ## 📁 Directory Structure
 
 ```
-Pi-version-control/
+Lenovo-version-control/
 ├── docker/
 │   ├── caddy/
 │   │   ├── docker-compose.yml
@@ -92,7 +104,9 @@ Pi-version-control/
 │       └── docker-compose.yml
 ├── systemd/
 │   ├── gokapi.service
-│   └── cloudflared.service
+│   ├── cloudflared.service
+│   ├── bookmarks.service
+│   └── planning-poker.service
 ├── cloudflare/
 │   └── config.yml
 ├── gokapi/
@@ -166,8 +180,8 @@ docker compose up -d
 
 ```bash
 # Install cloudflared
-wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
-sudo dpkg -i cloudflared-linux-arm64.deb
+wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+sudo dpkg -i cloudflared-linux-amd64.deb
 
 # Create config directory
 mkdir -p ~/.cloudflared
@@ -188,10 +202,10 @@ sudo systemctl start cloudflared.service
 ### 6. Setup Gokapi
 
 ```bash
-# Download Gokapi binary (ARM64)
+# Download Gokapi binary (x86_64)
 cd /mnt/ssd/apps/gokapi
-wget https://github.com/Forceu/Gokapi/releases/latest/download/gokapi-linux-arm64
-mv gokapi-linux-arm64 gokapi
+wget https://github.com/Forceu/Gokapi/releases/latest/download/gokapi-linux-amd64
+mv gokapi-linux-amd64 gokapi
 chmod +x gokapi
 
 # Create config directory
@@ -295,6 +309,8 @@ docker compose up -d
 - **8081**: Nextcloud
 - **3001**: Uptime Kuma
 - **8000**: Documents-to-Calendar
+- **5000**: Bookmarks
+- **3000**: Planning Poker
 - **53**: Pi-hole (DNS)
 
 ### Domain Routing (via Caddy)
@@ -304,6 +320,7 @@ docker compose up -d
 - `files.gmojsoski.com` → Gokapi (port 8091)
 - `cloud.gmojsoski.com` → Nextcloud (port 8081)
 - `bookmarks.gmojsoski.com` → Bookmarks server (port 5000)
+- `poker.gmojsoski.com` → Planning Poker (port 3000)
 - `tickets.gmojsoski.com` → Documents-to-Calendar (port 8000)
 
 ### Cloudflare Tunnel Configuration
@@ -426,6 +443,6 @@ This repository contains configuration files for personal use. Please review and
 ---
 
 **Last Updated**: December 2025
-**Pi Setup**: Raspberry Pi with ARM64 architecture
-**OS**: Linux (Raspberry Pi OS)
+**System**: Lenovo ThinkCentre with x86_64 architecture
+**OS**: Linux (Debian)
 
