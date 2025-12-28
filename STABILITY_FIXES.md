@@ -136,6 +136,25 @@ journalctl -u service-health-check.service -f
 3. Restart cloudflared: `systemctl restart cloudflared.service`
 4. Check Cloudflare logs: `journalctl -u cloudflared.service -f`
 
+### Nextcloud 502 Bad Gateway:
+1. Check if Nextcloud is running: `docker ps | grep nextcloud`
+2. Verify Nextcloud is accessible directly: `curl http://localhost:8081`
+3. **Common Issue**: Caddy and Nextcloud on different Docker networks
+   - **Fix**: Use host IP in Caddyfile: `http://172.17.0.1:8081` instead of `http://nextcloud-app:80`
+   - Check networks: `docker inspect caddy --format '{{range $net, $conf := .NetworkSettings.Networks}}{{$net}} {{end}}'`
+   - Check Nextcloud network: `docker inspect nextcloud-app --format '{{range $net, $conf := .NetworkSettings.Networks}}{{$net}} {{end}}'`
+
+### Poker Frontend Not Loading (CSS/JS 404):
+1. Check Caddy route has Host header forwarding:
+   ```caddy
+   reverse_proxy http://172.17.0.1:3000 {
+       header_up Host {host}
+       header_up X-Forwarded-Host {host}
+   }
+   ```
+2. Verify static files accessible directly: `curl http://localhost:3000/style.css`
+3. Reload Caddy: `docker exec caddy caddy reload --config /etc/caddy/Caddyfile`
+
 ## Auto-Start Services
 
 The following services are now configured to auto-start on boot:
