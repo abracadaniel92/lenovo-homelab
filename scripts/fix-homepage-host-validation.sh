@@ -50,9 +50,16 @@ EOF
 echo "4. Setting proper permissions..."
 chmod -R 755 "$CONFIG_DIR"
 
-echo "5. Restarting Homepage..."
+echo "5. Updating docker-compose.yml with environment variable..."
+cat >> "$HOMEPAGE_DIR/docker-compose.yml" <<'ENVEOF'
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=localhost:3002,127.0.0.1:3002,localhost,127.0.0.1,*
+ENVEOF
+
+echo "6. Restarting Homepage..."
 cd "$HOMEPAGE_DIR"
-docker compose restart
+docker compose down
+docker compose up -d
 
 echo ""
 echo "6. Waiting for Homepage to restart..."
