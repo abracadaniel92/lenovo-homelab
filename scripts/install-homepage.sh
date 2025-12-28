@@ -14,6 +14,13 @@ HOMEPAGE_DIR="/mnt/ssd/docker-projects/homepage"
 echo "1. Creating Homepage directory..."
 mkdir -p "$HOMEPAGE_DIR/config"
 
+echo "2. Creating settings.yaml to fix host validation..."
+cat > "$HOMEPAGE_DIR/config/settings.yaml" <<EOF
+# Homepage Settings
+# Allow all hosts to fix validation error
+hostname: '*'
+EOF
+
 echo "2. Creating docker-compose.yml..."
 cat > "$HOMEPAGE_DIR/docker-compose.yml" <<EOF
 services:
