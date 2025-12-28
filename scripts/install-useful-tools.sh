@@ -22,7 +22,7 @@ TOOLS=(
     "tree"            # Directory tree visualization
     "ripgrep"         # Fast text search (rg command)
     "glances"         # Advanced system monitoring
-    "neofetch"        # System information display
+    "inxi"            # System information display (neofetch alternative)
     "unattended-upgrades"  # Automatic security updates (safe)
     "apt-listchanges" # View changelogs before updates
     "ncdu"            # Disk usage analyzer (better than du)
@@ -78,12 +78,12 @@ echo "  • jq - JSON processor (try: curl ... | jq)"
 echo "  • tree - Directory tree (try: tree -L 2)"
 echo "  • ripgrep - Fast search (try: rg 'pattern')"
 echo "  • glances - System monitor (try: glances)"
-echo "  • neofetch - System info (try: neofetch)"
+echo "  • inxi - System info (try: inxi -Fxz)"
 echo "  • ncdu - Disk usage (try: ncdu /)"
 echo "  • unattended-upgrades - Auto security updates"
 echo ""
 echo "Quick test commands:"
-echo "  neofetch                    # System info"
+echo "  inxi -Fxz                   # System info"
 echo "  glances                     # System monitor"
 echo "  tree -L 2 /mnt/ssd          # Directory tree"
 echo "  rg 'pattern' /path          # Fast search"
