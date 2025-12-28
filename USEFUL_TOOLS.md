@@ -39,8 +39,9 @@ cat config.json | jq
 
 ### 5. **neofetch** - System Information
 **Why**: Quick overview of system specs  
-**Install**: `sudo apt install neofetch`  
-**Usage**: `neofetch`
+**Install**: Not available in Debian Trixie repos. Alternative: Use `glances` or `inxi`  
+**Alternative**: `sudo apt install inxi && inxi -Fxz` (system info)  
+**Usage**: `inxi -Fxz` or `glances` for system overview
 
 ### 6. **ncdu** - Disk Usage Analyzer
 **Why**: Interactive disk usage, better than `du`  
