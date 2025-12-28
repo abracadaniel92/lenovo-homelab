@@ -27,15 +27,25 @@ sudo ufw allow 53/udp comment 'Pi-hole DNS'
 echo "3. Allowing local service ports..."
 # These are for local communication between services
 # Services are accessed via Caddy (8080) which is behind Cloudflare tunnel
-sudo ufw allow from 127.0.0.1 to any port 3000 comment 'Poker (local)'
-sudo ufw allow from 127.0.0.1 to any port 5000 comment 'Bookmarks (local)'
-sudo ufw allow from 127.0.0.1 to any port 8000 comment 'Travelsync (local)'
-sudo ufw allow from 127.0.0.1 to any port 8080 comment 'Caddy (local)'
-sudo ufw allow from 127.0.0.1 to any port 8081 comment 'Nextcloud (local)'
-sudo ufw allow from 127.0.0.1 to any port 8088 comment 'GoatCounter (local)'
-sudo ufw allow from 127.0.0.1 to any port 8091 comment 'Gokapi (local)'
+# Allow from localhost
+sudo ufw allow from 127.0.0.1 to any port 3000 comment 'Poker (localhost)'
+sudo ufw allow from 127.0.0.1 to any port 5000 comment 'Bookmarks (localhost)'
+sudo ufw allow from 127.0.0.1 to any port 8000 comment 'Travelsync (localhost)'
+sudo ufw allow from 127.0.0.1 to any port 8080 comment 'Caddy (localhost)'
+sudo ufw allow from 127.0.0.1 to any port 8081 comment 'Nextcloud (localhost)'
+sudo ufw allow from 127.0.0.1 to any port 8088 comment 'GoatCounter (localhost)'
+sudo ufw allow from 127.0.0.1 to any port 8091 comment 'Gokapi (localhost)'
 
-echo "4. Allowing Docker network communication..."
+echo "4. Allowing Docker network to access service ports..."
+# CRITICAL: Allow Docker containers (Caddy) to access host services
+sudo ufw allow from 172.17.0.0/16 to any port 3000 comment 'Poker from Docker'
+sudo ufw allow from 172.17.0.0/16 to any port 5000 comment 'Bookmarks from Docker'
+sudo ufw allow from 172.17.0.0/16 to any port 8000 comment 'Travelsync from Docker'
+sudo ufw allow from 172.17.0.0/16 to any port 8081 comment 'Nextcloud from Docker'
+sudo ufw allow from 172.17.0.0/16 to any port 8088 comment 'GoatCounter from Docker'
+sudo ufw allow from 172.17.0.0/16 to any port 8091 comment 'Gokapi from Docker'
+
+echo "5. Allowing Docker network communication..."
 # Allow Docker bridge network
 sudo ufw allow from 172.17.0.0/16 comment 'Docker bridge network'
 sudo ufw allow from 172.18.0.0/16 comment 'Docker networks'
