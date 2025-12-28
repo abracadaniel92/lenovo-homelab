@@ -25,4 +25,4 @@ services:
       - ./uploads:/app/uploads
       - ./temp:/app/temp
       - ./data:/app/data
-    restart: unless-stopped
+    restart: always
