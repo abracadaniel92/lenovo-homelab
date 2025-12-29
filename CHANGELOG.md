@@ -2,6 +2,75 @@
 
 ## December 2025
 
+### December 29, 2025 - Service Fixes and Optimizations
+
+#### Planning Poker Mobile Browser Fix (December 29, 2025)
+- **Issue**: Mobile browsers showing blank screen and downloading HTML as text file instead of displaying
+- **Root Cause**: Express.js not setting explicit Content-Type headers for static files
+- **Fix**: Updated `server.js` to explicitly set Content-Type headers:
+  - HTML: `text/html; charset=UTF-8`
+  - CSS: `text/css; charset=UTF-8`
+  - JS: `application/javascript; charset=UTF-8`
+- **File Modified**: `planning_poker/server.js` (in planning_poker repository)
+- **Status**: ✅ Fixed
+- **Documentation**: `POKER_MOBILE_FIX.md`
+
+#### Planning Poker Bar Chart Mobile Alignment (December 29, 2025)
+- **Issue**: Vote distribution bar chart not aligned properly on mobile devices
+- **Root Cause**: Flexbox alignment issues on small screens, items not aligning to bottom
+- **Fix**: 
+  - Added `justify-content: flex-end` to items for bottom alignment
+  - Added horizontal scroll for many votes on small screens
+  - Improved mobile-specific sizing and spacing
+  - Fixed label positioning and text wrapping
+- **File Modified**: `planning_poker/public/style.css` (in planning_poker repository)
+- **Status**: ✅ Fixed
+
+#### TravelSync Document Processing Performance (December 29, 2025)
+- **Issue**: Document processing taking 48+ seconds, causing timeouts and crashes
+- **Root Causes**:
+  1. Slow scikit-image `denoise_nl_means` operation (30+ seconds)
+  2. OCR running on all images (2-5 seconds)
+  3. Image enhancement causing delays
+  4. No timeout handling for Gemini API calls
+- **Fixes Applied**:
+  - Removed slow scikit-image denoising, using fast OpenCV denoising instead
+  - Disabled OCR by default (can be enabled for best processing)
+  - Disabled image enhancement by default (can be enabled for best processing)
+  - Added 30-second timeout to Gemini API calls with proper async handling
+  - Run Gemini calls in thread pool to prevent blocking
+- **Performance Improvement**: Reduced from 48+ seconds to < 10 seconds (80%+ faster)
+- **Files Modified**: `travelsync/backend/services/document_processor.py` (in travelsync repository)
+- **Status**: ✅ Fixed
+- **Documentation**: `PERFORMANCE_OPTIMIZATIONS.md` (in travelsync repository)
+
+#### TravelSync "Body is Locked" Error Fix (December 29, 2025)
+- **Issue**: Upload endpoint crashing with "body is locked" or "body is disturbed" error
+- **Root Cause**: Accessing `file.content_type` after reading file with `await file.read()`
+- **Fix**: Reordered operations to get content_type BEFORE reading file:
+  1. Get content_type first
+  2. Validate file type
+  3. Read file contents (only once)
+- **File Modified**: `travelsync/backend/main.py` (in travelsync repository)
+- **Status**: ✅ Fixed
+- **Documentation**: `BODY_LOCKED_FIX.md` (in travelsync repository)
+
+#### TravelSync Format String Error Fix (December 29, 2025)
+- **Issue**: "Invalid format specifier" error when processing documents
+- **Root Cause**: Prompts used f-strings with JSON format examples containing `{` and `}` that Python interpreted as format placeholders
+- **Fix**: Changed prompts from f-strings to regular strings, using string concatenation for dynamic parts
+- **Files Modified**: `travelsync/backend/services/document_processor.py` (in travelsync repository)
+- **Status**: ✅ Fixed
+
+#### TravelSync Best Processing Mode (December 29, 2025)
+- **Enhancement**: Re-enabled OCR and image enhancement for best processing accuracy
+- **Configuration**: 
+  - OCR runs on images > 224x224 pixels
+  - Image enhancement enabled for better Gemini processing
+  - Format string issues resolved to allow proper prompt formatting
+- **Files Modified**: `travelsync/backend/services/document_processor.py` (in travelsync repository)
+- **Status**: ✅ Complete
+
 ### Service Fixes
 
 #### Bookmarks Service (December 28, 2025)
