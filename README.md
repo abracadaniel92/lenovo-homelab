@@ -318,6 +318,30 @@ nano docker-compose.yml
 docker compose up -d
 ```
 
+#### Vaultwarden (Password Manager)
+
+```bash
+# Use the setup script (recommended)
+cd "/home/goce/Desktop/Cursor projects/Lenovo scripts"
+./setup-vaultwarden.sh
+
+# Or manual setup:
+cd /mnt/ssd/docker-projects/vaultwarden
+cp /path/to/repo/docker/vaultwarden/docker-compose.yml ./
+
+# Generate admin token (optional but recommended)
+openssl rand -base64 32
+# Add the token to ADMIN_TOKEN in docker-compose.yml
+
+# Create data directory
+mkdir -p data
+
+# Start Vaultwarden
+docker compose up -d
+```
+
+**Note:** After creating your account, set `SIGNUPS_ALLOWED: "false"` in docker-compose.yml to prevent unauthorized signups.
+
 ## 🔧 Service Details
 
 ### Port Mapping
@@ -332,7 +356,7 @@ docker compose up -d
 - **5000**: Bookmarks
 - **3000**: Planning Poker
 - **3002**: Homepage
-- **8082**: FileBrowser
+- **8082**: Vaultwarden (Password Manager)
 - **9000**: Portainer (HTTP)
 - **9443**: Portainer (HTTPS)
 - **53**: Pi-hole (DNS)
@@ -347,6 +371,7 @@ docker compose up -d
 - `poker.gmojsoski.com` → Planning Poker (port 3000)
 - `tickets.gmojsoski.com` → Documents-to-Calendar (port 8000)
 - `travelsync.gmojsoski.com` → Travelsync/Documents-to-Calendar (port 8000)
+- `vault.gmojsoski.com` → Vaultwarden (port 8082)
 
 ### Cloudflare Tunnel Configuration
 
