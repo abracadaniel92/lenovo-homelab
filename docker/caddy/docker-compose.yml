@@ -14,3 +14,11 @@ services:
       - ./site:/srv/site
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - nextcloud-net
+
+networks:
+  nextcloud-net:
+    external: true
+    name: nextcloud_nextcloud-net
