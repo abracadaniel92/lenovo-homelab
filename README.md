@@ -53,6 +53,10 @@ This Lenovo ThinkCentre serves as a self-hosted server running:
 3. **Nextcloud** - Self-hosted cloud storage
    - Port: 8081
    - Location: `/mnt/ssd/apps/nextcloud`
+   - Version: 30.0.17.2 (latest)
+   - Database: PostgreSQL 16
+   - Domain: https://cloud.gmojsoski.com
+   - See: `usefull files/NEXTCLOUD_FRESH_INSTALL.md` for setup and restore instructions
 
 4. **Uptime Kuma** - Uptime monitoring
    - Port: 3001
