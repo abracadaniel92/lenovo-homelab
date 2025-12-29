@@ -63,16 +63,11 @@
 	@poker host poker.gmojsoski.com
 	handle @poker {
 		encode gzip
-		header Content-Type "text/html; charset=UTF-8" {
-			@html path *.html
-			@html path /
-		}
 		reverse_proxy http://172.17.0.1:3000 {
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {remote_host}
 			header_up Host {host}
 			header_up X-Forwarded-Host {host}
-			header_up Accept "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
 		}
 	}
 	
