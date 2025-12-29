@@ -39,6 +39,12 @@
 			header_up Host {host}
 			header_up X-Forwarded-Host {host}
 			header_up X-Forwarded-For {remote_host}
+			transport http {
+				keepalive off
+			}
+			health_uri /status.php
+			health_interval 10s
+			health_timeout 5s
 		}
 	}
 	
@@ -84,6 +90,17 @@
 	handle @vault {
 		encode gzip
 		reverse_proxy http://172.17.0.1:8082 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+			header_up Host {host}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+	
+	@books host books.gmojsoski.com
+	handle @books {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8090 {
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {remote_host}
 			header_up Host {host}

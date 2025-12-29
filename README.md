@@ -25,6 +25,8 @@ This Lenovo ThinkCentre serves as a self-hosted server running:
 - **Document Processing**: Documents-to-Calendar app
 - **Bookmarks**: Slack bookmarks Flask service
 - **Planning Poker**: Planning poker web application
+- **Password Manager**: Vaultwarden (Bitwarden-compatible)
+- **Ebook Library**: Kavita (ebook server for sharing with ebook club)
 - **Docker Management**: Portainer (web UI)
 - **Service Dashboard**: Homepage
 - **Auto-Updates**: Watchtower
@@ -346,6 +348,22 @@ docker compose up -d
 
 **Note:** After creating your account, set `SIGNUPS_ALLOWED: "false"` in docker-compose.yml to prevent unauthorized signups.
 
+#### Kavita (Ebook Library)
+
+```bash
+# Use the setup script (recommended)
+cd "/home/goce/Desktop/Cursor projects/Lenovo scripts"
+./setup-kavita.sh
+
+# Or manual setup:
+cd /mnt/ssd/docker-projects/kavita
+mkdir -p data media logs
+cp /path/to/repo/docker/kavita/docker-compose.yml ./
+docker compose up -d
+```
+
+See `usefull files/KAVITA_SETUP.md` for detailed setup and usage instructions.
+
 ## 🔧 Service Details
 
 ### Port Mapping
@@ -361,6 +379,7 @@ docker compose up -d
 - **3000**: Planning Poker
 - **3002**: Homepage
 - **8082**: Vaultwarden (Password Manager)
+- **8090**: Kavita (Ebook Library)
 - **9000**: Portainer (HTTP)
 - **9443**: Portainer (HTTPS)
 - **53**: Pi-hole (DNS)
@@ -376,6 +395,7 @@ docker compose up -d
 - `tickets.gmojsoski.com` → Documents-to-Calendar (port 8000)
 - `travelsync.gmojsoski.com` → Travelsync/Documents-to-Calendar (port 8000)
 - `vault.gmojsoski.com` → Vaultwarden (port 8082)
+- `books.gmojsoski.com` → Kavita (port 8090)
 
 ### Cloudflare Tunnel Configuration
 
@@ -447,6 +467,8 @@ docker compose logs -f <service-name>
 - /mnt/ssd/docker-projects/goatcounter/goatcounter-data
 - /mnt/ssd/docker-projects/uptime-kuma/data
 - /mnt/ssd/docker-projects/documents-to-calendar/data
+- /mnt/ssd/docker-projects/kavita/data (configuration)
+- /mnt/ssd/docker-projects/kavita/media (ebooks)
 ```
 
 ### Check Service Status
