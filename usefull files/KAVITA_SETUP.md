@@ -103,12 +103,23 @@ media/
     └── Book 1.epub
 ```
 
-### Method 3: Use Nextcloud
+### Method 3: Use Nextcloud (Automated Sync)
 
 Since you have Nextcloud, you can:
-1. Upload ebooks to Nextcloud
-2. Download them to the Kavita media folder
-3. Or use Nextcloud's file sync feature
+1. Upload ebooks to Nextcloud (via web interface or sync client)
+2. Run the sync script to automatically copy new books to Kavita:
+   ```bash
+   cd "/home/goce/Desktop/Cursor projects/Lenovo scripts"
+   ./sync-nextcloud-to-kavita.sh
+   ```
+3. The script will:
+   - ✅ Skip existing books (no duplicates)
+   - ✅ Copy only new books
+   - ✅ Organize by author or preserve folder structure
+   - ✅ Show sync summary
+4. Then force scan in Kavita to add the new books
+
+**Note:** Update `NEXTCLOUD_BOOKS_DIR` in the script to point to your Nextcloud books folder.
 
 ## User Management for Ebook Club
 
