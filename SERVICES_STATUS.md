@@ -29,6 +29,12 @@
 
 ## Recent Fixes (December 2025)
 
+### December 29, 2025
+- **Planning Poker**: Fixed mobile browser issues (blank screen, downloading files) and bar chart alignment
+- **TravelSync**: Fixed performance issues (reduced processing time from 48s to <10s), fixed "body is locked" errors, fixed format string errors, enabled best processing mode
+
+## Recent Fixes (December 2025)
+
 ### Bookmarks Service
 - **Issue**: Returning 404 for health checks
 - **Fix**: Added health check route (`/`) to Flask app
