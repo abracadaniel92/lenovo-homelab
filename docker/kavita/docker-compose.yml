@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   kavita:
-    image: kizaing/kavita:latest
+    image: jvmilazz0/kavita:latest
     container_name: kavita
     restart: always
     ports:
