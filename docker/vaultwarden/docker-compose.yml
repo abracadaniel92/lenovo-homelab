@@ -1,0 +1,55 @@
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: always
+    ports:
+      - "8082:80"
+    environment:
+      # Admin token for admin panel (generate a strong random token)
+      # You can generate one with: openssl rand -base64 32
+      ADMIN_TOKEN: ""
+      # Domain for Vaultwarden (update with your domain)
+      DOMAIN: https://vault.gmojsoski.com
+      # Database URL (using SQLite by default, can be changed to PostgreSQL)
+      DATABASE_URL: /data/db.sqlite3
+      # Enable signups (set to false after creating your account)
+      SIGNUPS_ALLOWED: "true"
+      # Enable invitations (set to false if you don't want invitation system)
+      INVITATIONS_ALLOWED: "true"
+      # Web vault enabled (the web interface)
+      WEB_VAULT_ENABLED: "true"
+      # Log level
+      LOG_LEVEL: info
+      # Extended logging (set to true for more detailed logs)
+      EXTENDED_LOGGING: "false"
+      # ROCKET_ADDRESS (internal, don't change)
+      ROCKET_ADDRESS: "0.0.0.0"
+      ROCKET_PORT: "80"
+    volumes:
+      - ./data:/data
+    # Optional: Uncomment to use PostgreSQL instead of SQLite
+    # depends_on:
+    #   - db
+    # networks:
+    #   - vaultwarden-net
+
+# Optional: PostgreSQL database (uncomment if you want to use PostgreSQL instead of SQLite)
+# services:
+#   db:
+#     image: postgres:16-alpine
+#     container_name: vaultwarden-db
+#     restart: always
+#     environment:
+#       POSTGRES_DB: vaultwarden
+#       POSTGRES_USER: vaultwarden
+#       POSTGRES_PASSWORD: change_me_strong_password
+#     volumes:
+#       - ./db:/var/lib/postgresql/data
+#     networks:
+#       - vaultwarden-net
+#
+# networks:
+#   vaultwarden-net:
+#     driver: bridge
+

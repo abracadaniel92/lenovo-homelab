@@ -80,6 +80,17 @@
 		}
 	}
 	
+	@vault host vault.gmojsoski.com
+	handle @vault {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8082 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+			header_up Host {host}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+	
 	handle {
 		encode gzip
 		root * /srv/site
