@@ -271,3 +271,52 @@ docker ps | grep kavita
 - **Discussion**: Use Kavita's notes feature or external chat for discussions
 - **Regular Updates**: Add new books regularly to keep the library fresh
 
+## Automation Tips
+
+### Reduce Manual Work
+
+1. **Auto-Scan Libraries**:
+   - Go to **Admin** → **Settings** → **Tasks**
+   - Enable **Scan Library** task (runs daily by default)
+   - Kavita will automatically detect new ebooks
+
+2. **Folder Watching** (if supported):
+   - Enable automatic folder watching in library settings
+   - New files are detected immediately
+
+3. **Bulk Operations**:
+   - Use the web interface for bulk actions
+   - Select multiple items for batch operations
+
+4. **API Access** (Advanced):
+   - Enable API in **Admin** → **Settings** → **API**
+   - Use API for automated user creation and library management
+   - Scripts available in `Lenovo scripts/` directory
+
+5. **Sync with Nextcloud**:
+   - Upload ebooks to Nextcloud
+   - Use Nextcloud's file sync or web interface
+   - Copy to Kavita media folder when ready
+
+### Quick Setup Workflow
+
+1. **One-time setup** (5 minutes):
+   - Create library
+   - Set scan schedule
+   - Create initial admin user
+
+2. **Adding ebooks** (automated):
+   - Copy files to `/mnt/ssd/docker-projects/kavita/media/`
+   - Kavita auto-scans daily (or manually trigger)
+
+3. **User management** (as needed):
+   - Create users when new members join
+   - Or use API for bulk creation
+
+### Recommended Settings
+
+- **Scan Interval**: Daily (default)
+- **Metadata Fetching**: Enabled (auto-fetches book info)
+- **Series Detection**: Enabled (auto-organizes series)
+- **Folder Structure**: Optional - Kavita handles metadata-based organization
+
