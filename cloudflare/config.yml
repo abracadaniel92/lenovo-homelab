@@ -41,5 +41,9 @@ ingress:
   - hostname: vault.gmojsoski.com
     service: http://localhost:8080
 
+  # Kavita (routed through Caddy)
+  - hostname: books.gmojsoski.com
+    service: http://localhost:8080
+
   # Catch-all (must be last)
   - service: http_status:404
