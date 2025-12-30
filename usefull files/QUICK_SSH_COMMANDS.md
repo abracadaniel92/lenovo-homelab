@@ -109,8 +109,8 @@ sudo systemctl restart gokapi.service
 
 ### Restart All Services
 ```bash
-# Quick restart script
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/ensure-services-running.sh"
+# Comprehensive service recovery (recommended)
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-all-services.sh"
 ```
 
 ### Restart Docker Containers
@@ -281,8 +281,8 @@ docker logs caddy --tail 30
 
 ### All Services Down
 ```bash
-# Restart everything
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/ensure-services-running.sh"
+# Restart everything (comprehensive fix)
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-all-services.sh"
 
 # Or manually:
 sudo systemctl restart cloudflared.service
@@ -409,7 +409,7 @@ journalctl -u cloudflared.service -n 30 --no-pager
 tail -30 /var/log/service-health-check.log
 
 # 8. Restart everything
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/ensure-services-running.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-all-services.sh"
 
 # 9. Fix Nextcloud 502 (if Caddy can't reach container)
 docker exec caddy caddy reload --config /etc/caddy/Caddyfile
@@ -418,12 +418,65 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
+## 💾 Backups
+
+### Backup All Critical Services (Recommended)
+```bash
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-all-critical.sh"
+```
+
+This backs up: Vaultwarden, Nextcloud, TravelSync, and KitchenOwl
+
+### Individual Service Backups
+
+**Vaultwarden (CRITICAL - Passwords):**
+```bash
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-vaultwarden.sh"
+```
+
+**Nextcloud (User Files & Database):**
+```bash
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-nextcloud.sh"
+```
+
+**TravelSync (Travel Data):**
+```bash
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-travelsync.sh"
+```
+
+**KitchenOwl (Shopping Lists):**
+```bash
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-kitchenowl.sh"
+```
+
+### Restore from Backup
+
+**KitchenOwl:**
+```bash
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/restore-kitchenowl.sh"
+```
+
+### Setup Automated Daily Backups (One-time)
+```bash
+sudo bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/setup-all-backups-cron.sh"
+```
+
+**Backup locations:**
+- Vaultwarden: `/mnt/ssd/backups/vaultwarden/`
+- Nextcloud: `/mnt/ssd/backups/nextcloud/`
+- TravelSync: `/mnt/ssd/backups/travelsync/`
+- KitchenOwl: `/mnt/ssd/backups/kitchenowl/`
+
+**Schedule:** Daily at 2:00 AM (after setup)  
+**Backups kept:** Last 30 automatically for each service
+
 ## 📝 Notes
 
 - All `sudo` commands require your password
 - Most services auto-restart on failure, but manual restart is faster
 - Health check runs every 2 minutes and will auto-restart services
 - Check logs if service won't start after restart
+- **Always backup KitchenOwl before making container changes!**
 
 ## 🔧 Common Issues & Quick Fixes
 
@@ -443,8 +496,7 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 
 ## 🔗 Related Files
 
-- Health check script: `scripts/health-check-and-restart.sh`
-- Service startup script: `scripts/ensure-services-running.sh`
-- Service status: `SERVICES_STATUS.md`
-- Troubleshooting: `STABILITY_FIXES.md`
+- Main fix script: `scripts/fix-all-services.sh`
+- Auto-recovery: `scripts/permanent-auto-recovery.sh`
+- Archived scripts: `scripts/archive/README.md`
 
