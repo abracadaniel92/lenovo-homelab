@@ -6,18 +6,22 @@ Quick reference for troubleshooting services from your phone via SSH.
 
 All scripts are located in: `/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/`
 
+**Service Restart Scripts** (in `restart services/`):
 - **fix-all-services.sh** - Comprehensive service recovery (recommended)
 - **emergency-fix.sh** - Quick emergency recovery
 - **fix-subdomains-down.sh** - Fix subdomain routing issues
+- **start_services.sh** - Start services
+
+**Other Scripts:**
 - **permanent-auto-recovery.sh** - Set up permanent auto-recovery (run once)
-- **health-check-and-restart.sh** - Health check script
-- **fix-health-check-service.sh** - Fix health check service
+- **backup-*.sh** - All backup scripts
+- **setup-*.sh** - Setup scripts
 
 ## 🚨 EMERGENCY FIX (Everything Down)
 
 **If everything is down, run this first (COMPREHENSIVE FIX):**
 ```bash
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-all-services.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-all-services.sh"
 ```
 
 This will:
@@ -31,14 +35,14 @@ This will:
 
 **Or use the simpler emergency fix:**
 ```bash
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/emergency-fix.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/emergency-fix.sh"
 ```
 
 ## 🌐 FIX SUBDOMAINS DOWN (502/404 Errors)
 
 **If all subdomains are returning 502/404 but services are running locally:**
 ```bash
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-subdomains-down.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-subdomains-down.sh"
 ```
 
 This will:
@@ -58,7 +62,7 @@ docker restart caddy
 
 **Comprehensive fix for all services:**
 ```bash
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-all-services.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-all-services.sh"
 ```
 
 This script will:
@@ -110,7 +114,7 @@ sudo systemctl restart gokapi.service
 ### Restart All Services
 ```bash
 # Comprehensive service recovery (recommended)
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-all-services.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-all-services.sh"
 ```
 
 ### Restart Docker Containers
@@ -239,7 +243,7 @@ tail -f /var/log/service-health-check.log
 ### All Subdomains Down (502/404 Error)
 ```bash
 # Use the fix script (recommended)
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-subdomains-down.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-subdomains-down.sh"
 
 # Or manually:
 sudo systemctl restart cloudflared.service
@@ -282,7 +286,7 @@ docker logs caddy --tail 30
 ### All Services Down
 ```bash
 # Restart everything (comprehensive fix)
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-all-services.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-all-services.sh"
 
 # Or manually:
 sudo systemctl restart cloudflared.service
@@ -409,7 +413,7 @@ journalctl -u cloudflared.service -n 30 --no-pager
 tail -30 /var/log/service-health-check.log
 
 # 8. Restart everything
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-all-services.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-all-services.sh"
 
 # 9. Fix Nextcloud 502 (if Caddy can't reach container)
 docker exec caddy caddy reload --config /etc/caddy/Caddyfile
@@ -496,7 +500,7 @@ sudo bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/setup-a
 
 ## 🔗 Related Files
 
-- Main fix script: `scripts/fix-all-services.sh`
+- Main fix script: `restart services/fix-all-services.sh`
 - Auto-recovery: `scripts/permanent-auto-recovery.sh`
 - Archived scripts: `scripts/archive/README.md`
 
