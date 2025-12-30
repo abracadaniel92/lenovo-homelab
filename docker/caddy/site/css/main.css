@@ -1,0 +1,164 @@
+/* ===== GLOBAL ===== */
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;  /* prevent horizontal scrolling */
+  width: 100%;
+  max-width: 100vw;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  background-color: #0a192f; /* navy */
+  color: #e6f1ff;           /* light text */
+  overflow-x: hidden;  /* prevent horizontal scrolling */
+  width: 100%;
+  max-width: 100vw;
+}
+
+/* ===== SCROLL REVEAL ===== */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.reveal.revealed {
+  animation: fadeUp 1.6s ease forwards;
+}
+
+/* Mobile text justify for key sections */
+@media (max-width: 768px) {
+  #experience p,
+  #experience li,
+  #home p,
+  #projects p {
+    text-align: left !important;
+  }
+}
+
+/* About section text should be left-aligned */
+#about p {
+  text-align: left !important;
+}
+
+/* Center text in stat boxes - must be more specific */
+#about .space-y-4 .rounded-xl.text-center p.text-center {
+  text-align: center !important;
+}
+
+/* ===== SHARED SECTION SHELL ===== */
+.section-shell {
+  margin: 0 auto;
+  max-width: 1120px;  /* match projects section width */
+  padding: 120px 24px 0;  /* consistent padding for all sections - 24px left/right so headers align */
+}
+
+/* All sections use the same width and padding as projects */
+#about .section-shell,
+#skills .section-shell,
+#certifications .section-shell {
+  max-width: 1120px;  /* match projects section width */
+  margin: 0 auto;
+  padding-left: 24px;  /* same left padding so headers align */
+  padding-right: 24px;
+}
+
+/* Fix Where I've worked section specifically to match projects */
+#experience .section-shell {
+  max-width: 1120px !important;  /* match projects section width */
+  margin: 0 auto !important;
+  padding: 120px 24px 0 !important;  /* match default section-shell padding */
+}
+
+@media (min-width: 768px) {
+  .section-shell {
+    padding: 120px 24px 0;  /* keep 24px padding on all screen sizes for header alignment */
+  }
+}
+
+/* Make ABOUT section same width and padding as projects */
+#about .section-shell {
+  margin: 0 auto;
+  max-width: 1120px;  /* match projects section width */
+  padding: 24px 24px 0;       /* reduced top space on mobile from 60px to 24px */
+  padding-left: 24px !important;  /* ensure same left padding */
+  padding-right: 24px !important;
+}
+
+@media (max-width: 640px) {
+  #about .section-shell {
+    padding-top: 8px !important;  /* reduced spacing from hero on mobile */
+  }
+}
+
+@media (min-width: 1024px) {
+  #about .section-shell {
+    padding: 96px 24px 0 !important;    /* same left/right padding as other sections */
+    max-width: 1120px;  /* match projects section width */
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+}
+
+/* Section heading */
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+/* Tighter spacing for experience section */
+#experience .section-heading {
+  margin-bottom: 30px;
+}
+
+.section-number {
+  color: #64ffda;
+  font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #e6f1ff;
+}
+
+.section-line {
+  height: 1px;
+  flex: 1;
+  background-color: #233554;
+}
+
+/* Back to top button base */
+#backToTop {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#backToTop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Side scroll indicator */
+.side-scroll {
+  display: none;
+}
+

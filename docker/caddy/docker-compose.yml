@@ -8,7 +8,7 @@ services:
       - "8443:443"
       - "8443:443/udp"
     volumes:
-      - ./config/Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile
       - ./data:/data
       - ./config:/config
       - ./site:/srv/site
@@ -17,8 +17,16 @@ services:
     networks:
       - default
       - nextcloud-net
+      - jellyfin-net
+      - kitchenowl-net
 
 networks:
   nextcloud-net:
     external: true
     name: nextcloud_nextcloud-net
+  jellyfin-net:
+    external: true
+    name: jellyfin_default
+  kitchenowl-net:
+    external: true
+    name: kitchenowl_kitchenowl-net

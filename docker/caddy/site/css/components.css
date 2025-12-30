@@ -1,0 +1,498 @@
+/* ===== ACCORDION COMPONENTS ===== */
+/* Prevent + and − icons from overlapping during transitions */
+[data-accordion-target] span:last-child {
+  display: inline-block;
+  min-width: 1.2em;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+[data-accordion-target].active span:last-child {
+  transform: rotate(45deg);
+}
+
+/* Prevent extra pseudo or duplicate icons */
+[data-accordion-target]::before,
+[data-accordion-target]::after {
+  content: none !important;
+}
+
+/* Prevent accidental rotation of spans inside accordion headings */
+[data-accordion-target] h3 span {
+  all: unset;
+  font-size: 0.85rem;
+  color: #9ca3af; /* gray-400 */
+  font-weight: 400;
+  transform: none !important;
+}
+
+/* Ensure only the last span in the accordion button toggles */
+[data-accordion-target] > span:last-child {
+  font-size: 1.5rem;
+  color: #14b8a6;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+/* Icon base + active state */
+.accordion-icon {
+  display: inline-block;
+  font-weight: 500;
+  line-height: 1;
+  transform: none !important;
+  rotate: 0deg !important;
+  transition: color 0.2s ease;
+}
+
+.accordion-btn.active .accordion-icon {
+  color: #14b8a6; /* brand teal */
+}
+
+.accordion-btn h3 span {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  font-weight: 400;
+  transform: none !important;
+}
+
+/* ===== VIEW PROJECTS BUTTON – GREEN OUTLINE ===== */
+.featured-project-toggle button,
+.company-card-toggle,
+.accordion-btn {
+  position: relative;
+  width: 100%;
+  padding: 0.9rem 1.2rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(45, 212, 191, 0.65); /* brand-300 aqua/green */
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(226, 255, 247, 0.9);
+  font-size: 0.75rem;
+  font-family: ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.25s ease;
+}
+
+/* Icon styling */
+.accordion-btn .accordion-icon,
+.company-card-toggle .accordion-icon {
+  font-size: 1.4rem;
+  color: #2dd4bf; /* brand-300 */
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+/* Hover effect: glow + subtle lift */
+.featured-project-toggle button:hover,
+.company-card-toggle:hover,
+.accordion-btn:hover {
+  border-color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.05);
+  box-shadow: 0 0 18px rgba(45, 212, 191, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Rotate icon when active */
+.accordion-btn.active .accordion-icon,
+.company-card-toggle.active .accordion-icon {
+  transform: rotate(45deg);
+  color: #6ef3dd;
+}
+
+/* ===== PROJECT CARDS ===== */
+.project-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  height: 100%;
+  position: relative;
+}
+
+.project-card:hover {
+  box-shadow: 0 0 20px rgba(0, 255, 200, 0.1);
+}
+
+/* ==== PROJECT LOGO TILE – CLEAN WHITE, NO SHADOW ==== */
+.logo-box {
+  width: 100%;
+  height: 120px;
+  border-radius: 0.75rem;
+  background: #ffffff;          /* pure white */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 0 auto 0.85rem auto;
+
+  border: none;
+  box-shadow: none;
+  transition: none;             /* no hover animation */
+}
+
+/* no hover shadow / lift */
+.logo-box:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* logo image */
+.logo-box img {
+  max-width: 80%;
+  max-height: 80%;
+  object-fit: contain;
+  display: block;
+}
+
+.tags span,
+.badge {
+  font-size: 0.7rem;
+  background: rgba(0, 255, 200, 0.15);
+  color: rgb(100, 255, 220);
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+/* Keeps Visit button fixed bottom-right */
+.visit-btn {
+  display: flex;
+  justify-content: flex-end;  /* forces the content (link) to the right */
+  margin-top: 1rem;
+}
+
+/* ===== SIDE SOCIALS (LEFT) ===== */
+.side-socials {
+  position: fixed;
+  bottom: 0;
+  left: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.side-socials.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.side-socials a svg {
+  opacity: 0.75;
+  fill: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.side-socials a:hover svg {
+  opacity: 1;
+  transform: translateY(-3px);
+}
+
+/* Vertical line */
+.side-line {
+  width: 1px;
+  height: 90px;
+  background-color: #ffffff;
+  opacity: 0.35;
+  margin-top: 10px;
+}
+
+/* ===== SIDE EMAIL (RIGHT EDGE) ===== */
+.side-email {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  padding-right: 25px;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.side-email.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.side-email a {
+  font-family: "SF Mono", monospace;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  color: #ffffff;
+  text-decoration: none;
+  transform: rotate(90deg);
+  transform-origin: right center;
+  opacity: 0.8;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.side-email a:hover {
+  opacity: 1;
+  transform: rotate(90deg) translateY(-4px);
+}
+
+.side-email .side-line {
+  width: 1px;
+  height: 80px;
+  background-color: #ffffff;
+  opacity: 0.35;
+}
+
+/* Hide on mobile */
+@media (max-width: 768px) {
+  .side-socials,
+  .side-email {
+    display: none;
+  }
+}
+
+/* EXPERIENCE FOOTER LAYOUT */
+.exp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* left = view, right = nav */
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  min-height: 3rem;  /* fixed minimum height to prevent movement */
+  padding-top: 1rem;  /* spacing from content above */
+  margin-top: auto;  /* push to bottom of flex container */
+  position: absolute;  /* fix position at bottom */
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 10;
+}
+
+/* On desktop, ensure footer stays at same position */
+@media (min-width: 768px) {
+  .exp-footer {
+    position: absolute;
+    bottom: 0;
+    margin-top: 0;  /* override auto margin when absolutely positioned */
+  }
+}
+
+/* On desktop, ensure footer stays at same position */
+@media (min-width: 768px) {
+  .exp-footer {
+    position: absolute !important;
+    bottom: 0 !important;
+    margin-top: 0 !important;  /* override auto margin when absolutely positioned */
+  }
+}
+
+/* View Projects button in Experience */
+.exp-view-btn {
+  padding: 0.45rem 1.1rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: transparent;
+  color: #e5e7eb;
+  font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    color 0.2s ease;
+}
+
+.exp-view-btn span {
+  font-size: 1rem;
+}
+
+.exp-view-btn:hover {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: #6ee7cd;
+  color: #e6fffa;
+  transform: translateY(-1px);
+}
+
+/* Prev / Next pills – transparent, like skills */
+.exp-nav-btn {
+  padding: 0.35rem 0.9rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: transparent;
+  color: #e5e7eb;
+  font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease,
+    color 0.2s ease;
+}
+
+.exp-nav-btn:hover {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: #6ee7cd;
+  color: #e6fffa;
+  transform: translateY(-1px);
+}
+
+/* View experience button - match Next/Previous button style with white border and text */
+a.accordion-btn[href="#experience"] {
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+a.accordion-btn[href="#experience"]:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.9) !important;
+  color: #ffffff !important;
+}
+
+a.accordion-btn[href="#experience"] .accordion-icon {
+  color: #ffffff !important;
+}
+
+a.accordion-btn[href="#experience"]:hover .accordion-icon {
+  color: #ffffff !important;
+}
+
+/* ===== CERTIFICATION CARDS ===== */
+.cert-card {
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.cert-card:hover {
+  border-color: rgba(100, 255, 218, 0.4); /* brand-300 with opacity */
+  background: rgba(255, 255, 255, 0.08); /* slightly brighter background */
+  box-shadow: 0 0 20px rgba(100, 255, 218, 0.2); /* subtle glow */
+  transform: translateY(-2px); /* slight lift */
+}
+
+/* Mobile: stack footer elements nicely */
+@media (max-width: 768px) {
+  .exp-footer {
+    justify-content: space-between;
+  }
+}
+
+/* Personal project cards - smaller and more square, borderless */
+.project-card.personal-project-card {
+  padding: 1rem !important;
+  min-height: 280px;
+  max-height: 320px;
+  border: none !important;
+  border-radius: 0 !important;
+  background: #112240 !important;  /* slightly lighter dark blue than main background */
+  box-shadow: none !important;
+  position: relative;  /* for positioning the link icon */
+}
+
+.project-card.personal-project-card:hover {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Icons container in top right corner */
+.personal-project-icons {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  z-index: 10;
+}
+
+/* External link and GitHub icons */
+.personal-project-link-icon,
+.personal-project-github-icon {
+  color: #ffffff;
+  opacity: 0.9;
+  transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.personal-project-link-icon:hover,
+.personal-project-github-icon:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+  color: #ffffff;
+}
+
+.personal-project-link-icon svg,
+.personal-project-github-icon svg {
+  width: 23px;
+  height: 23px;
+  stroke: #ffffff;
+  stroke-width: 1.5;
+}
+
+.personal-project-github-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Folder icon in top left */
+.personal-project-folder-icon {
+  color: #64ffda;
+  opacity: 0.8;
+}
+
+.personal-project-folder-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+@media (min-width: 1024px) {
+  .project-card.personal-project-card {
+    min-height: 300px;
+    max-height: 320px;
+  }
+}
+
+/* Hide additional personal projects by default */
+.personal-project-more-content {
+  display: none !important;
+}
+
+.personal-project-more-content.show {
+  display: block !important;
+}
+
+/* For article cards, use flex when shown */
+article.personal-project-more-content.show {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* For grid containers, use grid when shown */
+.personal-project-more-content.show.grid {
+  display: grid !important;
+}
+
