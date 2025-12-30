@@ -16,41 +16,7 @@
 
 ## 🔑 If You Forgot Your Password
 
-### Quick Fix: Use the Reset Script
-
-The easiest way to reset Portainer is to use the provided script:
-
-```bash
-cd "/home/goce/Desktop/Cursor projects/Lenovo scripts"
-./reset-portainer.sh
-```
-
-Or for non-interactive use (auto-confirm):
-```bash
-./reset-portainer.sh --yes
-```
-
-This script will:
-1. Stop Portainer
-2. Remove the data volume (deletes all settings)
-3. Restart Portainer
-4. You'll see the setup screen to create a new admin account
-
-### Diagnose the Issue First
-
-Before resetting, you can diagnose the issue:
-
-```bash
-cd "/home/goce/Desktop/Cursor projects/Lenovo scripts"
-./diagnose-portainer.sh
-```
-
-This will tell you:
-- If Portainer is running
-- If an admin account exists
-- What the issue is
-
-### Option 1: Reset via Portainer Volume (Manual)
+### Option 1: Reset via Portainer Volume
 
 ```bash
 # Stop Portainer
@@ -58,8 +24,7 @@ cd /mnt/ssd/docker-projects/portainer
 docker compose down
 
 # Remove the data volume (WARNING: This deletes all Portainer settings)
-# Note: Volume name may be portainer-data or portainer_portainer-data
-docker volume rm portainer_portainer-data || docker volume rm portainer-data
+docker volume rm portainer-data
 
 # Start Portainer again
 docker compose up -d
