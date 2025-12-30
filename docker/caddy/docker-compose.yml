@@ -1,0 +1,24 @@
+services:
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: always
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "8443:443/udp"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile
+      - ./data:/data
+      - ./config:/config
+      - ./site:/srv/site
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - nextcloud-net
+
+networks:
+  nextcloud-net:
+    external: true
+    name: nextcloud_nextcloud-net

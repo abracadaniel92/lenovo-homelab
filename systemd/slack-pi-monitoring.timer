@@ -1,0 +1,15 @@
+[Unit]
+Description=Slack Pi Health Monitoring Timer (Every 5 Days)
+Requires=slack-pi-monitoring.service
+
+[Timer]
+# Run every 5 days at 9:00 AM
+# Using OnCalendar with specific days that are approximately 5 days apart
+# This runs on: 1st, 6th, 11th, 16th, 21st, 26th, 31st of each month
+OnCalendar=*-*-1,6,11,16,21,26,31 09:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
+

@@ -1,0 +1,116 @@
+{
+	email contact@gmojsoski.com
+	auto_https off
+}
+
+# HTTP on port 80 (maps to host port 8080) - Cloudflare handles TLS
+:80 {
+	@gmojsoski host gmojsoski.com www.gmojsoski.com
+	handle @gmojsoski {
+		encode gzip
+		root * /srv/site
+		file_server
+	}
+	
+	@analytics host analytics.gmojsoski.com
+	handle @analytics {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8088 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	@files host files.gmojsoski.com
+	handle @files {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8091 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	@cloud host cloud.gmojsoski.com
+	handle @cloud {
+		encode gzip
+		reverse_proxy http://nextcloud-app:80 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+			header_up Host {host}
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-For {remote_host}
+			transport http {
+				keepalive off
+			}
+			health_uri /status.php
+			health_interval 10s
+			health_timeout 5s
+		}
+	}
+	
+	@bookmarks host bookmarks.gmojsoski.com
+	handle @bookmarks {
+		encode gzip
+		reverse_proxy http://172.17.0.1:5000 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	@tickets host tickets.gmojsoski.com
+	handle @tickets {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8000 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	@poker host poker.gmojsoski.com
+	handle @poker {
+		encode gzip
+		reverse_proxy http://172.17.0.1:3000 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+			header_up Host {host}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+	
+	@travelsync host travelsync.gmojsoski.com
+	handle @travelsync {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8000 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
+	@vault host vault.gmojsoski.com
+	handle @vault {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8082 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+			header_up Host {host}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+	
+	@shopping host shopping.gmojsoski.com
+	handle @shopping {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8092 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+			header_up Host {host}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+	
+	handle {
+		encode gzip
+		root * /srv/site
+		file_server
+	}
+}

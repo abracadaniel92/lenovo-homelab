@@ -1,0 +1,48 @@
+# Sensitive credentials
+*.json
+!gokapi/config.json.template  # Keep gokapi config template
+!cloudflare/config.yml  # Keep cloudflare config (no sensitive data)
+credentials.json
+token.pickle
+*.key
+*.pem
+*.crt
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Cloudflare credentials
+**/cloudflared/*.json
+
+# Gokapi sensitive data - use config.json.template instead
+gokapi/config.json
+
+# Docker volumes and data
+**/data/
+**/uploads/
+**/temp/
+**/db/
+**/goatcounter-data/
+**/gokapi-data/
+
+# Logs
+*.log
+logs/
+
+# Fail2ban installed configs (system-specific)
+# Keep jail.local.template in repo, but not installed configs
+/etc/fail2ban/jail.local
+
+# OS files
+.DS_Store
+Thumbs.db
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
