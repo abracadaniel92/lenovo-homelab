@@ -1,0 +1,16 @@
+[Unit]
+Description=Slack Pi Health Monitoring
+After=network.target
+
+[Service]
+Type=oneshot
+User=goce
+WorkingDirectory=/home/goce
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/bin/bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/slack-pi-monitoring.sh"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+

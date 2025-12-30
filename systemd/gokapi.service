@@ -1,0 +1,13 @@
+[Unit]
+Description=Gokapi
+After=network.target
+
+[Service]
+ExecStart=/mnt/ssd/apps/gokapi/gokapi -cd /mnt/ssd/apps/gokapi/config -d /mnt/ssd/apps/gokapi-data
+WorkingDirectory=/mnt/ssd/apps/gokapi
+User=goce
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+

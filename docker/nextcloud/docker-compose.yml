@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16
+    container_name: nextcloud-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: change_me_strong
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    networks:
+      - nextcloud-net
+
+  app:
+    image: nextcloud:30-apache
+    container_name: nextcloud-app
+    depends_on:
+      - db
+    restart: always
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: change_me_strong
+      NEXTCLOUD_TRUSTED_DOMAINS: cloud.gmojsoski.com
+      NEXTCLOUD_OVERWRITEHOST: cloud.gmojsoski.com
+      NEXTCLOUD_OVERWRITEPROTOCOL: https
+    volumes:
+      - ./app:/var/www/html
+    ports:
+      - "8081:80"
+    networks:
+      - nextcloud-net
+
+networks:
+  nextcloud-net:
+    driver: bridge

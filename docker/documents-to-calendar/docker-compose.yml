@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    container_name: documents-to-calendar
+    ports:
+      - "8000:8000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-secret-key-in-production}
+      - DATABASE_URL=sqlite:///./data/documents_calendar.db
+      - GOOGLE_CALENDAR_CREDENTIALS_PATH=/app/data/credentials.json
+      - GOOGLE_CALENDAR_CREDENTIALS_JSON=${GOOGLE_CALENDAR_CREDENTIALS_JSON}
+      - CREDENTIALS_JSON=${CREDENTIALS_JSON}
+      - GOOGLE_CALENDAR_TOKEN_PATH=/app/data/token.pickle
+      - GOOGLE_CALENDAR_HEADLESS=${GOOGLE_CALENDAR_HEADLESS:-true}
+      - EMAIL_ADDRESS=${EMAIL_ADDRESS}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - EMAIL_IMAP_SERVER=${EMAIL_IMAP_SERVER:-imap.gmail.com}
+      - EMAIL_IMAP_PORT=${EMAIL_IMAP_PORT:-993}
+      - EMAIL_AUTO_CHECK=${EMAIL_AUTO_CHECK:-false}
+      - EMAIL_CHECK_INTERVAL=${EMAIL_CHECK_INTERVAL:-300}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./temp:/app/temp
+      - ./data:/app/data
+    restart: always

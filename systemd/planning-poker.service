@@ -1,0 +1,19 @@
+[Unit]
+Description=Planning Poker Service
+After=network.target
+
+[Service]
+Type=simple
+User=goce
+WorkingDirectory=/home/goce/Desktop/Cursor projects/planning poker/planning_poker
+ExecStart=/home/goce/.nvm/versions/node/v20.19.6/bin/node server.js
+Restart=always
+RestartSec=10
+Environment="PORT=3000"
+Environment="HOST_PASSWORD=admin123"
+Environment="NODE_ENV=production"
+Environment="PATH=/home/goce/.nvm/versions/node/v20.19.6/bin:/usr/local/bin:/usr/bin:/bin"
+
+[Install]
+WantedBy=multi-user.target
+

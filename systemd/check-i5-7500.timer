@@ -1,0 +1,11 @@
+[Unit]
+Description=Run i5-7500 listing check daily at 10 AM
+Requires=check-i5-7500.service
+
+[Timer]
+OnCalendar=*-*-* 10:00:00
+Unit=check-i5-7500.service
+
+[Install]
+WantedBy=timers.target
+

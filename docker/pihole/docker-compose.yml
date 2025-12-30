@@ -1,0 +1,19 @@
+services:
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    network_mode: host
+    restart: always
+    cap_add:
+      - CAP_NET_ADMIN
+    volumes:
+      - pihole_config:/etc/pihole
+      - dnsmasq_config:/etc/dnsmasq.d
+    environment:
+      TZ: 'America/New_York'  # Update with your timezone
+      WEBPASSWORD: ''  # Set a password for the web interface
+
+volumes:
+  pihole_config:
+  dnsmasq_config:
+

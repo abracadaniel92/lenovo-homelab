@@ -1,0 +1,13 @@
+services:
+  goatcounter:
+    image: arp242/goatcounter:2.6.0
+    container_name: goatcounter
+    restart: always
+    ports:
+      - "8088:8080"   # Pi:8088 -> container:8080
+    volumes:
+      - ./goatcounter-data:/home/goatcounter/db
+    command: ["serve",
+              "-listen", ":8080",
+              "-tls", "none",
+              "-db", "sqlite:///home/goatcounter/db/goatcounter.sqlite3"]
