@@ -97,10 +97,10 @@
 		}
 	}
 	
-	@books host books.gmojsoski.com
-	handle @books {
+	@shopping host shopping.gmojsoski.com
+	handle @shopping {
 		encode gzip
-		reverse_proxy http://172.17.0.1:8090 {
+		reverse_proxy http://172.17.0.1:8092 {
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {remote_host}
 			header_up Host {host}
