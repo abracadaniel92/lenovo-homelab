@@ -2,6 +2,25 @@
 
 Quick reference for troubleshooting services from your phone via SSH.
 
+## 🚀 QUICK FIX ALL (Run This First!)
+
+**One command to fix all services:**
+```bash
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/quick-fix-all.sh"
+```
+
+This script will:
+- ✅ Check and start Docker
+- ✅ Restart Caddy (reverse proxy)
+- ✅ Restart Cloudflare Tunnel
+- ✅ Restart TravelSync
+- ✅ Restart Planning Poker
+- ✅ Restart Nextcloud
+- ✅ Restart all other services
+- ✅ Show final status of all services
+
+**Perfect for fixing issues from your phone!** 📱
+
 ## 🔄 Restart Services
 
 ### Restart Individual Services
