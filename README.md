@@ -27,10 +27,12 @@ This Lenovo ThinkCentre serves as a self-hosted server running:
 - **Planning Poker**: Planning poker web application
 - **Password Manager**: Vaultwarden (Bitwarden-compatible)
 - **Ebook Library**: Kavita (ebook server for sharing with ebook club)
+- **Media Server**: Jellyfin (music, movies, books)
+- **Shopping Lists**: KitchenOwl (household management)
 - **Docker Management**: Portainer (web UI)
 - **Service Dashboard**: Homepage
 - **Auto-Updates**: Watchtower
-- **File Manager**: FileBrowser
+- **Auto-Recovery**: Health check system (every 30 seconds)
 
 ## 💻 System Requirements
 
@@ -84,9 +86,20 @@ This Lenovo ThinkCentre serves as a self-hosted server running:
    - No web UI (runs in background)
    - Location: `/mnt/ssd/docker-projects/watchtower`
 
-10. **FileBrowser** - Web file manager
+10. **Jellyfin** - Media server (music, movies, books)
+    - Port: 8096
+    - Location: `/mnt/ssd/docker-projects/jellyfin`
+    - Domain: https://jellyfin.gmojsoski.com
+
+11. **KitchenOwl** - Shopping lists and household management
+    - Port: 8092
+    - Location: `/mnt/ssd/docker-projects/kitchenowl`
+    - Domain: https://shopping.gmojsoski.com
+
+12. **Vaultwarden** - Password manager (Bitwarden-compatible)
     - Port: 8082
-    - Location: `/mnt/ssd/docker-projects/filebrowser`
+    - Location: `/mnt/ssd/docker-projects/vaultwarden`
+    - Domain: https://vault.gmojsoski.com
 
 ### System Services
 
@@ -380,6 +393,8 @@ See `usefull files/KAVITA_SETUP.md` for detailed setup and usage instructions.
 - **3002**: Homepage
 - **8082**: Vaultwarden (Password Manager)
 - **8090**: Kavita (Ebook Library)
+- **8092**: KitchenOwl (Shopping Lists)
+- **8096**: Jellyfin (Media Server)
 - **9000**: Portainer (HTTP)
 - **9443**: Portainer (HTTPS)
 - **53**: Pi-hole (DNS)
@@ -395,7 +410,8 @@ See `usefull files/KAVITA_SETUP.md` for detailed setup and usage instructions.
 - `tickets.gmojsoski.com` → Documents-to-Calendar (port 8000)
 - `travelsync.gmojsoski.com` → Travelsync/Documents-to-Calendar (port 8000)
 - `vault.gmojsoski.com` → Vaultwarden (port 8082)
-- `books.gmojsoski.com` → Kavita (port 8090)
+- `shopping.gmojsoski.com` → KitchenOwl (port 8092)
+- `jellyfin.gmojsoski.com` → Jellyfin (port 8096)
 
 ### Cloudflare Tunnel Configuration
 
@@ -441,6 +457,39 @@ CREDENTIALS_JSON=base64-encoded-credentials
 GOOGLE_CALENDAR_HEADLESS=true
 ```
 
+## 🛡️ Monitoring & Auto-Recovery
+
+The server has a multi-layer monitoring system:
+
+| Layer | Tool | Frequency | Purpose |
+|-------|------|-----------|---------|
+| 1 | enhanced-health-check.timer | Every 30 seconds | Check & restart all services |
+| 2 | service-watchdog.service | Continuous (20s loop) | Monitor critical services |
+| 3 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
+| 4 | Docker restart policies | On failure | Auto-restart containers |
+
+### Check Monitoring Status
+
+```bash
+# Health check status
+systemctl status enhanced-health-check.timer
+
+# Service watchdog status
+systemctl status service-watchdog.service
+
+# View health check logs
+tail -50 /var/log/enhanced-health-check.log
+```
+
+### Emergency Recovery
+
+If services go down, run:
+```bash
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-all-services.sh"
+```
+
+See `usefull files/MONITORING_AND_RECOVERY.md` for detailed documentation.
+
 ## 🔄 Maintenance
 
 ### Update Services
@@ -457,19 +506,28 @@ docker compose restart <service-name>
 docker compose logs -f <service-name>
 ```
 
-### Backup Important Data
+### Backup System
+
+**Automated daily backups** run at 2:00 AM for critical services.
 
 ```bash
-# Backup directories
-- /mnt/ssd/apps/nextcloud/app
-- /mnt/ssd/apps/nextcloud/db
-- /mnt/ssd/apps/gokapi-data
-- /mnt/ssd/docker-projects/goatcounter/goatcounter-data
-- /mnt/ssd/docker-projects/uptime-kuma/data
-- /mnt/ssd/docker-projects/documents-to-calendar/data
-- /mnt/ssd/docker-projects/kavita/data (configuration)
-- /mnt/ssd/docker-projects/kavita/media (ebooks)
+# Run manual backup of all critical services
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-all-critical.sh"
+
+# Individual backups
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-vaultwarden.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-nextcloud.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-travelsync.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-kitchenowl.sh"
 ```
+
+**Backup locations**:
+- `/mnt/ssd/backups/vaultwarden/` - Passwords (CRITICAL)
+- `/mnt/ssd/backups/nextcloud/` - Cloud files & database
+- `/mnt/ssd/backups/travelsync/` - Travel documents
+- `/mnt/ssd/backups/kitchenowl/` - Shopping lists
+
+**Retention**: Last 30 backups per service
 
 ### Check Service Status
 

@@ -1,0 +1,1464 @@
+/* ===== HERO SECTION ===== */
+/* Mobile: much tighter */
+@media (max-width: 640px) {
+  #home {
+    min-height: auto;          /* don't force full viewport height */
+    padding-top: 96px;         /* clear the fixed navbar */
+    padding-bottom: 0;         /* remove bottom padding */
+  }
+
+  .hero-shell {
+    padding: 140px 24px 16px;  /* reduced bottom padding from 32px to 16px */
+  }
+}
+
+/* ===== HERO TYPOGRAPHY ===== */
+.hero-overline {
+  color: #64ffda;
+  font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 15px;
+  letter-spacing: 0.15em;
+  margin-bottom: 16px;
+}
+
+.hero-title {
+  margin: 0 0 12px;
+  color: #e6f1ff;
+  font-weight: 700;
+  line-height: 1.1;
+  font-size: clamp(40px, 8vw, 80px);
+}
+
+.hero-subtitle {
+  margin: 0 0 20px;
+  color: #8892b0;
+  font-weight: 700;
+  line-height: 1.1;
+  font-size: clamp(32px, 7vw, 60px);
+}
+
+.hero-text {
+  margin-top: 0;
+  margin-bottom: 40px;
+  max-width: 675px; /* 25% narrower than the previous 900px */
+  color: #8892b0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* ===== HERO BUTTONS ===== */
+.hero-btn {
+  display: inline-block;
+  padding: 0.875rem 1.75rem;
+  font-size: 0.875rem;
+  font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Primary button - original style */
+.hero-btn-primary {
+  background: transparent;
+  color: #64ffda;
+  border: 1px solid #64ffda;
+}
+
+.hero-btn-primary:hover {
+  background: rgba(100, 255, 218, 0.1);
+  transform: translateY(-2px);
+}
+
+.hero-btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Secondary button - original style */
+.hero-btn-secondary {
+  background: transparent;
+  color: #e6f1ff;
+  border: 1px solid rgba(100, 255, 218, 0.1);
+}
+
+.hero-btn-secondary:hover {
+  background: rgba(100, 255, 218, 0.05);
+  transform: translateY(-2px);
+}
+
+.hero-btn-secondary:active {
+  transform: translateY(0);
+}
+
+/* Glow animation on hover - shimmer effect */
+.hero-btn-primary::before,
+.hero-btn-secondary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.hero-btn-primary:hover::before,
+.hero-btn-secondary:hover::before {
+  left: 100%;
+}
+
+/* ===== HERO PAGE-LOAD ANIMATION ===== */
+.hero-item {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.6s cubic-bezier(0.645, 0.045, 0.355, 1),
+    transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+body.page-loaded .hero-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== HERO LAYOUT ===== */
+#home {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;   /* vertically center hero content */
+}
+
+.hero-shell {
+  margin: 0 auto;
+  max-width: 1600px;
+  padding: 140px 24px 80px; /* enough top to clear navbar */
+}
+
+/* Desktop / larger screens */
+@media (min-width: 1024px) {
+  .hero-shell {
+    padding-left: 60px !important;
+    padding-right: 60px !important;
+  }
+}
+
+/* Mobile: tighter hero */
+@media (max-width: 640px) {
+  #home {
+    min-height: auto;
+    padding-top: 96px;          /* clear fixed navbar */
+  }
+
+  .hero-shell {
+    padding: 120px 24px 32px;
+  }
+}
+
+/* === White double-chevron scroll hint (fixed) === */
+.scroll-chevrons {
+  position: fixed;
+  bottom: 60px;              /* distance from bottom on desktop */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  z-index: 40;
+}
+
+/* Single chevron */
+.chevron-down {
+  width: 14px;
+  height: 14px;
+  border-right: 2px solid rgba(255, 255, 255, 0.8);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+  transform: rotate(45deg);
+  opacity: 0.8;
+  animation: chevronPulse 1.6s infinite ease-out;
+}
+
+/* Slight delay to create cascading motion */
+.chevron-down--delay {
+  animation-delay: 0.25s;
+}
+
+/* Hidden state for scroll indicator */
+.scroll-chevrons--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+/* Animation */
+@keyframes chevronPulse {
+  0% {
+    transform: translateY(0) rotate(45deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(6px) rotate(45deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) rotate(45deg);
+    opacity: 0.7;
+  }
+}
+
+/* Move slightly up on mobile */
+@media (max-width: 768px) {
+  .scroll-chevrons {
+    bottom: 32px;
+  }
+}
+
+.scroll-indicator-wrapper {
+  position: fixed;
+  bottom: 40px;   /* move up/down as you want */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;    /* above content */
+}
+
+/* ===== EXPERIENCE SECTION ===== */
+/* Experience section layout */
+.exp-section {
+  margin: 0 auto;
+  max-width: 1000px;
+  padding: 80px 24px 120px;
+}
+
+@media (min-width: 768px) {
+  .exp-section {
+    padding: 80px 150px 120px;
+  }
+}
+
+/* Inner grid: tabs left, content right */
+.exp-inner {
+  display: grid;
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .exp-inner {
+    grid-template-columns: minmax(140px, 200px) 1fr;
+    gap: 32px;
+  }
+}
+
+/* Tabs */
+.exp-tabs {
+  display: flex;
+  flex-direction: row;
+  border-bottom: 1px solid #233554;
+  overflow-x: auto;
+}
+
+@media (min-width: 768px) {
+  .exp-tabs {
+    flex-direction: column;
+    border-bottom: none;
+    border-left: 1px solid #233554;
+  }
+}
+
+/* Shorten the vertical line to end after Nike */
+.exp-tabs-container {
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .exp-tabs-container {
+    border-left: none !important;
+  }
+  
+  .exp-tabs-container::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+    /* Height covers 7 buttons (Intertec through Nike) plus a bit extra */
+    height: calc(7 * 3rem + 1rem); /* ~22rem = ~352px */
+    background-color: #233554;
+  }
+}
+
+.exp-tab {
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 16px;
+  font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  color: #8892b0;
+  white-space: nowrap;
+  border-bottom: 1px solid #233554;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+@media (min-width: 768px) {
+  .exp-tab {
+    border-bottom: none;
+    border-left: 2px solid transparent;
+  }
+}
+
+.exp-tab:hover {
+  background: #112240;
+  color: #e6f1ff;
+}
+
+.exp-tab.active {
+  color: #64ffda;
+  background: #112240;
+}
+
+@media (min-width: 768px) {
+  .exp-tab.active {
+    border-left-color: #64ffda;
+  }
+}
+
+/* Panels */
+.exp-panels {
+  min-height: 500px;  /* fixed height to keep footer in place */
+  position: relative;
+}
+
+/* Container that holds the panels - needs fixed height for footer positioning */
+.flex-1.relative {
+  position: relative;
+  min-height: 500px;
+}
+
+.exp-panel {
+  display: none;
+}
+
+.exp-panel.active {
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;  /* fixed height to match container */
+  position: relative;
+}
+
+/* Ensure all panels have consistent structure and padding for footer */
+.experience-panel {
+  position: relative;
+  padding-bottom: 4.5rem !important;  /* space for fixed footer - important to override inline classes */
+}
+
+/* Panel content */
+.exp-role {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #e6f1ff;
+}
+
+.exp-role span {
+  color: #64ffda;
+}
+
+.exp-dates {
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  color: #8892b0;
+  font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+
+.exp-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  color: #a8b2d1;
+}
+
+.exp-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.experience-panel {
+  scrollbar-width: thin;
+  scrollbar-color: #495670 #0a192f;
+}
+
+.experience-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.experience-panel::-webkit-scrollbar-track {
+  background: #0a192f;
+}
+
+.experience-panel::-webkit-scrollbar-thumb {
+  background-color: #495670;
+  border-radius: 999px;
+}
+
+/* Arrow bullets */
+.exp-bullet {
+  position: relative;
+  padding-left: 20px;
+  color: #a8b2d1;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.exp-bullet::before {
+  content: "▹";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #64ffda;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Fix "Where I've worked" tabs on mobile */
+@media (max-width: 767px) {
+  /* Prevent horizontal overflow on the experience section */
+  #experience {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+  
+  #experience .section-shell {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  
+  /* Fix the parent flex container - keep it fixed */
+  #experience .mt-10.flex {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  /* Tabs container - keep original layout, add horizontal scroll with subtle scrollbar */
+  .exp-tabs-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;  /* smooth scrolling on iOS */
+    scrollbar-width: thin;  /* Firefox - thin scrollbar */
+    scrollbar-color: rgba(100, 255, 218, 0.3) transparent;  /* subtle teal scrollbar */
+    padding-bottom: 8px;  /* space for scrollbar */
+  }
+  
+  /* Custom scrollbar styling for WebKit browsers (Chrome, Safari, Edge) */
+  .exp-tabs-container::-webkit-scrollbar {
+    height: 4px;  /* very thin scrollbar */
+  }
+  
+  .exp-tabs-container::-webkit-scrollbar-track {
+    background: transparent;  /* invisible track */
+    border-radius: 2px;
+  }
+  
+  .exp-tabs-container::-webkit-scrollbar-thumb {
+    background: rgba(100, 255, 218, 0.3);  /* subtle teal */
+    border-radius: 2px;
+    transition: background 0.2s ease;
+  }
+  
+  .exp-tabs-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 255, 218, 0.5);  /* slightly more visible on hover */
+  }
+  
+  /* Keep content panel fixed - no horizontal scroll */
+  .flex-1.relative {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .exp-panel {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  /* About section - consistent spacing */
+  #about {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: -1.5rem !important;  /* negative margin for tighter spacing */
+  }
+  
+  #about .section-shell {
+    padding-top: 8px !important;  /* reduced spacing from hero on mobile */
+  }
+
+  /* Experience section - consistent spacing */
+  #experience {
+    padding-top: 1rem !important;  /* standard spacing */
+    padding-bottom: 5rem !important;  /* standard spacing */
+  }
+}
+
+/* ===== PROJECTS & CASE STUDIES ===== */
+.section-shell.projects-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 120px 24px 2rem;  /* minimal bottom padding for spacing to tech skills */
+  border: none !important;
+  border-bottom: none !important;
+}
+
+.featured-project {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Hide additional projects by default */
+.featured-project.projects-more-content {
+  display: none !important;
+}
+
+.featured-project.projects-more-content.show {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.5rem !important;
+  animation: fadeInUp 0.5s ease;
+  position: relative;
+  width: 100%;
+}
+
+/* Ensure all child elements are visible when shown */
+.featured-project.projects-more-content.show .featured-project-media,
+.featured-project.projects-more-content.show .featured-project-content {
+  display: block;
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Desktop: use grid layout when shown */
+@media (min-width: 1024px) {
+  .featured-project.projects-more-content.show {
+    display: grid !important;
+    grid-template-columns: 50% 50% !important;
+    align-items: center !important;
+    gap: 1.5rem !important;
+  }
+
+  .featured-project.projects-more-content.show .featured-project-media,
+  .featured-project.projects-more-content.show .featured-project-content {
+    display: block !important;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Show More Button - More prominent and user-friendly */
+.projects-view-more-btn {
+  background: rgba(100, 255, 218, 0.1);
+  border: 1px solid rgba(100, 255, 218, 0.3);
+  border-radius: 0.5rem;
+  color: #64ffda;
+  font-family: "SF Mono", ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+  white-space: nowrap;
+  z-index: 1;
+  /* Prevent text truncation */
+  overflow: visible;
+  text-overflow: clip;
+  word-break: keep-all;
+  width: auto;
+  min-width: fit-content;
+  flex-shrink: 0;
+  /* No glow by default */
+  box-shadow: none;
+}
+
+.projects-view-more-btn:hover {
+  color: #64ffda;
+  background: rgba(100, 255, 218, 0.15);
+  border-color: rgba(100, 255, 218, 0.5);
+  /* Glow only appears on hover */
+  box-shadow: 0 0 20px rgba(100, 255, 218, 0.4);
+  transform: translateY(-2px);
+}
+
+.projects-view-more-btn.hidden {
+  display: none;
+}
+
+
+.projects-spacer {
+  height: 2.5rem;
+}
+
+@media (min-width: 1024px) {
+  .projects-spacer {
+    height: 4rem;
+  }
+}
+
+/* === FROSTED BIG BLOCK === */
+.featured-project-media {
+  position: relative;
+  z-index: 0;
+}
+
+/* === CLEAN FROSTED COMPANY BACKGROUND (MATCH SITE BG) === */
+.featured-media-inner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.75rem;
+  padding: 1.25rem 1.75rem;
+
+  /* Match your page background */
+  background: rgba(10, 25, 47, 0.65);
+
+  /* Full frosted look */
+  backdrop-filter: blur(18px) saturate(100%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+
+  /* New frosted border */
+  border: 1px solid rgba(226, 232, 240, 0.18);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.75);
+  
+  display: flex;
+  align-items: flex-start;  /* align items at the top for consistent logo alignment */
+  justify-content: center;  /* center the group horizontally */
+  flex-direction: row-reverse;  /* logo on right, text on left */
+  gap: 1.25rem;
+}
+
+/* Ensure all featured projects have consistent logo alignment */
+.featured-project .featured-media-logo {
+  align-self: flex-start;
+  margin-top: 0;
+}
+
+
+/* glass overlay */
+.featured-media-inner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+
+  /* also match your background exactly */
+  background: rgba(10, 25, 47, 0.45);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 0;
+}
+
+/* content above glass */
+.featured-media-logo,
+.featured-media-label,
+.featured-media-name,
+.featured-media-tags {
+  position: relative;
+  z-index: 1;
+}
+
+/* Right-align the text content div */
+.featured-media-inner > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;  /* right align all text */
+  text-align: right;
+  justify-content: flex-start;  /* align content to top */
+}
+
+/* Fix "Delivered with" label position */
+.featured-media-label {
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  min-height: 1rem;  /* fixed height for label */
+  line-height: 1rem;
+}
+
+/* Fix company name position - ensure it aligns with logo */
+.featured-media-name {
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  min-height: 1.5rem;  /* fixed height for company name */
+  line-height: 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Tags can vary in height without affecting alignment */
+.featured-media-tags {
+  margin-top: 0;
+  line-height: 1.2;
+}
+
+/* === CLEAN LOGO (NO BORDERS, NO SHADOWS, NO BG) === */
+.featured-media-logo {
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
+  max-width: 72px;
+  flex-shrink: 0;
+  flex-grow: 0;
+
+  border-radius: 0 !important;
+  background: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  margin-top: 0 !important;
+
+  box-shadow: none !important;
+
+  display: flex;
+  align-items: flex-start;  /* align logo to top */
+  justify-content: center;
+  position: relative;
+  align-self: flex-start;  /* ensure logo stays at top */
+}
+
+.featured-media-logo img {
+  width: 72px;
+  height: 72px;
+  max-width: 72px;
+  max-height: 72px;
+  object-fit: contain;
+  object-position: center;
+
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+.featured-media-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.featured-media-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e5f9ff;
+}
+
+.featured-media-tags {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+/* === SUMMARY CARD === */
+.featured-project-content {
+  position: relative;
+  z-index: 1;
+  margin-top: -2.5rem;
+  margin-inline: auto;
+  max-width: 100% !important;  /* expanded to use more space */
+  padding: 1.75rem 1.75rem 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(10, 25, 47, 0.98);
+
+  /* Remove border + shadows */
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Make the text block inside always able to grow */
+.featured-project-content p {
+  max-width: 100% !important;
+}
+
+.featured-project-meta {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.featured-project-summary {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+/* "View projects" button wrapper */
+.featured-project-toggle {
+  margin-top: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Button group container */
+.featured-project-toggle-group {
+  margin-top: 1rem;
+  width: 100%;
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Desktop alternation */
+@media (min-width: 1024px) {
+  .featured-project {
+    display: grid;
+    grid-template-columns: 50% 50%;  /* equal 50-50 split */
+    align-items: center;
+  }
+
+  /* === UNIFY PROJECT ROW LAYOUT – NO MORE ALTERNATING === */
+  /* Make "right" rows behave like normal rows */
+  .featured-project--right {
+    grid-template-columns: 50% 50%;  /* equal 50-50 split */
+  }
+
+  .featured-project--right .featured-project-media,
+  .featured-project--right .featured-project-content {
+    order: initial;              /* remove left/right swap */
+  }
+
+  /* All projects center the group but right-align content */
+  .featured-project--right .featured-media-inner,
+  .featured-project--left .featured-media-inner {
+    justify-content: center;     /* center the group horizontally */
+    flex-direction: row-reverse;  /* logo on right, text on left */
+  }
+  
+  .featured-project--right .featured-media-inner > div,
+  .featured-project--left .featured-media-inner > div {
+    align-items: flex-end;      /* right align text content */
+    text-align: right;
+  }
+
+  .featured-project--left .featured-project-content {
+    margin-inline: 0;
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .featured-project {
+    gap: 0.3rem; /* was 1.5rem from the flex default */
+  }
+
+  .featured-project-content {
+    margin-top: 0.35rem !important;  /* was 1.25rem */
+    padding-top: 1.4rem;             /* tiny bit less padding if you want */
+  }
+
+  .featured-media-inner {
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;  /* logo on left, text on right */
+  }
+  
+  .featured-media-inner > div {
+    align-items: flex-start;  /* align text content to left */
+    text-align: left;   /* left align text */
+  }
+  
+  .featured-media-tags {
+    text-align: left !important;  /* ensure tags are left-aligned on mobile */
+  }
+}
+
+/* === FINAL PROJECT DIVIDER RESET === */
+.project-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Center it inside the Projects container */
+  width: 40%;               /* tweak 35–50% to taste */
+  max-width: 480px;
+  min-height: 1px;
+  background: rgba(255, 255, 255, 0.28);
+
+  margin: 2.5rem auto;      /* equal space above/below, centered horizontally */
+}
+
+/* Completely remove the default background line for divider with view more button */
+/* Using a direct class selector instead of :has() for better browser support */
+.project-divider-with-button {
+  /* Remove the 1px min-height that creates the line */
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  /* Match site background to hide the line - use exact same color */
+  background: #0a192f !important;
+  background-color: #0a192f !important;
+  background-image: none !important;
+  /* Remove all borders */
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  /* Spacing */
+  padding: 0.5rem 0 0 !important;
+  margin: 2.5rem auto 0 !important;
+  /* Layout */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative;
+  overflow: visible;
+  line-height: 0 !important;
+}
+
+/* Also support :has() selector for browsers that support it */
+.project-divider:has(.projects-view-more-btn:not(.hidden)),
+.project-divider:has(#projectsViewMore:not(.hidden)) {
+  min-height: 0 !important;
+  height: auto !important;
+  background: #0a192f !important;
+  background-color: #0a192f !important;
+  border: none !important;
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Remove any potential line from the divider itself - set height to content only */
+.project-divider:has(.projects-view-more-btn:not(.hidden)) {
+  height: fit-content !important;
+  min-height: 0 !important;
+}
+
+/* Remove any margin or border from accordion panel that might create a line */
+.projects-accordion-panel.hidden {
+  margin-bottom: 0 !important;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+}
+
+/* Ensure no line appears between accordion panel and divider with view more button */
+.projects-accordion-panel.hidden + .project-divider:has(.projects-view-more-btn:not(.hidden)) {
+  margin-top: 2.5rem !important;
+  margin-bottom: 0 !important;
+}
+
+/* When button is hidden, make it a regular line (no pseudo-elements) */
+.project-divider:has(.projects-view-more-btn.hidden),
+.project-divider-with-button:has(.projects-view-more-btn.hidden),
+.project-divider-with-button .projects-view-more-btn.hidden {
+  /* Override all the button-specific styles when button is hidden */
+}
+
+/* When divider has button class but button is hidden, transform to regular line */
+.project-divider-with-button:has(.projects-view-more-btn.hidden) {
+  min-height: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  background: rgba(255, 255, 255, 0.28) !important;
+  background-color: rgba(255, 255, 255, 0.28) !important;
+  margin: 2.5rem auto !important;
+  display: block !important;
+  align-items: unset !important;
+  justify-content: unset !important;
+  /* Remove all button-specific overrides */
+  max-height: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  line-height: normal !important;
+}
+
+/* Regular dividers without buttons should be simple lines */
+.project-divider:not(:has(.projects-view-more-btn)) {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* Add lines on both sides ONLY when divider has a button */
+.project-divider:has(.projects-view-more-btn:not(.hidden))::before,
+.project-divider:has(.projects-view-more-btn:not(.hidden))::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.28);
+  position: relative;
+  top: 0;
+  bottom: auto;  /* Ensure it doesn't extend below */
+}
+
+.project-divider:has(.projects-view-more-btn:not(.hidden))::before {
+  margin-right: 1rem;
+  margin-bottom: 0;
+}
+
+.project-divider:has(.projects-view-more-btn:not(.hidden))::after {
+  margin-left: 1rem;
+  margin-bottom: 0;
+}
+
+/* Ensure no line appears below the divider container */
+.project-divider:has(.projects-view-more-btn:not(.hidden))::after {
+  display: block;
+  height: 1px;
+  max-height: 1px;
+  overflow: hidden;
+}
+
+/* Slightly wider on small screens if you want */
+@media (max-width: 768px) {
+  .project-divider {
+    width: 55%;
+    margin: 1.5rem auto;
+  }
+  
+  .project-divider::before,
+  .project-divider::after {
+    margin: 0 0.5rem;
+  }
+}
+
+/* Reduce vertical space between project blocks */
+.featured-project {
+  margin-bottom: 0.1rem !important;
+}
+
+/* Ensure consistent spacing when projects are shown */
+.featured-project.projects-more-content.show {
+  margin-bottom: 0.1rem !important;
+  margin-top: 0 !important;
+}
+
+/* Hide dividers and spacers when content is collapsed */
+.projects-more-content-divider,
+.projects-more-content-spacer {
+  display: none !important;
+}
+
+/* Show when projects are expanded - controlled by JavaScript */
+.projects-more-content-divider.show,
+.projects-more-content-spacer.show {
+  display: block !important;
+}
+
+@media (min-width: 1024px) {
+  .featured-project {
+    margin-bottom: 0.1rem !important;
+  }
+}
+
+/* Reduce the gap inside each grid block */
+.featured-project .grid {
+  row-gap: 0.5rem !important;
+  column-gap: 0.5rem !important;
+}
+
+@media (min-width: 1024px) {
+  .featured-project .grid {
+    row-gap: 0.5rem !important;
+    column-gap: 0.5rem !important;
+  }
+}
+
+/* === FINAL PROJECT LAYOUT TWEAKS === */
+/* 1. Tighten vertical gap between project rows */
+.projects-spacer {
+  height: 1.25rem;              /* was 2.5 / 4rem */
+}
+
+@media (min-width: 1024px) {
+  .projects-spacer {
+    height: 1.75rem;
+  }
+}
+
+/* Remove extra bottom margin on each featured-project */
+.featured-project {
+  margin-bottom: 0.75rem !important;
+}
+
+/* ===== TECHNICAL SKILLS ===== */
+/* ===== TECH SKILLS – RAIL LAYOUT ===== */
+/* Ensure section heading displays correctly like certifications */
+#skills .section-heading {
+  display: flex !important;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
+  width: 100%;
+  max-width: 100%;
+}
+
+#skills .section-title {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #e6f1ff !important;
+}
+
+#skills .section-line {
+  height: 1px;
+  flex: 1;
+  background-color: #233554;
+}
+
+/* Two-column grid: labels on left, skills on right - each row aligned */
+#skills .mt-6.space-y-6,
+#skills .space-y-6,
+.skill-grid-container {
+  display: grid;
+  grid-template-columns: 280px 1fr;  /* wider labels column, skills column */
+  column-gap: 3.5rem;  /* increased gap to push skills further right */
+  row-gap: 1.5rem;
+  align-items: center;  /* center align items vertically in each row */
+}
+
+/* Ensure first row aligns properly - adjust Cloud Platforms label */
+.skill-grid-container > .skill-rail-label:first-of-type {
+  align-self: center;
+  padding-top: 1.1rem;  /* further increased padding to push it down to align with pills */
+  margin-top: 0.15rem;   /* additional margin to fine-tune alignment */
+}
+
+/* Fix triangle alignment for first label */
+.skill-grid-container > .skill-rail-label:first-of-type::before {
+  top: calc(50% + 0.35rem);  /* adjust triangle position to account for padding */
+  transform: translateY(-50%);
+}
+
+/* Labels go in first column */
+.skill-rail-label {
+  grid-column: 1;
+  align-self: center;  /* center label vertically to align with pills */
+}
+
+/* Skill rows go in second column */
+.skill-rail-row {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  align-self: center;  /* center the skill row vertically */
+}
+
+/* TECH SKILL LABEL + TRIANGLE BULLET (replace old rules) */
+.skill-rail-label {
+  position: relative;
+  padding-left: 1.35rem;          /* space for triangle */
+  width: 280px;                   /* wider to match grid column */
+  font-family: "SF Mono", ui-monospace, monospace;
+  font-size: 0.85rem;             /* increased from 0.75rem */
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;            /* center vertically to align with pills */
+  line-height: 1.2;
+  flex-shrink: 0;                 /* prevent label from shrinking */
+  white-space: nowrap;           /* keep labels on one line */
+}
+
+/* lift the triangle a few pixels */
+.skill-rail-label::before {
+  content: "▹";
+  position: absolute;
+  left: 0;
+  top: 50%;                      /* center vertically */
+  transform: translateY(-50%);   /* center the triangle */
+  color: #64ffda;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+/* keep label text colour */
+.skill-rail-label span {
+  color: #6ee7cd !important;
+}
+
+/* Chip list */
+.skill-rail-chips {
+  display: flex;
+  flex-wrap: nowrap;  /* keep all chips in one row */
+  gap: 0.4rem;        /* slightly reduced gap */
+}
+
+/* Individual skill chip */
+.skill-rail-chips span {
+  font-size: 0.9rem !important;   /* increased from 0.75rem */
+  padding: 0.35rem 0.8rem;        /* increased padding for larger text */
+  border-radius: 999px;
+  color: #e5e7eb;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 1);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  white-space: nowrap;            /* prevent text wrapping inside chips */
+  flex-shrink: 0;                 /* prevent chips from shrinking */
+  line-height: 1.2;               /* tighter line height to prevent extra space */
+  margin: 0 !important;           /* ensure no margins */
+}
+
+.skill-rail-chips span:hover {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.7);
+  transform: translateY(-1px);
+}
+
+/* Mobile – stack grid columns vertically */
+@media (max-width: 768px) {
+  #skills .mt-6.space-y-6,
+  #skills .space-y-6,
+  .skill-grid-container {
+    grid-template-columns: 1fr;
+    column-gap: 0;
+    row-gap: 0.75rem;
+  }
+  
+  .skill-rail-label {
+    grid-column: 1;
+    width: 100%;
+  }
+  
+  .skill-rail-row {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .skill-rail-label {
+    width: auto;
+  }
+  
+  .skill-rail-chips {
+    flex-wrap: wrap;  /* allow wrapping on mobile */
+    gap: 0.4rem;      /* consistent gap for both row and column */
+    row-gap: 0.4rem;  /* fix awkward gap when new line starts */
+    align-content: flex-start; /* prevent extra spacing when wrapping */
+  }
+  
+  .skill-rail-row {
+    margin: 0 !important;  /* remove any margins on mobile */
+    padding: 0 !important; /* remove any padding on mobile */
+    min-height: 0 !important; /* prevent extra height */
+  }
+  
+  /* Reduce row gap between skill rows on mobile */
+  .skill-grid-container {
+    row-gap: 0.5rem !important; /* tighter spacing between rows on mobile */
+  }
+}
+
+/* Remove negative margin - using uniform spacing */
+#skills {
+  margin-top: 0 !important;
+}
+
+/* === FINAL SECTION SPACING: PROJECTS → SKILLS → CERTS === */
+/* Remove the big inner top padding from these shells */
+#projects .section-shell,
+#personal-projects .section-shell,
+#skills .section-shell,
+#certifications .section-shell {
+  padding-top: 0 !important;
+}
+
+/* === UNIFORM SECTION SPACING === */
+/* Use the spacing between experience and projects as the standard */
+/* Each section: padding-bottom: 5rem, next section: padding-top: 1rem = 6rem total gap */
+
+#about {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: -1.5rem !important;  /* negative margin for tighter spacing */
+}
+
+#experience {
+  padding-top: 1rem !important;     /* standard spacing */
+  padding-bottom: 5rem !important;  /* standard spacing */
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+#projects {
+  padding-top: 1rem !important;     /* keep same */
+  padding-bottom: 5rem !important;  /* match experience bottom */
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+#personal-projects {
+  padding-top: 1rem !important;     /* match projects top */
+  padding-bottom: 5rem !important;  /* match experience bottom */
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+#skills {
+  padding-top: 1rem !important;     /* match projects top */
+  padding-bottom: 2rem !important;  /* further reduced spacing before certifications */
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;      /* rely on padding-bottom / padding-top for spacing */
+}
+
+#certifications {
+  padding-top: 0.4rem !important;     /* further reduced spacing after skills */
+  padding-bottom: 8rem !important;  /* increased spacing before contact */
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+#contact {
+  padding-top: 9rem !important;     /* increased gap before contact */
+  margin-top: 0 !important;
+  padding-bottom: 2.5rem !important;
+}
+
+/* Mobile: same uniform spacing */
+@media (max-width: 640px) {
+  #about {
+    padding-bottom: 0 !important;
+    margin-bottom: -1.5rem !important;  /* negative margin for tighter spacing on mobile */
+  }
+  #experience {
+    padding-top: 1rem !important;
+    padding-bottom: 5rem !important;
+  }
+  #projects {
+    padding-top: 1rem !important;
+    padding-bottom: 8rem !important;  /* more space before personal-projects on mobile */
+  }
+  #personal-projects {
+    padding-top: 3.5rem !important;   /* more space after projects on mobile */
+    padding-bottom: 2rem !important;  /* less space before skills on mobile */
+  }
+  #skills {
+    padding-top: 0.5rem !important;   /* less space after personal-projects on mobile */
+    padding-bottom: 3.2rem !important;   /* further reduced spacing before certifications on mobile */
+  }
+  #certifications {
+    padding-top: 1.6rem !important;     /* further reduced spacing after skills on mobile */
+    padding-bottom: 8rem !important;  /* increased spacing before contact on mobile */
+  }
+  #contact {
+    padding-top: 7rem !important;     /* increased gap before contact on mobile */
+  }
+}
+
+/* TECH SKILLS FIX — align labels and pills perfectly */
+.skills-grid {
+  display: grid;
+  grid-template-columns: 260px 1fr;   /* left fixed, right flexible */
+  row-gap: 2rem;
+  column-gap: 2rem;
+}
+
+/* On mobile stack correctly */
+@media (max-width: 768px) {
+  .skills-grid {
+    grid-template-columns: 1fr;
+    row-gap: 1.5rem;
+  }
+}
+
+/* Reduce bottom spacing in Contact section on mobile */
+@media (max-width: 640px) {
+  #contact {
+    padding-bottom: 1.2rem !important;   /* lower section bottom padding */
+    margin-bottom: 0 !important;
+  }
+
+  #contact .mt-10 {
+    margin-top: 1.25rem !important;      /* tighten gap above "Say Hello" */
+    margin-bottom: 0 !important;
+  }
+
+  #contact button,
+  #contact a {
+    margin-bottom: 0.75rem !important;   /* slightly tighten button spacing */
+  }
+
+  footer,
+  #footer {
+    margin-top: 0.5rem !important;
+    padding-top: 0.5rem !important;
+  }
+}
+
+/* 🔧 MOBILE: tighten vertical gaps between Experience → Projects → Skills → Certs */
+@media (max-width: 640px) {
+  /* Kill the huge inner padding on these section shells */
+  #projects .section-shell,
+  #skills .section-shell,
+  #certifications .section-shell {
+    padding-top: 24px !important;   /* was 120px */
+    padding-bottom: 0 !important;
+  }
+
+  /* Tighten the outer section padding too */
+  #projects {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    margin-top: 0 !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  #skills {
+    padding-top: 0.75rem !important;
+    padding-bottom: 3.2rem !important;   /* further reduced spacing before certifications on mobile */
+    margin-top: 0 !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  #certifications {
+    padding-top: 1.6rem !important;     /* further reduced spacing after skills on mobile */
+    padding-bottom: 0.75rem !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+}
+

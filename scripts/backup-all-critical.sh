@@ -39,3 +39,4 @@ echo "   Nextcloud:  /mnt/ssd/backups/nextcloud/"
 echo "   TravelSync: /mnt/ssd/backups/travelsync/"
 echo "   KitchenOwl: /mnt/ssd/backups/kitchenowl/"
 
+

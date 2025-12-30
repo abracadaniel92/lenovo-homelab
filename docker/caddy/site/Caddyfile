@@ -1,0 +1,9 @@
+:8080 {
+    root * /usr/share/caddy
+    file_server
+    encode gzip
+
+    log {
+        output file /var/log/caddy/access.log
+    }
+}

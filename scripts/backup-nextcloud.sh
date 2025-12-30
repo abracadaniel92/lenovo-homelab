@@ -68,3 +68,4 @@ echo ""
 echo "ℹ️  Note: User files are in /mnt/ssd/apps/nextcloud/app/data/"
 echo "   Consider backing up that directory separately if needed."
 
+
