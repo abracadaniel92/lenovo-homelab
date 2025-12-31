@@ -111,10 +111,20 @@
 	jellyfin.gmojsoski.com {
 		encode gzip
 		reverse_proxy http://172.17.0.1:8096 {
+			# Headers for proper routing
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {remote_host}
 			header_up Host {host}
 			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-For {remote_host}
+			
+			# WebSocket support (required for mobile app)
+			transport http {
+				versions 1.1 2
+			}
+			
+			# Increase timeouts for mobile app
+			timeout 300s
 		}
 	}
 	
