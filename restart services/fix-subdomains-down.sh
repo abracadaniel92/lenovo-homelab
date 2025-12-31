@@ -35,25 +35,27 @@ else
     docker logs caddy --tail 20
 fi
 
-# 3. Restart Cloudflare Tunnel
+# 3. Restart Cloudflare Tunnel (Docker with replicas)
 echo ""
 echo "3. Restarting Cloudflare Tunnel..."
-echo "   (This requires sudo password)"
-sudo systemctl restart cloudflared.service
+cd /mnt/ssd/docker-projects/cloudflared || { echo "ERROR: Cloudflared directory not found!"; exit 1; }
+docker compose restart
 sleep 10
 
 # Check tunnel status
-if systemctl is-active --quiet cloudflared.service; then
-    echo "✅ Cloudflare tunnel restarted"
+TUNNEL_COUNT=$(docker ps --filter "name=cloudflared" --format "{{.Names}}" 2>/dev/null | wc -l)
+if [ "$TUNNEL_COUNT" -ge 1 ]; then
+    echo "✅ Cloudflare tunnel restarted ($TUNNEL_COUNT replicas running)"
 else
     echo "❌ Cloudflare tunnel failed to start"
-    systemctl status cloudflared.service --no-pager | head -10
+    docker compose up -d
+    sleep 5
 fi
 
 # 4. Check tunnel logs
 echo ""
 echo "4. Recent Cloudflare tunnel logs:"
-journalctl -u cloudflared.service --since "1 minute ago" --no-pager | tail -10
+docker compose logs --tail 10
 
 # 5. Test external access (may take a moment to propagate)
 echo ""
@@ -76,7 +78,7 @@ echo "=========================================="
 echo ""
 echo "If subdomains are still down after 1-2 minutes:"
 echo "1. Check Caddy logs: docker logs caddy"
-echo "2. Check tunnel logs: journalctl -u cloudflared.service -f"
+echo "2. Check tunnel logs: cd /mnt/ssd/docker-projects/cloudflared && docker compose logs -f"
 echo "3. Verify Caddy config: docker exec caddy cat /etc/caddy/Caddyfile"
 echo ""
 
