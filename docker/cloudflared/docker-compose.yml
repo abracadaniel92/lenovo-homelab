@@ -1,0 +1,36 @@
+# Cloudflare Tunnel with High Availability
+# Uses Docker replicas for redundancy - if one instance crashes, others continue
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-ha
+    restart: always
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - /home/goce/.cloudflared:/etc/cloudflared:ro
+    networks:
+      - default
+    deploy:
+      mode: replicated
+      replicas: 2  # Run 2 instances for redundancy
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 0  # Unlimited restart attempts
+        window: 60s
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Ensure proper network settings for QUIC
+    sysctls:
+      - net.core.rmem_max=8388608
+      - net.core.rmem_default=8388608
+
+networks:
+  default:
+    driver: bridge
+
