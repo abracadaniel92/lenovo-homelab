@@ -84,7 +84,10 @@ def parse_recipes_from_docx(doc_path):
     meal_pattern = re.compile(r'^(ПОЈАДОК|РУЧЕК|ВЕЧЕРА|УЖИНА|ДЕСЕРТ|СНЕК)\s*:\s*(.+)$', re.IGNORECASE)
     ingredients_pattern = re.compile(r'^(Состојки|Ингредиенти|Ingredients)', re.IGNORECASE)
     instructions_pattern = re.compile(r'^(Начин на припрема|Приготовка|Подготовка|Instructions)', re.IGNORECASE)
-    calories_pattern = re.compile(r'^(Калориска вредност|Калории|Calories)', re.IGNORECASE)
+    # Only match the header, not the actual calorie values line
+    calories_header_pattern = re.compile(r'^Калориска вредност\s*$', re.IGNORECASE)
+    # Match both regular and ВЕГЕ (vegan) calorie lines
+    calories_value_pattern = re.compile(r'^Калории(\s+ВЕГЕ)?\s*:', re.IGNORECASE)
     
     for line in lines:
         # Check for day marker with workout
@@ -130,8 +133,18 @@ def parse_recipes_from_docx(doc_path):
             current_section = 'instructions'
             continue
         
-        if calories_pattern.match(line):
+        if calories_header_pattern.match(line):
             current_section = 'calories'
+            continue
+        
+        # If we see "Калории:" line, capture it directly as calorie info
+        if calories_value_pattern.match(line):
+            if current_recipe:
+                # Append to existing calorie info (for ВЕГЕ variants)
+                if current_recipe.get('calories_info'):
+                    current_recipe['calories_info'] += '\n' + line
+                else:
+                    current_recipe['calories_info'] = line
             continue
         
         # Process content based on current section
@@ -141,7 +154,14 @@ def parse_recipes_from_docx(doc_path):
                 # Remove bullet point
                 if ingredient.startswith('–') or ingredient.startswith('-'):
                     ingredient = ingredient[1:].strip()
-                if ingredient and len(ingredient) > 1:
+                
+                # Check if this is a "Зачини:" (spices) line - move to instructions instead
+                if ingredient and re.match(r'^Зачини\s*:', ingredient, re.IGNORECASE):
+                    # Add spices to instructions/description, not ingredients
+                    if 'spices_info' not in current_recipe:
+                        current_recipe['spices_info'] = ''
+                    current_recipe['spices_info'] = ingredient
+                elif ingredient and len(ingredient) > 1:
                     current_recipe['ingredients'].append(ingredient)
             
             elif current_section == 'instructions':
@@ -290,18 +310,31 @@ def main():
             skipped += 1
             continue
         
-        # Build description
+        # Build description: instructions first, then spices, then calories at end
         desc_parts = []
-        if recipe.get('meal_type'):
-            desc_parts.append(f"[{recipe['meal_type']}]")
-        if recipe.get('workout_tag'):
-            desc_parts.append(f"[{recipe['workout_tag']}]")
-        if recipe.get('calories_info'):
-            desc_parts.append(f"\n\n{recipe['calories_info']}")
-        if recipe.get('instructions'):
-            desc_parts.append(f"\n\n{recipe['instructions']}")
         
-        description = ' '.join(desc_parts[:2]) + ''.join(desc_parts[2:])
+        # Add meal type and workout as tags at the top
+        tags_line = []
+        if recipe.get('meal_type'):
+            tags_line.append(f"[{recipe['meal_type']}]")
+        if recipe.get('workout_tag'):
+            tags_line.append(f"[{recipe['workout_tag']}]")
+        if tags_line:
+            desc_parts.append(' '.join(tags_line))
+        
+        # Add preparation instructions
+        if recipe.get('instructions'):
+            desc_parts.append(recipe['instructions'])
+        
+        # Add spices info (moved from ingredients)
+        if recipe.get('spices_info'):
+            desc_parts.append(f"\n{recipe['spices_info']}")
+        
+        # Add calories at the very end
+        if recipe.get('calories_info'):
+            desc_parts.append(f"\n\n📊 {recipe['calories_info']}")
+        
+        description = '\n\n'.join(desc_parts)
         
         # Insert recipe
         cursor.execute("""
