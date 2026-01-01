@@ -1,13 +1,13 @@
 #!/bin/bash
 ###############################################################################
-# TravelSync (Documents-to-Calendar) Backup Script
+# TravelSync Backup Script
 # Backs up travel data and calendar events database
 ###############################################################################
 
 set -e
 
 BACKUP_DIR="/mnt/ssd/backups/travelsync"
-DATA_DIR="/mnt/ssd/docker-projects/documents-to-calendar/data"
+DATA_DIR="/mnt/ssd/docker-projects/travelsync/data"
 DB_FILE="$DATA_DIR/documents_calendar.db"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_FILE="$BACKUP_DIR/travelsync-${TIMESTAMP}.tar.gz"

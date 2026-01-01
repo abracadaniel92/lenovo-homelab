@@ -26,7 +26,7 @@ The server has a multi-layer monitoring system that ensures services stay online
 - Docker daemon
 - Caddy (reverse proxy) - CRITICAL
 - Cloudflare Tunnel
-- TravelSync (documents-to-calendar)
+- TravelSync
 - Planning Poker
 - Nextcloud
 - Jellyfin
@@ -260,7 +260,7 @@ To prevent downtime:
 
 ## Last Updated
 
-December 31, 2025
+January 2026
 
 
 

@@ -29,7 +29,7 @@ Quick reference for the lemongrab server.
 | **Homepage** | 8000 | - | Dashboard |
 | **Portainer** | 9000 | - | Docker UI |
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
-| **Documents-to-Calendar** | 8000 | tickets.gmojsoski.com | Custom app |
+| **TravelSync** | 8000 | tickets.gmojsoski.com | Travel docs |
 | **Watchtower** | - | - | Auto-updates 2 AM |
 | **Nginx (Vaultwarden)** | 8083 | - | iOS DELETE fix |
 

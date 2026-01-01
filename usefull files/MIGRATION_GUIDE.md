@@ -163,8 +163,8 @@ nano /mnt/ssd/apps/nextcloud/docker-compose.yml
 nano /mnt/ssd/docker-projects/pihole/docker-compose.yml
 # Update WEBPASSWORD
 
-# Documents-to-Calendar
-nano /mnt/ssd/docker-projects/documents-to-calendar/.env
+# TravelSync
+nano /mnt/ssd/docker-projects/travelsync/.env
 # Update ADMIN_PASSWORD, JWT_SECRET_KEY
 ```
 
@@ -201,7 +201,7 @@ curl http://localhost:8081
 # Gokapi
 curl http://localhost:8091
 
-# Documents-to-Calendar
+# TravelSync
 curl http://localhost:8000/api/health
 
 # Uptime Kuma
@@ -234,7 +234,7 @@ newgrp docker
 - Gokapi data (`/mnt/ssd/apps/gokapi-data`)
 - GoatCounter data
 - Uptime Kuma data
-- Documents-to-Calendar data (uploads, database, credentials)
+- TravelSync data (uploads, database, credentials)
 - Caddy data and site files
 - Docker named volumes
 
@@ -350,14 +350,14 @@ pi_backup_YYYYMMDD_HHMMSS/
 ├── credentials/
 │   ├── cloudflared/
 │   ├── gokapi/
-│   ├── documents-to-calendar/
+│   ├── travelsync/
 │   └── .env files
 ├── data/
 │   ├── nextcloud.tar.gz
 │   ├── gokapi-data.tar.gz
 │   ├── goatcounter-data.tar.gz
 │   ├── uptime-kuma-data.tar.gz
-│   ├── documents-to-calendar.tar.gz
+│   ├── travelsync.tar.gz
 │   ├── caddy-data.tar.gz
 │   ├── caddy-site.tar.gz
 │   └── docker-volumes/
@@ -366,7 +366,7 @@ pi_backup_YYYYMMDD_HHMMSS/
 │   ├── goatcounter/
 │   ├── nextcloud/
 │   ├── uptime-kuma/
-│   ├── documents-to-calendar/
+│   ├── travelsync/
 │   └── pihole/
 ├── network/
 │   ├── interfaces

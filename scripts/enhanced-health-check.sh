@@ -127,9 +127,9 @@ if ! check_service_http "http://localhost:8091/" 5; then
     restart_docker_service "Gokapi" "/mnt/ssd/docker-projects/gokapi"
 fi
 
-# Documents-to-Calendar
+# TravelSync
 if ! check_service_http "http://localhost:8000/" 5; then
-    restart_docker_service "Documents-to-Calendar" "/mnt/ssd/docker-projects/documents-to-calendar"
+    restart_docker_service "TravelSync" "/mnt/ssd/docker-projects/travelsync"
 fi
 
 # Planning Poker

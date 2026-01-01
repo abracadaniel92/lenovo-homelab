@@ -250,13 +250,13 @@ backup_credentials() {
         done
     fi
     
-    # Backup documents-to-calendar credentials
-    if [ -d /mnt/ssd/docker-projects/documents-to-calendar/data ]; then
-        mkdir -p "$BACKUP_BASE_DIR/credentials/documents-to-calendar"
-        cp -r /mnt/ssd/docker-projects/documents-to-calendar/data "$BACKUP_BASE_DIR/credentials/documents-to-calendar/"
-        print_success "Backed up documents-to-calendar credentials"
+    # Backup travelsync credentials
+    if [ -d /mnt/ssd/docker-projects/travelsync/data ]; then
+        mkdir -p "$BACKUP_BASE_DIR/credentials/travelsync"
+        cp -r /mnt/ssd/docker-projects/travelsync/data "$BACKUP_BASE_DIR/credentials/travelsync/"
+        print_success "Backed up travelsync credentials"
     else
-        print_warning "Documents-to-calendar data directory not found, skipping"
+        print_warning "TravelSync data directory not found, skipping"
     fi
 }
 
@@ -354,20 +354,20 @@ backup_application_data() {
         print_warning "Uptime Kuma data directory not found or empty, skipping"
     fi
     
-    # Backup Documents-to-Calendar data
-    if [ -d /mnt/ssd/docker-projects/documents-to-calendar ]; then
-        print_info "Backing up Documents-to-Calendar data..."
-        cd /mnt/ssd/docker-projects/documents-to-calendar
+    # Backup TravelSync data
+    if [ -d /mnt/ssd/docker-projects/travelsync ]; then
+        print_info "Backing up TravelSync data..."
+        cd /mnt/ssd/docker-projects/travelsync
         if [ -n "$(ls -A uploads temp data documents_calendar.db 2>/dev/null)" ]; then
-            sudo tar czf "$BACKUP_BASE_DIR/data/documents-to-calendar.tar.gz" \
+            sudo tar czf "$BACKUP_BASE_DIR/data/travelsync.tar.gz" \
                 --exclude='backend' --exclude='frontend' \
                 uploads temp data documents_calendar.db 2>/dev/null || true
-            print_success "Backed up Documents-to-Calendar data"
+            print_success "Backed up TravelSync data"
         else
-            print_warning "Documents-to-Calendar data directory empty, skipping"
+            print_warning "TravelSync data directory empty, skipping"
         fi
     else
-        print_warning "Documents-to-Calendar directory not found, skipping"
+        print_warning "TravelSync directory not found, skipping"
     fi
     
     # Backup Caddy data

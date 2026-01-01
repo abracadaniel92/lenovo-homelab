@@ -35,7 +35,7 @@ This repository contains all configuration files, scripts, and setup instruction
 - **File Sharing**: Gokapi
 - **Monitoring**: Uptime Kuma
 - **Analytics**: GoatCounter
-- **Document Processing**: Documents-to-Calendar app
+- **Travel Documents**: TravelSync app
 - **Bookmarks**: Flask bookmarks service
 - **Planning Poker**: Planning poker web application
 - **Docker Management**: Portainer
@@ -67,7 +67,7 @@ This repository contains all configuration files, scripts, and setup instruction
 | **Homepage** | 8000 | - | Service dashboard |
 | **Portainer** | 9000 | - | Docker management UI |
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
-| **Documents-to-Calendar** | 8000 | tickets.gmojsoski.com | Document processing |
+| **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
 | **Watchtower** | - | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |
 
@@ -86,7 +86,7 @@ Pi-version-control/
 ├── docker/                    # Docker compose files for all services
 │   ├── caddy/
 │   ├── cloudflared/
-│   ├── documents-to-calendar/
+│   ├── travelsync/
 │   ├── goatcounter/
 │   ├── jellyfin/              # (reference only - actual in /home/docker-projects/)
 │   ├── kavita/                # (deprecated - using Jellyfin for books)

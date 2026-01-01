@@ -46,7 +46,7 @@ Some Docker containers still have `restart=unless-stopped` instead of `restart=a
 - caddy
 - goatcounter
 - uptime-kuma
-- documents-to-calendar
+- travelsync
 
 **Fix Applied**: Updated docker-compose.yml files in repository
 **Action Required**: Recreate containers to apply new policy:
@@ -54,7 +54,7 @@ Some Docker containers still have `restart=unless-stopped` instead of `restart=a
 cd /mnt/ssd/docker-projects/caddy && docker compose up -d
 cd /mnt/ssd/docker-projects/goatcounter && docker compose up -d
 cd /mnt/ssd/docker-projects/uptime-kuma && docker compose up -d
-cd /mnt/ssd/docker-projects/documents-to-calendar && docker compose up -d
+cd /mnt/ssd/docker-projects/travelsync && docker compose up -d
 ```
 
 Or run the fix script:
@@ -102,7 +102,7 @@ sudo systemctl daemon-reload
 
 ### Recreate All Containers with New Restart Policy
 ```bash
-for project in caddy goatcounter uptime-kuma documents-to-calendar; do
+for project in caddy goatcounter uptime-kuma travelsync; do
     cd "/mnt/ssd/docker-projects/$project"
     docker compose down
     docker compose up -d

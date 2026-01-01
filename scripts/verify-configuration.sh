@@ -151,7 +151,7 @@ echo ""
 echo "4. Checking Docker Containers..."
 echo ""
 
-CONTAINERS=("caddy" "goatcounter" "nextcloud-app" "uptime-kuma" "pihole" "documents-to-calendar")
+CONTAINERS=("caddy" "goatcounter" "nextcloud-app" "uptime-kuma" "pihole" "travelsync")
 for container in "${CONTAINERS[@]}"; do
     RESTART_POLICY=$(docker inspect "$container" --format '{{.HostConfig.RestartPolicy.Name}}' 2>/dev/null || echo "not-found")
     if [ "$RESTART_POLICY" = "always" ]; then

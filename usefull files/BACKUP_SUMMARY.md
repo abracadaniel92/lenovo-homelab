@@ -15,7 +15,7 @@
   - `df638884-0d3e-4799-8a98-60e844fcd164.json`
   - `cert.pem`
 - ✅ Gokapi configuration (`/mnt/ssd/apps/gokapi/config/config.json`)
-- ✅ Documents-to-Calendar credentials
+- ✅ TravelSync credentials
   - `.env` file
   - `data/credentials.json`
   - `data/token.pickle`
@@ -27,10 +27,10 @@
   - GoatCounter
   - Nextcloud
   - Uptime Kuma
-  - Documents-to-Calendar
-  - Plausible
-  - Umami
-- ✅ Dockerfiles (Documents-to-Calendar)
+  - TravelSync
+  - Plausible (deprecated)
+  - Umami (deprecated)
+- ✅ Dockerfiles (TravelSync)
 - ✅ Caddyfile (`/mnt/ssd/docker-projects/caddy/config/Caddyfile`)
 
 ### 3. Docker Named Volumes (5 volumes, ~444MB)
@@ -56,7 +56,7 @@
 
 ## ⚠️ Application Data Status
 
-**Note**: Application data backups (Nextcloud, Gokapi data, GoatCounter, Uptime Kuma, Documents-to-Calendar data, Caddy data) may still be in progress or may not have been backed up if directories were empty or not found.
+**Note**: Application data backups (Nextcloud, Gokapi data, GoatCounter, Uptime Kuma, TravelSync data, Caddy data) may still be in progress or may not have been backed up if directories were empty or not found.
 
 The restore script will handle missing data gracefully and will skip restoration of data that doesn't exist in the backup.
 
@@ -70,7 +70,7 @@ pi_backup_20251219_095552/
 ├── credentials/           # All sensitive credentials
 │   ├── cloudflared/
 │   ├── gokapi/
-│   └── documents-to-calendar/
+│   └── travelsync/
 ├── data/                  # Application data & Docker volumes
 │   └── docker-volumes/    # Docker named volumes (5 files)
 ├── docker/                # Docker configurations
@@ -78,7 +78,7 @@ pi_backup_20251219_095552/
 │   ├── goatcounter/
 │   ├── nextcloud/
 │   ├── uptime-kuma/
-│   └── documents-to-calendar/
+│   └── travelsync/
 ├── network/              # Network configuration files
 ├── systemd/              # Systemd service files
 ├── manifest/             # Backup manifest and system info
@@ -144,8 +144,8 @@ The restore script will:
    nano /mnt/ssd/docker-projects/pihole/docker-compose.yml
    # Update WEBPASSWORD
    
-   # Documents-to-Calendar
-   nano /mnt/ssd/docker-projects/documents-to-calendar/.env
+   # TravelSync
+   nano /mnt/ssd/docker-projects/travelsync/.env
    # Update ADMIN_PASSWORD, JWT_SECRET_KEY
    ```
 
@@ -173,7 +173,7 @@ The restore script will:
    curl http://localhost:8080   # Caddy
    curl http://localhost:8088   # GoatCounter
    curl http://localhost:8091   # Gokapi
-   curl http://localhost:8000/api/health  # Documents-to-Calendar
+   curl http://localhost:8000/api/health  # TravelSync
    ```
 
 ---

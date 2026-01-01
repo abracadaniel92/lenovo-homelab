@@ -46,13 +46,13 @@ systemctl status gokapi cloudflared
 # Update passwords
 nano /mnt/ssd/apps/nextcloud/docker-compose.yml
 nano /mnt/ssd/docker-projects/pihole/docker-compose.yml
-nano /mnt/ssd/docker-projects/documents-to-calendar/.env
+nano /mnt/ssd/docker-projects/travelsync/.env
 
 # Test services
 curl http://localhost:8080  # Caddy
 curl http://localhost:8088  # GoatCounter
 curl http://localhost:8091  # Gokapi
-curl http://localhost:8000/api/health  # Documents-to-Calendar
+curl http://localhost:8000/api/health  # TravelSync
 ```
 
 ## Important Notes

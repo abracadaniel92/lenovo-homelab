@@ -25,7 +25,7 @@ ingress:
   - hostname: bookmarks.gmojsoski.com
     service: http://127.0.0.1:8080
 
-  # Documents-to-Calendar (routed through Caddy)
+  # TravelSync (routed through Caddy)
   - hostname: tickets.gmojsoski.com
     service: http://127.0.0.1:8080
 

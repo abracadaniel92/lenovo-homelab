@@ -125,7 +125,7 @@ docker restart goatcounter
 docker restart nextcloud-app
 docker restart uptime-kuma
 docker restart pihole
-docker restart documents-to-calendar
+docker restart travelsync
 
 # Restart all containers
 docker restart $(docker ps -q)

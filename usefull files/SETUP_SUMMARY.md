@@ -9,7 +9,7 @@ This document provides a quick reference for setting up this Lenovo ThinkCentre 
 - ✅ **GoatCounter** - Analytics (`docker/goatcounter/`)
 - ✅ **Nextcloud** - Cloud storage (`docker/nextcloud/`)
 - ✅ **Uptime Kuma** - Monitoring (`docker/uptime-kuma/`)
-- ✅ **Documents-to-Calendar** - Document processing (`docker/documents-to-calendar/`)
+- ✅ **TravelSync** - Document processing (`docker/travelsync/`)
 - ✅ **Pi-hole** - DNS/Ad blocking (`docker/pihole/`)
 - ✅ **Portainer** - Docker management UI (`docker/portainer/`)
 - ✅ **Homepage** - Service dashboard (`scripts/install-homepage.sh`)
@@ -40,7 +40,7 @@ This document provides a quick reference for setting up this Lenovo ThinkCentre 
 - **Passwords**: All default passwords must be changed before production use
 - **Credentials**: Cloudflare tunnel credentials file must be obtained from Cloudflare dashboard
 - **Gokapi**: Use `config.json.template` and generate your own salts
-- **Environment Variables**: Create `.env` files for services that need them (Documents-to-Calendar)
+- **Environment Variables**: Create `.env` files for services that need them (TravelSync)
 
 ## Service Ports
 
@@ -52,7 +52,7 @@ This document provides a quick reference for setting up this Lenovo ThinkCentre 
 | Gokapi | 8091 | files.gmojsoski.com |
 | Nextcloud | 8081 | cloud.gmojsoski.com |
 | Uptime Kuma | 3001 | - |
-| Documents-to-Calendar | 8000 | tickets.gmojsoski.com |
+| TravelSync | 8000 | tickets.gmojsoski.com |
 | Bookmarks | 5000 | bookmarks.gmojsoski.com |
 | Planning Poker | 3000 | poker.gmojsoski.com |
 | Homepage | 3002 | - |

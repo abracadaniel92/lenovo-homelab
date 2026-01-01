@@ -1,7 +1,7 @@
 services:
   app:
     build: .
-    container_name: documents-to-calendar
+    container_name: travelsync
     ports:
       - "8000:8000"
     environment:
