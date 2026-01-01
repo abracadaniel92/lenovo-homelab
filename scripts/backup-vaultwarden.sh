@@ -66,3 +66,4 @@ echo "⚠️  IMPORTANT: Test restore this backup to ensure it works!"
 echo "   Restore script: restore-vaultwarden.sh"
 
 
+

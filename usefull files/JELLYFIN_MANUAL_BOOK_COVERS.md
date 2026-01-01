@@ -141,3 +141,4 @@ After adding covers manually:
 
 Most books should have covers from metadata providers. For the rest, manual addition is quick and easy!
 
+

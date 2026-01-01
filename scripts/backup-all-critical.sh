@@ -40,3 +40,4 @@ echo "   TravelSync: /mnt/ssd/backups/travelsync/"
 echo "   KitchenOwl: /mnt/ssd/backups/kitchenowl/"
 
 
+

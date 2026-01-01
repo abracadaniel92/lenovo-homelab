@@ -123,3 +123,4 @@ To test if automatic fix is working:
 - `fix-subdomains-down.sh` - Manual fix script (more comprehensive)
 - `fix-all-services.sh` - Complete service recovery
 
+

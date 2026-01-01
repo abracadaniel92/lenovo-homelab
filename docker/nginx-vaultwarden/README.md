@@ -64,3 +64,4 @@ docker logs vaultwarden --tail 10
 # Should show: PUT /api/ciphers/<cipher_id>/delete
 ```
 
+

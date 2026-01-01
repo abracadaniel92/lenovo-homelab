@@ -5,6 +5,11 @@
 
 # Main portfolio site
 :80 {
+	# Prevent caching of error responses
+	handle_errors {
+		header Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+		respond "{err.status_code} {err.status_text}"
+	}
 	@gmojsoski host gmojsoski.com www.gmojsoski.com
 	handle @gmojsoski {
 		encode gzip
@@ -96,6 +101,7 @@
 	@shopping host shopping.gmojsoski.com
 	handle @shopping {
 		encode gzip
+		header Cache-Control "no-cache, must-revalidate"
 		reverse_proxy http://172.17.0.1:8092 {
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {remote_host}
@@ -107,6 +113,7 @@
 	@jellyfin host jellyfin.gmojsoski.com
 	handle @jellyfin {
 		encode gzip
+		header Cache-Control "no-cache, must-revalidate"
 		reverse_proxy http://172.17.0.1:8096 {
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {remote_host}

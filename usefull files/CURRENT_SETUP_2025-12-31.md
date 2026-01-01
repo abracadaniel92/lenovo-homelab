@@ -155,3 +155,4 @@ Key directories:
 - Nextcloud: `/mnt/ssd/apps/nextcloud/`
 - Cloudflared config: `/home/goce/.cloudflared/`
 
+
