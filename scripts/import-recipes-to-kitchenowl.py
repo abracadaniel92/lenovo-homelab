@@ -333,7 +333,7 @@ def main():
             item_id = find_or_create_item(item_name)
             if item_id:
                 cursor.execute("""
-                    INSERT INTO recipe_items (recipe_id, item_id, description, created_at, updated_at, optional)
+                    INSERT OR IGNORE INTO recipe_items (recipe_id, item_id, description, created_at, updated_at, optional)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (recipe_id, item_id, ing, now, now, 0))
         
