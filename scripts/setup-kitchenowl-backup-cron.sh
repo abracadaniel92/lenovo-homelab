@@ -48,3 +48,5 @@ echo "  bash /home/goce/Desktop/Cursor\\ projects/Pi-version-control/scripts/bac
 
 
 
+
+

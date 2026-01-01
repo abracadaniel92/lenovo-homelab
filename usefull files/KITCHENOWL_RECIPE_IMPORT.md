@@ -4,50 +4,61 @@
 
 Import Macedonian Word documents (.docx) containing recipes into KitchenOwl.
 
+**Script location**: `scripts/import-recipes-to-kitchenowl.py`
+
 **Features:**
 - Parses multiple recipes from single documents
 - Extracts meal types (ПОЈАДОК, РУЧЕК, ВЕЧЕРА, УЖИНА, СНЕК, ДЕСЕРТ)
 - Extracts workout/day tags from "Ден X: |Workout Name|" patterns
-- Filters out preparation steps from ingredients
-- Skips simple snacks (банана, јаболко, etc.) to preserve images for real recipes
+- Separates spices from ingredients (moved to description)
+- Captures vegan calorie variants (Калории ВЕГЕ)
+- Skips simple snacks (банана, јаболко, etc.)
 - Handles duplicates automatically
 
 ## Quick Import
 
-### Step 1: Parse Documents to JSON
+### Full Import (Recommended)
+
 ```bash
 cd "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts"
-python3 import-recipes-to-kitchenowl.py /path/to/documents/ --dry-run
+
+# Import from a single document
+python3 import-recipes-to-kitchenowl.py ~/Downloads/"Recipe Document.docx"
+
+# Import from multiple documents
+python3 import-recipes-to-kitchenowl.py ~/Downloads/*.docx
+
+# Dry run (parse only, don't import)
+python3 import-recipes-to-kitchenowl.py ~/Downloads/*.docx --dry-run
 ```
 
-### Step 2: Copy to Container
-```bash
-docker cp /tmp/parsed_recipes.json kitchenowl:/data/
-docker cp /tmp/import_from_json.py kitchenowl:/data/
-```
+### Clear and Reimport
 
-### Step 3: Import (Optional: Clear First)
 ```bash
-# Clear existing recipes (optional)
-docker exec kitchenowl python3 -c "
+# Stop KitchenOwl first
+cd /home/docker-projects/kitchenowl
+docker compose stop kitchenowl
+
+# Clear existing recipes
+python3 << 'EOF'
 import sqlite3
-conn = sqlite3.connect('/data/database.db')
+conn = sqlite3.connect('/home/docker-projects/kitchenowl/data/database.db')
 cursor = conn.cursor()
-cursor.execute('DELETE FROM recipe_items')
-cursor.execute('DELETE FROM recipe_tags')
-cursor.execute('DELETE FROM planner')
-cursor.execute('DELETE FROM recipe')
+cursor.execute("DELETE FROM recipe_tags")
+cursor.execute("DELETE FROM recipe_items")
+cursor.execute("DELETE FROM recipe")
 conn.commit()
-print('Cleared recipes')
-"
+print("✅ Cleared all recipes")
+conn.close()
+EOF
 
-# Run import
-docker exec kitchenowl python3 /data/import_from_json.py
-```
+# Reimport
+cd "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts"
+python3 import-recipes-to-kitchenowl.py ~/Downloads/*.docx
 
-### Step 4: Restart
-```bash
-docker restart kitchenowl
+# Restart KitchenOwl
+cd /home/docker-projects/kitchenowl
+docker compose start kitchenowl
 ```
 
 ## Document Format Expected
@@ -66,108 +77,62 @@ Step 1...
 Step 2...
 Калориска вредност
 Калории: 350kcal | Протеини: 25g | ...
+Калории ВЕГЕ: 320kcal | Протеини: 20g | ...  (optional vegan variant)
 
 УЖИНА: Another Recipe
 ...
 ```
 
+## Recipe Structure in KitchenOwl
+
+Each imported recipe has:
+- **Name**: Recipe title (e.g., "ЈАЈЦА НА ТУРСКИ НАЧИН")
+- **Items**: Ingredients list (spices excluded)
+- **Description**: 
+  - Preparation method
+  - Spices section (if any)
+  - Calorie info (regular + vegan variant if present)
+- **Tags**: Meal type + workout day (e.g., "ПОЈАДОК", "Military FIT")
+
 ## Skipped Items
 
-The following simple snacks are automatically skipped:
+### Simple Snacks (Auto-skipped)
+These are skipped to preserve image slots for real recipes:
 - банана, јаболко, портокал, мандарина, грозје, киви
 - круша, праска, кајсија, слива, диња, лубеница
 - јапонско јаболко, нар, смоква, боровинки, малини
 - јагоди, цреши, вишни, ананас
 - протеинско пудингче (standalone)
 
-## Filtered Ingredients
-
-Lines containing these words are filtered out of ingredients:
-- Preparation verbs: измешајте, ставете, додајте, печете, варете, пржете
-- Location words: во сад, во тава, во рерна
-- Time words: минути, часа, секунди
-- Section headers: подготовка, припрема
-- Lines longer than 100 characters
-- Lines ending with `:` (sub-headers)
-
-## Cleanup Commands
-
-### Remove Bad Ingredients (Prep Steps)
-```bash
-docker exec kitchenowl python3 -c "
-import sqlite3
-import re
-conn = sqlite3.connect('/data/database.db')
-cursor = conn.cursor()
-
-prep_indicators = ['измешајте', 'мешајте', 'ставете', 'додајте', 'наредете', 
-    'поделете', 'сервирајте', 'оставете', 'печете', 'варете', 'пржете', 
-    'загрејте', 'исечете', 'сечете', 'излупете', 'во сад', 'во тава', 
-    'подготовка', 'припрема', 'минути', 'часа']
-
-cursor.execute('SELECT recipe_id, item_id, description FROM recipe_items')
-items = cursor.fetchall()
-deleted = 0
-for recipe_id, item_id, desc in items:
-    desc_lower = desc.lower()
-    if any(p in desc_lower for p in prep_indicators) or len(desc) > 100:
-        cursor.execute('DELETE FROM recipe_items WHERE recipe_id = ? AND item_id = ?', 
-                       (recipe_id, item_id))
-        deleted += 1
-conn.commit()
-print(f'Removed {deleted} bad ingredients')
-"
-docker restart kitchenowl
-```
-
-### Remove Simple Snack Recipes
-```bash
-docker exec kitchenowl python3 -c "
-import sqlite3
-conn = sqlite3.connect('/data/database.db')
-cursor = conn.cursor()
-
-skip_snacks = ['банана', 'јаболко', 'портокал', 'мандарина', 'грозје', 'киви',
-    'протеинско пудингче', 'детокс салата', 'јагоди', 'цреши', 'диња', 'лубеница']
-
-cursor.execute('''
-    SELECT r.id, r.name FROM recipe r
-    LEFT JOIN recipe_items ri ON r.id = ri.recipe_id
-    GROUP BY r.id HAVING COUNT(ri.item_id) <= 1
-''')
-for recipe_id, name in cursor.fetchall():
-    if any(s in name.lower() for s in skip_snacks):
-        cursor.execute('DELETE FROM recipe_items WHERE recipe_id = ?', (recipe_id,))
-        cursor.execute('DELETE FROM recipe_tags WHERE recipe_id = ?', (recipe_id,))
-        cursor.execute('DELETE FROM planner WHERE recipe_id = ?', (recipe_id,))
-        cursor.execute('DELETE FROM recipe WHERE id = ?', (recipe_id,))
-        print(f'Deleted: {name}')
-conn.commit()
-"
-docker restart kitchenowl
-```
+### Spices (Moved to Description)
+These are separated from ingredients:
+- сол, бибер, куркума, кари, оригано
+- цимет, ванила, какао, босилек
+- мирудии, зачини
 
 ## Database Location
 
-- **Container path**: `/data/database.db`
-- **Host path**: `/mnt/ssd/docker-projects/kitchenowl/data/database.db`
+| Location | Path |
+|----------|------|
+| Container | `/data/database.db` |
+| Host | `/home/docker-projects/kitchenowl/data/database.db` |
 
 ## Troubleshooting
 
 ### "attempt to write a readonly database"
 Stop KitchenOwl first:
 ```bash
-docker stop kitchenowl
+docker compose stop kitchenowl
 # ... do operations ...
-docker start kitchenowl
+docker compose start kitchenowl
 ```
 
 ### Recipes not showing
-Check visibility is set to 'PRIVATE' (uppercase):
+Ensure visibility is 'PRIVATE' (uppercase):
 ```bash
-docker exec kitchenowl python3 -c "
+python3 -c "
 import sqlite3
-conn = sqlite3.connect('/data/database.db')
+conn = sqlite3.connect('/home/docker-projects/kitchenowl/data/database.db')
 cursor = conn.cursor()
 cursor.execute(\"UPDATE recipe SET visibility = 'PRIVATE' WHERE visibility = 'private'\")
 conn.commit()
@@ -177,21 +142,33 @@ print('Fixed visibility')
 
 ### Check recipe count
 ```bash
-docker exec kitchenowl python3 -c "
+python3 -c "
 import sqlite3
-conn = sqlite3.connect('/data/database.db')
+conn = sqlite3.connect('/home/docker-projects/kitchenowl/data/database.db')
 cursor = conn.cursor()
 cursor.execute('SELECT COUNT(*) FROM recipe')
 print(f'Total recipes: {cursor.fetchone()[0]}')
 "
 ```
 
-## Last Import Stats (Dec 31, 2025)
+### View sample recipe
+```bash
+python3 -c "
+import sqlite3
+conn = sqlite3.connect('/home/docker-projects/kitchenowl/data/database.db')
+cursor = conn.cursor()
+cursor.execute('SELECT name, description FROM recipe LIMIT 1')
+r = cursor.fetchone()
+if r:
+    print(f'Name: {r[0]}')
+    print(f'Description: {r[1][:500]}...')
+"
+```
 
-- **Documents processed**: 17 Word files
-- **Total recipes imported**: 294
-- **Ingredient links**: 2,373
-- **Tags created**: 20 (workout types + meal types)
-- **Unique items**: 2,770
-- **Duplicates skipped**: 20
-- **Simple snacks skipped**: ~30
+## Import Stats
+
+| Metric | Value |
+|--------|-------|
+| Current recipes | 27 |
+| Last import | January 2026 |
+| Source docs | Word documents from Downloads |
