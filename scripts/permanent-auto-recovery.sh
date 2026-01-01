@@ -79,7 +79,7 @@ fi
 # Check TravelSync
 if ! check_service_http "http://localhost:8000/api/health" 5; then
     log "WARNING: TravelSync not responding. Restarting..."
-    cd /mnt/ssd/docker-projects/documents-to-calendar
+    cd /mnt/ssd/docker-projects/travelsync
     docker compose restart
     sleep 3
 fi
@@ -220,7 +220,7 @@ echo "6. Ensuring Docker containers auto-start..."
 # Update docker-compose files to use restart: always (if not already)
 for compose_file in \
     "/mnt/ssd/docker-projects/caddy/docker-compose.yml" \
-    "/mnt/ssd/docker-projects/documents-to-calendar/docker-compose.yml" \
+    "/mnt/ssd/docker-projects/travelsync/docker-compose.yml" \
     "/mnt/ssd/apps/nextcloud/docker-compose.yml"; do
     if [ -f "$compose_file" ]; then
         if ! grep -q "restart: always" "$compose_file"; then

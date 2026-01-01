@@ -30,7 +30,7 @@ sleep 5
 
 # Start other Docker containers
 echo "Starting Docker containers..."
-cd /mnt/ssd/docker-projects/documents-to-calendar && docker compose up -d || echo "WARNING: documents-to-calendar failed"
+cd /mnt/ssd/docker-projects/travelsync && docker compose up -d || echo "WARNING: travelsync failed"
 cd /mnt/ssd/docker-projects/goatcounter && docker compose up -d || echo "WARNING: goatcounter failed"
 cd /mnt/ssd/docker-projects/uptime-kuma && docker compose up -d || echo "WARNING: uptime-kuma failed"
 cd /mnt/ssd/apps/nextcloud && docker compose up -d || echo "WARNING: nextcloud failed"
@@ -49,7 +49,7 @@ sleep 5
 # Check status
 echo ""
 echo "=== Status ==="
-docker ps --format "{{.Names}}: {{.Status}}" | grep -E "caddy|documents|nextcloud"
+docker ps --format "{{.Names}}: {{.Status}}" | grep -E "caddy|travelsync|nextcloud"
 systemctl is-active cloudflared.service planning-poker.service gokapi.service bookmarks.service
 
 echo ""

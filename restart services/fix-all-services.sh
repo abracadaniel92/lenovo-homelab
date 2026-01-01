@@ -53,7 +53,7 @@ echo "4. Starting Docker containers..."
 declare -a containers=(
     "/mnt/ssd/apps/nextcloud:db"
     "/mnt/ssd/apps/nextcloud:app"
-    "/mnt/ssd/docker-projects/documents-to-calendar:app"
+    "/mnt/ssd/docker-projects/travelsync:app"
     "/mnt/ssd/docker-projects/goatcounter:goatcounter"
     "/mnt/ssd/docker-projects/uptime-kuma:uptime-kuma"
     "/mnt/ssd/docker-projects/kitchenowl:kitchenowl"

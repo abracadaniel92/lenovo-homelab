@@ -321,7 +321,7 @@ create_directory_structure() {
     print_info "Creating directory structure..."
     
     # Create Docker project directories
-    sudo mkdir -p /mnt/ssd/docker-projects/{caddy,goatcounter,uptime-kuma,documents-to-calendar,pihole}
+    sudo mkdir -p /mnt/ssd/docker-projects/{caddy,goatcounter,uptime-kuma,travelsync,pihole}
     sudo mkdir -p /mnt/ssd/apps/{nextcloud,gokapi,gokapi-data,gokapi-config}
     
     # Set ownership
@@ -432,13 +432,13 @@ restore_application_data() {
         print_success "Uptime Kuma data restored"
     fi
     
-    # Restore Documents-to-Calendar data
-    if [ -f "$BACKUP_DIR/data/documents-to-calendar.tar.gz" ]; then
-        print_info "Restoring Documents-to-Calendar data..."
-        mkdir -p /mnt/ssd/docker-projects/documents-to-calendar
-        sudo tar xzf "$BACKUP_DIR/data/documents-to-calendar.tar.gz" -C /mnt/ssd/docker-projects/documents-to-calendar
-        sudo chown -R "$RESTORE_USER:$RESTORE_USER" /mnt/ssd/docker-projects/documents-to-calendar
-        print_success "Documents-to-Calendar data restored"
+    # Restore TravelSync data
+    if [ -f "$BACKUP_DIR/data/travelsync.tar.gz" ]; then
+        print_info "Restoring TravelSync data..."
+        mkdir -p /mnt/ssd/docker-projects/travelsync
+        sudo tar xzf "$BACKUP_DIR/data/travelsync.tar.gz" -C /mnt/ssd/docker-projects/travelsync
+        sudo chown -R "$RESTORE_USER:$RESTORE_USER" /mnt/ssd/docker-projects/travelsync
+        print_success "TravelSync data restored"
     fi
     
     # Restore Caddy data
@@ -489,12 +489,12 @@ restore_credentials() {
         print_success "Restored $REL_PATH"
     done
     
-    # Restore documents-to-calendar credentials
-    if [ -d "$BACKUP_DIR/credentials/documents-to-calendar/data" ]; then
-        mkdir -p /mnt/ssd/docker-projects/documents-to-calendar/data
-        cp -r "$BACKUP_DIR/credentials/documents-to-calendar/data"/* \
-            /mnt/ssd/docker-projects/documents-to-calendar/data/
-        print_success "Documents-to-Calendar credentials restored"
+    # Restore travelsync credentials
+    if [ -d "$BACKUP_DIR/credentials/travelsync/data" ]; then
+        mkdir -p /mnt/ssd/docker-projects/travelsync/data
+        cp -r "$BACKUP_DIR/credentials/travelsync/data"/* \
+            /mnt/ssd/docker-projects/travelsync/data/
+        print_success "TravelSync credentials restored"
     fi
     
     print_success "Credentials restored"
@@ -606,12 +606,12 @@ start_docker_services() {
         docker_compose_cmd /mnt/ssd/docker-projects/uptime-kuma/docker-compose.yml up -d || print_warning "Failed to start Uptime Kuma"
     fi
     
-    # Start Documents-to-Calendar
-    if [ -f /mnt/ssd/docker-projects/documents-to-calendar/docker-compose.yml ]; then
-        print_info "Starting Documents-to-Calendar..."
-        cd /mnt/ssd/docker-projects/documents-to-calendar
-        docker_compose_cmd /mnt/ssd/docker-projects/documents-to-calendar/docker-compose.yml build || print_warning "Failed to build Documents-to-Calendar"
-        docker_compose_cmd /mnt/ssd/docker-projects/documents-to-calendar/docker-compose.yml up -d || print_warning "Failed to start Documents-to-Calendar"
+    # Start TravelSync
+    if [ -f /mnt/ssd/docker-projects/travelsync/docker-compose.yml ]; then
+        print_info "Starting TravelSync..."
+        cd /mnt/ssd/docker-projects/travelsync
+        docker_compose_cmd /mnt/ssd/docker-projects/travelsync/docker-compose.yml build || print_warning "Failed to build TravelSync"
+        docker_compose_cmd /mnt/ssd/docker-projects/travelsync/docker-compose.yml up -d || print_warning "Failed to start TravelSync"
     fi
     
     # Start Pi-hole

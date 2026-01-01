@@ -161,7 +161,7 @@ docker network prune
 - ✅ Nextcloud (Docker)
 - ✅ GoatCounter (Docker)
 - ✅ Uptime Kuma (Docker)
-- ✅ Documents-to-Calendar (Docker)
+- ✅ TravelSync (Docker)
 
 ### Monitoring
 - ✅ Health check script (every 2 minutes)
