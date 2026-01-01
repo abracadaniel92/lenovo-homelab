@@ -226,3 +226,5 @@ sudo bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/permane
 3. **fix-subdomains-down.sh** - Use when subdomains are 502/404
 
 
+
+

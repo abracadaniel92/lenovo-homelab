@@ -1,156 +1,163 @@
 # Lenovo ThinkCentre Configuration & Setup
 
-This repository contains all configuration files and setup instructions for replicating this self-hosted server setup. The server runs multiple services including Docker containers, reverse proxy (Caddy), Cloudflare Tunnel, and various applications.
+This repository contains all configuration files, scripts, and setup instructions for a self-hosted home server. The server runs multiple services including Docker containers, reverse proxy (Caddy), Cloudflare Tunnel, and various applications.
 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
 - [System Requirements](#system-requirements)
-- [Installed Services](#installed-services)
+- [Running Services](#running-services)
 - [Directory Structure](#directory-structure)
 - [Setup Instructions](#setup-instructions)
-- [Service Details](#service-details)
+- [Monitoring & Auto-Recovery](#monitoring--auto-recovery)
+- [Backup System](#backup-system)
 - [Maintenance](#maintenance)
+- [Troubleshooting](#troubleshooting)
 
 ## 🎯 Overview
 
-This Lenovo ThinkCentre serves as a self-hosted server running:
-- **Reverse Proxy**: Caddy (handles HTTPS termination and routing)
-- **Tunnel**: Cloudflare Tunnel (exposes services securely to the internet)
-- **File Sharing**: Gokapi
-- **Analytics**: GoatCounter
+| Detail | Value |
+|--------|-------|
+| **Hostname** | lemongrab |
+| **OS** | Linux (Debian-based) |
+| **Storage** | 512GB NVMe SSD |
+| **Docker Data** | `/home/docker-projects/` (symlinked from `/mnt/ssd/docker-projects/`) |
+| **Backups** | `/mnt/ssd/backups/` |
+
+### What This Server Runs
+
+- **Reverse Proxy**: Caddy (handles routing for all services)
+- **Tunnel**: Cloudflare Tunnel (2 replicas for redundancy)
+- **Media Server**: Jellyfin (movies, TV, music, books)
 - **Cloud Storage**: Nextcloud
-- **Monitoring**: Uptime Kuma
-- **DNS/Ad Blocking**: Pi-hole
-- **Document Processing**: Documents-to-Calendar app
-- **Bookmarks**: Slack bookmarks Flask service
-- **Planning Poker**: Planning poker web application
 - **Password Manager**: Vaultwarden (Bitwarden-compatible)
-- **Ebook Library**: Kavita (ebook server for sharing with ebook club)
-- **Media Server**: Jellyfin (music, movies, books)
-- **Shopping Lists**: KitchenOwl (household management)
-- **Docker Management**: Portainer (web UI)
+- **Recipe Manager**: KitchenOwl (shopping lists & recipes)
+- **File Sharing**: Gokapi
+- **Monitoring**: Uptime Kuma
+- **Analytics**: GoatCounter
+- **Document Processing**: Documents-to-Calendar app
+- **Bookmarks**: Flask bookmarks service
+- **Planning Poker**: Planning poker web application
+- **Docker Management**: Portainer
 - **Service Dashboard**: Homepage
-- **Auto-Updates**: Watchtower
-- **Auto-Recovery**: Health check system (every 30 seconds)
+- **Auto-Updates**: Watchtower (with exclusions)
 
 ## 💻 System Requirements
 
 - Lenovo ThinkCentre or similar x86_64 system
 - Docker and Docker Compose installed
-- SSD mounted at `/mnt/ssd` (recommended for better performance)
+- SSD storage (recommended for performance)
 - Cloudflare account with tunnel configured
 - Domain name with DNS configured
 
-## 📦 Installed Services
+## 📦 Running Services
 
-### Docker Containers
+### Docker Containers (15 containers)
 
-1. **Caddy** - Reverse proxy and web server
-   - Port: 8080 (HTTP), 8443 (HTTPS)
-   - Location: `/mnt/ssd/docker-projects/caddy`
+| Service | Port | External URL | Description |
+|---------|------|--------------|-------------|
+| **Caddy** | 8080 | - | Reverse proxy for all services |
+| **Cloudflare Tunnel** | - | - | 2 replicas for redundancy |
+| **Jellyfin** | 8096 | jellyfin.gmojsoski.com | Media server |
+| **KitchenOwl** | 8092 | shopping.gmojsoski.com | Recipe manager & shopping lists |
+| **Vaultwarden** | 8082 | vault.gmojsoski.com | Password manager |
+| **Nextcloud** | 8081 | cloud.gmojsoski.com | Cloud storage (PostgreSQL) |
+| **Uptime Kuma** | 3001 | - | Monitoring & alerts |
+| **GoatCounter** | 8088 | analytics.gmojsoski.com | Web analytics |
+| **Homepage** | 8000 | - | Service dashboard |
+| **Portainer** | 9000 | - | Docker management UI |
+| **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
+| **Documents-to-Calendar** | 8000 | tickets.gmojsoski.com | Document processing |
+| **Watchtower** | - | - | Auto-updates (daily 2 AM) |
+| **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |
 
-2. **GoatCounter** - Privacy-friendly web analytics
-   - Port: 8088
-   - Location: `/mnt/ssd/docker-projects/goatcounter`
+### Systemd Services
 
-3. **Nextcloud** - Self-hosted cloud storage
-   - Port: 8081
-   - Location: `/mnt/ssd/apps/nextcloud`
-   - Version: 30.0.17.2 (latest)
-   - Database: PostgreSQL 16
-   - Domain: https://cloud.gmojsoski.com
-   - See: `usefull files/NEXTCLOUD_FRESH_INSTALL.md` for setup and restore instructions
-
-4. **Uptime Kuma** - Uptime monitoring
-   - Port: 3001
-   - Location: `/mnt/ssd/docker-projects/uptime-kuma`
-
-5. **Documents-to-Calendar** - Document processing app
-   - Port: 8000
-   - Location: `/mnt/ssd/docker-projects/documents-to-calendar`
-
-6. **Pi-hole** - DNS sinkhole and ad blocker
-   - Network: Host mode
-   - Location: Docker volume
-
-7. **Portainer** - Docker management UI
-   - Port: 9000 (HTTP), 9443 (HTTPS)
-   - Location: `/mnt/ssd/docker-projects/portainer`
-
-8. **Homepage** - Service dashboard
-   - Port: 3002
-   - Location: `/mnt/ssd/docker-projects/homepage`
-
-9. **Watchtower** - Auto-update Docker containers
-   - No web UI (runs in background)
-   - Location: `/mnt/ssd/docker-projects/watchtower`
-
-10. **Jellyfin** - Media server (music, movies, books)
-    - Port: 8096
-    - Location: `/mnt/ssd/docker-projects/jellyfin`
-    - Domain: https://jellyfin.gmojsoski.com
-
-11. **KitchenOwl** - Shopping lists and household management
-    - Port: 8092
-    - Location: `/mnt/ssd/docker-projects/kitchenowl`
-    - Domain: https://shopping.gmojsoski.com
-
-12. **Vaultwarden** - Password manager (Bitwarden-compatible)
-    - Port: 8082
-    - Location: `/mnt/ssd/docker-projects/vaultwarden`
-    - Domain: https://vault.gmojsoski.com
-
-### System Services
-
-1. **Gokapi** - File sharing service
-   - Port: 8091
-   - Location: `/mnt/ssd/apps/gokapi`
-   - Service: `/etc/systemd/system/gokapi.service`
-
-2. **Cloudflare Tunnel** - Secure tunnel to Cloudflare
-   - Config: `/home/goce/.cloudflared/config.yml`
-   - Service: `/etc/systemd/system/cloudflared.service`
-
-3. **Bookmarks** - Slack bookmarks Flask service
-   - Port: 5000
-   - Location: `/mnt/ssd/apps/bookmarks`
-   - Service: `/etc/systemd/system/bookmarks.service`
-
-4. **Planning Poker** - Planning poker web application
-   - Port: 3000
-   - Location: `/home/goce/Desktop/Cursor projects/planning poker/planning_poker`
-   - Service: `/etc/systemd/system/planning-poker.service`
+| Service | Port | Description |
+|---------|------|-------------|
+| **Planning Poker** | 3000 | poker.gmojsoski.com |
+| **Bookmarks** | 5000 | bookmarks.gmojsoski.com |
+| **Gokapi** | 8091 | files.gmojsoski.com |
 
 ## 📁 Directory Structure
 
 ```
-Lenovo-version-control/
-├── docker/
+Pi-version-control/
+├── docker/                    # Docker compose files for all services
 │   ├── caddy/
-│   │   ├── docker-compose.yml
-│   │   └── Caddyfile
-│   ├── goatcounter/
-│   │   └── docker-compose.yml
-│   ├── nextcloud/
-│   │   └── docker-compose.yml
-│   ├── uptime-kuma/
-│   │   └── docker-compose.yml
+│   ├── cloudflared/
 │   ├── documents-to-calendar/
-│   │   ├── docker-compose.yml
-│   │   └── Dockerfile
-│   └── pihole/
-│       └── docker-compose.yml
-├── systemd/
-│   ├── gokapi.service
-│   ├── cloudflared.service
+│   ├── goatcounter/
+│   ├── jellyfin/              # (reference only - actual in /home/docker-projects/)
+│   ├── kavita/                # (deprecated - using Jellyfin for books)
+│   ├── nextcloud/
+│   ├── nginx-vaultwarden/
+│   ├── pihole/
+│   ├── portainer/
+│   ├── uptime-kuma/
+│   ├── vaultwarden/
+│   └── watchtower/
+├── systemd/                   # Systemd service files
 │   ├── bookmarks.service
-│   └── planning-poker.service
+│   ├── cloudflared.service
+│   ├── gokapi.service
+│   ├── planning-poker.service
+│   ├── slack-goatcounter-weekly.service
+│   ├── slack-goatcounter-weekly.timer
+│   └── slack-pi-monitoring.*
+├── scripts/                   # Utility scripts
+│   ├── backup-*.sh           # Backup scripts
+│   ├── enhanced-health-check.sh
+│   ├── import-recipes-to-kitchenowl.py
+│   ├── slack-*.sh            # Notification scripts
+│   └── archive/              # Old/deprecated scripts
+├── restart services/          # Emergency recovery scripts
+│   ├── fix-all-services.sh
+│   └── emergency-fix.sh
 ├── cloudflare/
 │   └── config.yml
+├── fail2ban/
+│   └── jail.local.template
+├── usefull files/            # Documentation & guides
+│   ├── MONITORING_AND_RECOVERY.md
+│   ├── KITCHENOWL_RECIPE_IMPORT.md
+│   ├── NEXTCLOUD_FRESH_INSTALL.md
+│   ├── VAULTWARDEN_SETUP.md
+│   └── archive/              # Old documentation
+├── INFRASTRUCTURE_SUMMARY.md  # Quick reference
+└── README.md                  # This file
+```
+
+### Server Directory Structure
+
+```
+/home/docker-projects/        # All Docker services
+├── caddy/
+├── cloudflared/
+├── goatcounter/
+├── homepage/
+├── jellyfin/
+├── kitchenowl/
+├── nginx-vaultwarden/
+├── portainer/
+├── uptime-kuma/
+├── vaultwarden/
+└── watchtower/
+
+/home/apps/                   # Non-Docker apps
+├── nextcloud/
 ├── gokapi/
-│   └── config.json
-└── README.md
+├── gokapi-data/
+└── bookmarks/
+
+/mnt/ssd/                     # Symlinks + backups
+├── docker-projects -> /home/docker-projects
+├── apps -> /home/apps
+└── backups/
+    ├── vaultwarden/
+    ├── nextcloud/
+    ├── kitchenowl/
+    └── travelsync/
 ```
 
 ## 🚀 Setup Instructions
@@ -169,293 +176,41 @@ sudo usermod -aG docker $USER
 # Install Docker Compose plugin
 sudo apt-get install docker-compose-plugin -y
 
-# Log out and back in for group changes to take effect
+# Log out and back in for group changes
 ```
 
-### 2. Mount SSD (if applicable)
+### 2. Create Directory Structure
 
 ```bash
-# Find your SSD
-lsblk
+# Create directories
+sudo mkdir -p /home/docker-projects
+sudo mkdir -p /home/apps/{nextcloud,gokapi,gokapi-data,bookmarks}
+sudo mkdir -p /mnt/ssd/backups/{vaultwarden,nextcloud,kitchenowl,travelsync}
 
-# Mount to /mnt/ssd (adjust device name)
+# Create symlinks for compatibility
 sudo mkdir -p /mnt/ssd
-sudo mount /dev/sda1 /mnt/ssd  # Adjust device name
-
-# Add to /etc/fstab for permanent mounting
-sudo nano /etc/fstab
-# Add: /dev/sda1 /mnt/ssd ext4 defaults 0 2
-```
-
-### 3. Create Directory Structure
-
-```bash
-# Create directories for Docker projects
-sudo mkdir -p /mnt/ssd/docker-projects/{caddy,goatcounter,uptime-kuma,documents-to-calendar}
-sudo mkdir -p /mnt/ssd/apps/{nextcloud,gokapi,gokapi-data,gokapi-config}
+sudo ln -s /home/docker-projects /mnt/ssd/docker-projects
+sudo ln -s /home/apps /mnt/ssd/apps
 
 # Set ownership
-sudo chown -R $USER:$USER /mnt/ssd/docker-projects
-sudo chown -R $USER:$USER /mnt/ssd/apps
+sudo chown -R $USER:$USER /home/docker-projects
+sudo chown -R $USER:$USER /home/apps
 ```
 
-### 4. Setup Caddy
+### 3. Clone This Repository
 
 ```bash
-cd /mnt/ssd/docker-projects/caddy
-mkdir -p config data site
-
-# Copy Caddyfile
-cp /path/to/repo/docker/caddy/Caddyfile ./config/
-
-# Copy docker-compose.yml
-cp /path/to/repo/docker/caddy/docker-compose.yml ./
-
-# Start Caddy
-docker compose up -d
+cd ~/Desktop/"Cursor projects"
+git clone https://github.com/abracadaniel92/lenovo-version-control.git Pi-version-control
 ```
 
-### 5. Setup Cloudflare Tunnel
+### 4. Setup Services
 
-```bash
-# Install cloudflared
-wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-sudo dpkg -i cloudflared-linux-amd64.deb
-
-# Create config directory
-mkdir -p ~/.cloudflared
-
-# Copy config (update credentials file path)
-cp /path/to/repo/cloudflare/config.yml ~/.cloudflared/
-
-# Place your tunnel credentials file at:
-# ~/.cloudflared/df638884-0d3e-4799-8a98-60e844fcd164.json
-
-# Install systemd service
-sudo cp /path/to/repo/systemd/cloudflared.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable cloudflared.service
-sudo systemctl start cloudflared.service
-```
-
-### 6. Setup Gokapi
-
-```bash
-# Download Gokapi binary (x86_64)
-cd /mnt/ssd/apps/gokapi
-wget https://github.com/Forceu/Gokapi/releases/latest/download/gokapi-linux-amd64
-mv gokapi-linux-amd64 gokapi
-chmod +x gokapi
-
-# Create config directory
-mkdir -p config
-
-# Copy config template and customize
-cp /path/to/repo/gokapi/config.json.template ./config/config.json
-# Edit config.json and update:
-# - SaltAdmin: Generate a random string
-# - SaltFiles: Generate a random string  
-# - Username: Your email
-# - ServerUrl: Your domain
-# - Cipher: Generate via Gokapi or leave empty for auto-generation
-
-# Create data directory
-mkdir -p /mnt/ssd/apps/gokapi-data
-
-# Install systemd service
-sudo cp /path/to/repo/systemd/gokapi.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable gokapi.service
-sudo systemctl start gokapi.service
-```
-
-### 7. Setup Docker Services
-
-#### GoatCounter
-
-```bash
-cd /mnt/ssd/docker-projects/goatcounter
-cp /path/to/repo/docker/goatcounter/docker-compose.yml ./
-mkdir -p goatcounter-data
-docker compose up -d
-```
-
-#### Nextcloud
-
-```bash
-cd /mnt/ssd/apps/nextcloud
-cp /path/to/repo/docker/nextcloud/docker-compose.yml ./
-
-# Update POSTGRES_PASSWORD in docker-compose.yml
-nano docker-compose.yml
-
-# Create directories
-mkdir -p db app
-
-# Start services
-docker compose up -d
-```
-
-#### Uptime Kuma
-
-```bash
-cd /mnt/ssd/docker-projects/uptime-kuma
-cp /path/to/repo/docker/uptime-kuma/docker-compose.yml ./
-mkdir -p data
-docker compose up -d
-```
-
-#### Documents-to-Calendar
-
-```bash
-cd /mnt/ssd/docker-projects/documents-to-calendar
-cp /path/to/repo/docker/documents-to-calendar/docker-compose.yml ./
-cp /path/to/repo/docker/documents-to-calendar/Dockerfile ./
-
-# Create necessary directories
-mkdir -p uploads temp data
-
-# Create .env file with required variables
-nano .env
-# Add: GOOGLE_API_KEY, ADMIN_PASSWORD, JWT_SECRET_KEY, CREDENTIALS_JSON, etc.
-
-# Build and start
-docker compose build
-docker compose up -d
-```
-
-#### Pi-hole
-
-```bash
-cd /mnt/ssd/docker-projects/pihole
-cp /path/to/repo/docker/pihole/docker-compose.yml ./
-
-# Update timezone and web password in docker-compose.yml
-nano docker-compose.yml
-
-# Start
-docker compose up -d
-```
-
-#### Vaultwarden (Password Manager)
-
-```bash
-# Use the setup script (recommended)
-cd "/home/goce/Desktop/Cursor projects/Lenovo scripts"
-./setup-vaultwarden.sh
-
-# Or manual setup:
-cd /mnt/ssd/docker-projects/vaultwarden
-cp /path/to/repo/docker/vaultwarden/docker-compose.yml ./
-
-# Generate admin token (optional but recommended)
-openssl rand -base64 32
-# Add the token to ADMIN_TOKEN in docker-compose.yml
-
-# Create data directory
-mkdir -p data
-
-# Start Vaultwarden
-docker compose up -d
-```
-
-**Note:** After creating your account, set `SIGNUPS_ALLOWED: "false"` in docker-compose.yml to prevent unauthorized signups.
-
-#### Kavita (Ebook Library)
-
-```bash
-# Use the setup script (recommended)
-cd "/home/goce/Desktop/Cursor projects/Lenovo scripts"
-./setup-kavita.sh
-
-# Or manual setup:
-cd /mnt/ssd/docker-projects/kavita
-mkdir -p data media logs
-cp /path/to/repo/docker/kavita/docker-compose.yml ./
-docker compose up -d
-```
-
-See `usefull files/KAVITA_SETUP.md` for detailed setup and usage instructions.
-
-## 🔧 Service Details
-
-### Port Mapping
-
-- **8080**: Caddy (HTTP)
-- **8443**: Caddy (HTTPS)
-- **8088**: GoatCounter
-- **8091**: Gokapi
-- **8081**: Nextcloud
-- **3001**: Uptime Kuma
-- **8000**: Documents-to-Calendar
-- **5000**: Bookmarks
-- **3000**: Planning Poker
-- **3002**: Homepage
-- **8082**: Vaultwarden (Password Manager)
-- **8090**: Kavita (Ebook Library)
-- **8092**: KitchenOwl (Shopping Lists)
-- **8096**: Jellyfin (Media Server)
-- **9000**: Portainer (HTTP)
-- **9443**: Portainer (HTTPS)
-- **53**: Pi-hole (DNS)
-
-### Domain Routing (via Caddy)
-
-- `gmojsoski.com` / `www.gmojsoski.com` → Static site (port 8080)
-- `analytics.gmojsoski.com` → GoatCounter (port 8088)
-- `files.gmojsoski.com` → Gokapi (port 8091)
-- `cloud.gmojsoski.com` → Nextcloud (port 8081) - **Note**: Uses host IP (172.17.0.1:8081) due to different Docker networks
-- `bookmarks.gmojsoski.com` → Bookmarks server (port 5000)
-- `poker.gmojsoski.com` → Planning Poker (port 3000)
-- `tickets.gmojsoski.com` → Documents-to-Calendar (port 8000)
-- `travelsync.gmojsoski.com` → Travelsync/Documents-to-Calendar (port 8000)
-- `vault.gmojsoski.com` → Vaultwarden (port 8082)
-- `shopping.gmojsoski.com` → KitchenOwl (port 8092)
-- `jellyfin.gmojsoski.com` → Jellyfin (port 8096)
-
-### Cloudflare Tunnel Configuration
-
-The Cloudflare tunnel routes all domains through Cloudflare's network, providing:
-- DDoS protection
-- SSL/TLS termination
-- Global CDN
-- WAF (Web Application Firewall)
-
-All services are routed to `localhost:8080` where Caddy handles the internal routing.
-
-## 🔐 Security Notes
-
-1. **Passwords**: Update all default passwords in docker-compose.yml files
-   - Nextcloud: `POSTGRES_PASSWORD`
-   - Pi-hole: `WEBPASSWORD`
-   - Documents-to-Calendar: `ADMIN_PASSWORD`, `JWT_SECRET_KEY`
-
-2. **Credentials**: 
-   - Cloudflare tunnel credentials file should be kept secure
-   - Google API credentials for Documents-to-Calendar should be in `.env` file
-   - Gokapi config contains authentication salts - use `config.json.template` and generate your own salts
-   - **Important**: The actual `gokapi/config.json` with real salts is excluded from git. Use the template and generate new salts when setting up.
-
-3. **Firewall**: Consider setting up UFW or similar:
-   ```bash
-   sudo apt install ufw
-   sudo ufw allow 22/tcp  # SSH
-   sudo ufw allow 53/udp  # Pi-hole DNS
-   sudo ufw enable
-   ```
-
-## 📝 Environment Variables
-
-### Documents-to-Calendar (.env file)
-
-```env
-GOOGLE_API_KEY=your-api-key
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your-password
-JWT_SECRET_KEY=your-64-char-secret
-CREDENTIALS_JSON=base64-encoded-credentials
-GOOGLE_CALENDAR_HEADLESS=true
-```
+See individual setup guides in `usefull files/`:
+- `NEXTCLOUD_FRESH_INSTALL.md` - Cloud storage setup
+- `VAULTWARDEN_SETUP.md` - Password manager setup
+- `KITCHENOWL_RECIPE_IMPORT.md` - Recipe import guide
+- `MONITORING_AND_RECOVERY.md` - Health check setup
 
 ## 🛡️ Monitoring & Auto-Recovery
 
@@ -464,9 +219,9 @@ The server has a multi-layer monitoring system:
 | Layer | Tool | Frequency | Purpose |
 |-------|------|-----------|---------|
 | 1 | enhanced-health-check.timer | Every 30 seconds | Check & restart all services |
-| 2 | service-watchdog.service | Continuous (20s loop) | Monitor critical services |
-| 3 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
-| 4 | Docker restart policies | On failure | Auto-restart containers |
+| 2 | Docker restart policies | On failure | Auto-restart containers |
+| 3 | Cloudflare Tunnel (2 replicas) | Continuous | Redundant external access |
+| 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
 
 ### Check Monitoring Status
 
@@ -474,101 +229,144 @@ The server has a multi-layer monitoring system:
 # Health check status
 systemctl status enhanced-health-check.timer
 
-# Service watchdog status
-systemctl status service-watchdog.service
-
 # View health check logs
 tail -50 /var/log/enhanced-health-check.log
+
+# Check all containers
+docker ps --format "table {{.Names}}\t{{.Status}}"
 ```
 
 ### Emergency Recovery
 
-If services go down, run:
 ```bash
+# If services go down, run:
 bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-all-services.sh"
 ```
 
-See `usefull files/MONITORING_AND_RECOVERY.md` for detailed documentation.
+## 💾 Backup System
 
-## 🔄 Maintenance
+**Automated daily backups** run at 2:00 AM for critical services.
+
+### Backup Scripts
+
+```bash
+# Run all backups
+bash scripts/backup-all-critical.sh
+
+# Individual backups
+bash scripts/backup-vaultwarden.sh
+bash scripts/backup-nextcloud.sh
+bash scripts/backup-kitchenowl.sh
+bash scripts/backup-travelsync.sh
+```
+
+### Backup Locations
+
+| Service | Location | Importance |
+|---------|----------|------------|
+| Vaultwarden | `/mnt/ssd/backups/vaultwarden/` | CRITICAL |
+| Nextcloud | `/mnt/ssd/backups/nextcloud/` | High |
+| KitchenOwl | `/mnt/ssd/backups/kitchenowl/` | Medium |
+| Travelsync | `/mnt/ssd/backups/travelsync/` | Medium |
+
+**Retention**: Last 30 backups per service
+
+## 🔧 Maintenance
 
 ### Update Services
 
 ```bash
-# Update Docker images
+# Update a Docker service
+cd /home/docker-projects/<service>
 docker compose pull
 docker compose up -d
 
-# Restart specific service
-docker compose restart <service-name>
-
 # View logs
-docker compose logs -f <service-name>
+docker compose logs -f
+
+# Restart specific service
+docker compose restart
 ```
 
-### Backup System
+### Watchtower Auto-Updates
 
-**Automated daily backups** run at 2:00 AM for critical services.
-
-```bash
-# Run manual backup of all critical services
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-all-critical.sh"
-
-# Individual backups
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-vaultwarden.sh"
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-nextcloud.sh"
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-travelsync.sh"
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/backup-kitchenowl.sh"
-```
-
-**Backup locations**:
-- `/mnt/ssd/backups/vaultwarden/` - Passwords (CRITICAL)
-- `/mnt/ssd/backups/nextcloud/` - Cloud files & database
-- `/mnt/ssd/backups/travelsync/` - Travel documents
-- `/mnt/ssd/backups/kitchenowl/` - Shopping lists
-
-**Retention**: Last 30 backups per service
+Watchtower updates containers daily at 2 AM, except:
+- **Excluded** (manual updates only): Nextcloud, Vaultwarden, Jellyfin, KitchenOwl
 
 ### Check Service Status
 
 ```bash
-# Docker services
+# All Docker containers
 docker ps
 
-# System services
-systemctl status gokapi
-systemctl status cloudflared
+# Systemd services
+systemctl status planning-poker bookmarks gokapi
+
+# Check external access
+curl -s -o /dev/null -w "%{http_code}\n" https://jellyfin.gmojsoski.com
 ```
 
 ## 🐛 Troubleshooting
 
-### Service won't start
+### Services not accessible externally
 
-1. Check logs: `docker compose logs <service>` or `journalctl -u <service>`
-2. Verify ports aren't in use: `sudo netstat -tulpn | grep <port>`
-3. Check file permissions
-4. Verify environment variables are set
+```bash
+# 1. Check Cloudflare tunnel
+docker logs cloudflared-cloudflared-1
 
-### Cloudflare Tunnel issues
+# 2. Restart tunnel
+cd /home/docker-projects/cloudflared && docker compose restart
 
-1. Verify credentials file exists and is readable
-2. Check tunnel status: `cloudflared tunnel list`
-3. View logs: `journalctl -u cloudflared -f`
+# 3. Check Caddy
+docker logs caddy
+```
+
+### Container keeps restarting
+
+```bash
+# Check logs
+docker logs <container-name>
+
+# Check health
+docker inspect <container-name> --format '{{.State.Health}}'
+```
+
+### Database locked errors
+
+```bash
+# Stop container first
+cd /home/docker-projects/<service>
+docker compose stop
+
+# Make changes, then restart
+docker compose up -d
+```
 
 ### Caddy routing issues
 
-1. Check Caddyfile syntax: `docker exec caddy caddy validate --config /etc/caddy/Caddyfile`
-2. Reload Caddy: `docker exec caddy caddy reload --config /etc/caddy/Caddyfile`
-3. Check container networking: `docker network inspect bridge`
+```bash
+# Validate config
+docker exec caddy caddy validate --config /etc/caddy/Caddyfile
+
+# Reload config
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+## 🔐 Security Notes
+
+1. **Passwords**: Update all default passwords in docker-compose.yml files
+2. **Credentials**: Keep Cloudflare tunnel credentials file secure
+3. **Firewall**: UFW is configured to allow only necessary ports
+4. **Vaultwarden**: Set `SIGNUPS_ALLOWED: "false"` after creating your account
 
 ## 📚 Additional Resources
 
 - [Caddy Documentation](https://caddyserver.com/docs/)
 - [Cloudflare Tunnel Docs](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)
-- [Gokapi GitHub](https://github.com/Forceu/Gokapi)
-- [GoatCounter Docs](https://www.goatcounter.com/)
+- [Jellyfin Documentation](https://jellyfin.org/docs/)
+- [KitchenOwl GitHub](https://github.com/TomBursch/kitchenowl)
+- [Vaultwarden Wiki](https://github.com/dani-garcia/vaultwarden/wiki)
 - [Nextcloud Documentation](https://docs.nextcloud.com/)
-- [Pi-hole Documentation](https://docs.pi-hole.net/)
 
 ## 📄 License
 
@@ -576,7 +374,7 @@ This repository contains configuration files for personal use. Please review and
 
 ---
 
-**Last Updated**: December 2025
-**System**: Lenovo ThinkCentre with x86_64 architecture
-**OS**: Linux (Debian)
-
+**Last Updated**: January 2026  
+**System**: Lenovo ThinkCentre (lemongrab)  
+**OS**: Linux (Debian)  
+**Repository**: https://github.com/abracadaniel92/lenovo-version-control
