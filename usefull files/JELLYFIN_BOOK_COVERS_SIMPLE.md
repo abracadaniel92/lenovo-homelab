@@ -71,3 +71,4 @@ After the refresh completes, book covers should appear. If some books still don'
 - You can manually add covers (see main guide)
 - Or wait - metadata providers update regularly
 
+

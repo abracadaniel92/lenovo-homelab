@@ -91,3 +91,4 @@ echo "3. Restart Caddy: cd /mnt/ssd/docker-projects/caddy && docker compose rest
 echo "4. Check service logs for errors"
 echo ""
 
+

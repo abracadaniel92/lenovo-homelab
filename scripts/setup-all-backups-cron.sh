@@ -50,3 +50,4 @@ echo "To test backup manually:"
 echo "  bash $SCRIPT_DIR/backup-all-critical.sh"
 
 
+

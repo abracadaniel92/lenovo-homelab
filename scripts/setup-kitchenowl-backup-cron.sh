@@ -47,3 +47,4 @@ echo "To test backup manually:"
 echo "  bash /home/goce/Desktop/Cursor\\ projects/Pi-version-control/scripts/backup-kitchenowl.sh"
 
 
+
