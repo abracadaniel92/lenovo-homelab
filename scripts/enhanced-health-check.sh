@@ -116,10 +116,6 @@ if ! check_service_http "http://localhost:3001/" 5; then
     restart_docker_service "Uptime-Kuma" "/mnt/ssd/docker-projects/uptime-kuma"
 fi
 
-# Kavita (books) - runs on port 8090
-if ! check_service_http "http://localhost:8090/" 5; then
-    restart_docker_service "Kavita" "/mnt/ssd/docker-projects/kavita"
-fi
 
 # GoatCounter (analytics)
 if ! check_service_http "http://localhost:8088/" 5; then
