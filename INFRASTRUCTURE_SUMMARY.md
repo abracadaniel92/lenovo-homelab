@@ -114,6 +114,8 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix
 
 ## Backup System
 
+### Local Backups
+
 | Service | Location | Schedule |
 |---------|----------|----------|
 | Vaultwarden | `/mnt/ssd/backups/vaultwarden/` | Daily 2 AM |
@@ -122,6 +124,30 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix
 | Travelsync | `/mnt/ssd/backups/travelsync/` | Daily 2 AM |
 
 **Retention**: 30 backups per service
+
+### Offsite Backup (Backblaze B2)
+
+- **Provider**: Backblaze B2 Cloud Storage
+- **Bucket**: `Goce-Lenovo`
+- **Location**: `b2-backup:Goce-Lenovo/`
+- **Sync Schedule**: Daily at 3:00 AM (after local backups)
+- **Sync Script**: `/usr/local/bin/sync-backups-to-b2.sh`
+- **Log File**: `/var/log/rclone-sync.log`
+- **Status**: ✅ Configured and running (443 files synced)
+
+**Manual Commands**:
+```bash
+# Sync now
+rclone sync /mnt/ssd/backups/ b2-backup:Goce-Lenovo/
+
+# List files in B2
+rclone ls b2-backup:Goce-Lenovo/
+
+# Check sync logs
+tail -f /var/log/rclone-sync.log
+```
+
+**Note**: Script excludes `nextcloud-data-extra-*/data/**` due to permission restrictions.
 
 ## KitchenOwl Recipe Import
 
@@ -176,3 +202,4 @@ docker compose up -d  # Restart
 10. ✅ **Fixed health check script** (Jan 2, 2026) - Now correctly detects Docker containers instead of non-existent systemd service
 11. ✅ **Added Pi-hole setup guide** for Raspberry Pi 4 (192.168.1.137)
 12. ✅ **Investigated and fixed external access issues** - See `EXTERNAL_ACCESS_INVESTIGATION.md`
+13. ✅ **Configured Backblaze B2 offsite backup** (Jan 2, 2026) - rclone sync to B2 daily at 3 AM
