@@ -155,7 +155,7 @@ If you want to share your GitHub repo:
 
 **Key Files to Highlight:**
 - `README.md` - Complete setup guide
-- `INFRASTRUCTURE_SUMMARY.md` - Architecture overview
+- `docs/reference/infrastructure-summary.md` - Architecture overview
 - `scripts/` - Automation scripts (Python, Bash)
 - `docker/` - Service configurations
 - `SECRETS_MANAGEMENT_PLAN.md` - Security planning
