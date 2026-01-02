@@ -19,7 +19,7 @@ Quick reference for the lemongrab server.
 | Service | Port | External URL | Status |
 |---------|------|--------------|--------|
 | **Caddy** | 8080 | - | Reverse proxy |
-| **Cloudflare Tunnel** | - | - | 2 replicas |
+| **Cloudflare Tunnel** | 2000 | - | 2 replicas + metrics |
 | **Jellyfin** | 8096 | jellyfin.gmojsoski.com | Media server |
 | **KitchenOwl** | 8092 | shopping.gmojsoski.com | 27 recipes |
 | **Vaultwarden** | 8082 | vault.gmojsoski.com | Password manager |
