@@ -36,7 +36,7 @@ done
 # 4. Start Caddy (CRITICAL - must be first)
 echo ""
 echo "3. Starting Caddy..."
-cd /mnt/ssd/docker-projects/caddy || { echo "   ❌ ERROR: Caddy directory not found!"; exit 1; }
+cd /home/docker-projects/caddy || cd /mnt/ssd/docker-projects/caddy || { echo "   ❌ ERROR: Caddy directory not found!"; exit 1; }
 docker compose up -d caddy
 sleep 5
 
@@ -75,19 +75,27 @@ for container_spec in "${containers[@]}"; do
     fi
 done
 
-# 6. Start systemd services
+# 6. Start Cloudflare Tunnel (Docker)
 echo ""
-echo "5. Starting systemd services..."
-sudo systemctl start cloudflared.service > /dev/null 2>&1 && echo "   ✅ cloudflared.service" || echo "   ⚠️  cloudflared.service failed"
+echo "5. Starting Cloudflare Tunnel (Docker)..."
+cd /home/docker-projects/cloudflared || cd /mnt/ssd/docker-projects/cloudflared || { echo "   ⚠️  Cloudflared directory not found!"; }
+if [ -d "$(pwd)" ]; then
+    docker compose up -d > /dev/null 2>&1 && echo "   ✅ Cloudflare Tunnel started" || echo "   ⚠️  Cloudflare Tunnel failed"
+    sleep 5
+fi
+
+# 7. Start systemd services
+echo ""
+echo "6. Starting systemd services..."
 sudo systemctl start planning-poker.service > /dev/null 2>&1 && echo "   ✅ planning-poker.service" || echo "   ⚠️  planning-poker.service failed"
 sudo systemctl start gokapi.service > /dev/null 2>&1 && echo "   ✅ gokapi.service" || echo "   ⚠️  gokapi.service failed"
 sudo systemctl start bookmarks.service > /dev/null 2>&1 && echo "   ✅ bookmarks.service" || echo "   ⚠️  bookmarks.service failed"
 
 sleep 5
 
-# 7. Test local connectivity
+# 8. Test local connectivity
 echo ""
-echo "6. Testing local connectivity..."
+echo "7. Testing local connectivity..."
 for domain in tickets.gmojsoski.com poker.gmojsoski.com cloud.gmojsoski.com shopping.gmojsoski.com jellyfin.gmojsoski.com; do
     code=$(curl -s -o /dev/null -w "%{http_code}" -H "Host: $domain" http://localhost:8080 --max-time 3 2>&1 || echo "000")
     if [[ "$code" =~ ^[23] ]]; then
@@ -97,14 +105,17 @@ for domain in tickets.gmojsoski.com poker.gmojsoski.com cloud.gmojsoski.com shop
     fi
 done
 
-# 8. Show status
+# 9. Show status
 echo ""
-echo "7. Service Status:"
+echo "8. Service Status:"
 echo "   Docker containers:"
 docker ps --format "   {{.Names}}: {{.Status}}" | head -10
 echo ""
+echo "   Cloudflare Tunnel:"
+docker ps --filter "name=cloudflared" --format "   {{.Names}}: {{.Status}}" 2>/dev/null || echo "   ⚠️  Not running"
+echo ""
 echo "   Systemd services:"
-systemctl is-active cloudflared.service planning-poker.service gokapi.service bookmarks.service 2>&1 | sed 's/^/   /'
+systemctl is-active planning-poker.service gokapi.service bookmarks.service 2>&1 | sed 's/^/   /'
 
 echo ""
 echo "=========================================="
@@ -113,7 +124,7 @@ echo "=========================================="
 echo ""
 echo "If services are still down:"
 echo "1. Check logs: docker logs <container-name>"
-echo "2. Check tunnel: journalctl -u cloudflared.service -f"
-echo "3. Restart tunnel: sudo systemctl restart cloudflared.service"
+echo "2. Check tunnel: cd /home/docker-projects/cloudflared && docker compose logs -f"
+echo "3. Restart external access: bash \"$(dirname \"$0\")/fix-external-access.sh\""
 echo ""
 
