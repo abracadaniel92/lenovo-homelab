@@ -50,6 +50,16 @@ This repository contains all configuration files, scripts, and setup instruction
 - Cloudflare account with tunnel configured
 - Domain name with DNS configured
 
+## 📚 Documentation
+
+Documentation has been reorganized into a structured format. See [docs/README.md](docs/README.md) for the full index.
+
+**Quick Links:**
+- [Infrastructure Summary](docs/reference/infrastructure-summary.md)
+- [Backup Strategy](docs/concepts/backup-strategy.md)
+- [Common Commands](docs/reference/common-commands.md)
+- [How-To Guides](docs/how-to-guides/)
+
 ## 📦 Running Services
 
 ### Docker Containers (15 containers)
