@@ -64,12 +64,20 @@ if ! check_service_http "http://localhost:8080/" 5; then
 fi
 
 # Cloudflare Tunnel (external access - CRITICAL)
+# Cloudflare tunnel runs as Docker containers, not systemd service
 TUNNEL_RUNNING=$(docker ps --filter "name=cloudflared" --format "{{.Names}}" | wc -l)
 if [ "$TUNNEL_RUNNING" -lt 1 ]; then
     log "CRITICAL: Cloudflare tunnel not running. Restarting..."
-    cd /mnt/ssd/docker-projects/cloudflared
+    cd /home/docker-projects/cloudflared || cd /mnt/ssd/docker-projects/cloudflared
     docker compose up -d
     sleep 5
+    # Verify it started
+    TUNNEL_RUNNING_AFTER=$(docker ps --filter "name=cloudflared" --format "{{.Names}}" | wc -l)
+    if [ "$TUNNEL_RUNNING_AFTER" -ge 1 ]; then
+        log "SUCCESS: Cloudflare tunnel restarted successfully"
+    else
+        log "ERROR: Cloudflare tunnel failed to start!"
+    fi
 fi
 
 # ============================================================================
