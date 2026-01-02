@@ -1,13 +1,12 @@
 #!/bin/bash
 ###############################################################################
 # Enhanced Health Check with Auto-Recovery
-# Checks all critical services and auto-restarts if down
 ###############################################################################
 
 LOG_FILE="/var/log/enhanced-health-check.log"
 MAX_LOG_SIZE=10485760  # 10MB
 
-# Rotate log if too large
+# Rotate log
 if [ -f "$LOG_FILE" ] && [ $(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0) -gt $MAX_LOG_SIZE ]; then
     mv "$LOG_FILE" "${LOG_FILE}.old"
     touch "$LOG_FILE"
@@ -28,20 +27,9 @@ check_service_http() {
     fi
 }
 
-restart_docker_service() {
-    local name=$1
-    local path=$2
-    log "WARNING: $name not responding. Restarting..."
-    cd "$path"
-    docker compose restart
-    sleep 5
-}
-
-# ============================================================================
-# PHASE 1: Check Docker is running
-# ============================================================================
+# Check Docker
 if ! systemctl is-active --quiet docker; then
-    log "CRITICAL: Docker not running. Starting..."
+    log "ERROR: Docker not running. Starting..."
     sudo systemctl start docker
     sleep 10
 fi
@@ -51,19 +39,20 @@ until docker ps > /dev/null 2>&1; do
     sleep 2
 done
 
-# ============================================================================
-# PHASE 2: Check critical infrastructure (Caddy & Tunnel)
-# ============================================================================
-
-# Caddy (reverse proxy - CRITICAL)
+# Check Caddy (CRITICAL)
 if ! check_service_http "http://localhost:8080/" 5; then
     log "CRITICAL: Caddy not responding. Restarting..."
     cd /mnt/ssd/docker-projects/caddy
-    docker compose restart
+    docker compose restart caddy
     sleep 5
+    if ! check_service_http "http://localhost:8080/" 10; then
+        log "CRITICAL: Caddy still not responding after restart!"
+    else
+        log "SUCCESS: Caddy is now responding"
+    fi
 fi
 
-# Cloudflare Tunnel (external access - CRITICAL)
+# Check Cloudflare Tunnel (external access - CRITICAL)
 # Cloudflare tunnel runs as Docker containers, not systemd service
 TUNNEL_RUNNING=$(docker ps --filter "name=cloudflared" --format "{{.Names}}" | wc -l)
 if [ "$TUNNEL_RUNNING" -lt 1 ]; then
@@ -80,77 +69,83 @@ if [ "$TUNNEL_RUNNING" -lt 1 ]; then
     fi
 fi
 
-# ============================================================================
-# PHASE 3: Check external access
-# ============================================================================
-check_external() {
-    curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$1" 2>/dev/null
+# Check external access (subdomain downtime detection)
+check_external_access() {
+    local domain=$1
+    local status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "https://${domain}" 2>/dev/null)
+    if [ "$status" = "200" ] || [ "$status" = "302" ] || [ "$status" = "303" ] || [ "$status" = "301" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
-EXTERNAL_STATUS=$(check_external "gmojsoski.com")
-if [ "$EXTERNAL_STATUS" != "200" ] && [ "$EXTERNAL_STATUS" != "302" ]; then
-    log "CRITICAL: External access down (status: $EXTERNAL_STATUS). Restarting tunnel..."
-    cd /mnt/ssd/docker-projects/cloudflared
+# Check if external access is down (502/404 errors)
+EXTERNAL_DOWN=false
+if ! check_external_access "gmojsoski.com"; then
+    log "WARNING: External access down (gmojsoski.com not accessible)"
+    EXTERNAL_DOWN=true
+fi
+
+# If external access is down, run fix-subdomains-down script
+if [ "$EXTERNAL_DOWN" = true ]; then
+    log "CRITICAL: External access down detected. Running fix-subdomains-down.sh..."
+    FIX_SCRIPT="/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-subdomains-down.sh"
+    if [ -f "$FIX_SCRIPT" ]; then
+        # Run the fix script (it will handle sudo internally)
+        bash "$FIX_SCRIPT" >> "$LOG_FILE" 2>&1
+        log "Fix script executed. Waiting 10 seconds for services to recover..."
+        sleep 10
+        
+        # Verify fix worked
+        if check_external_access "gmojsoski.com"; then
+            log "SUCCESS: External access restored after fix"
+        else
+            log "WARNING: External access still down after fix. May need manual intervention."
+        fi
+    else
+        log "ERROR: Fix script not found at $FIX_SCRIPT"
+    fi
+fi
+
+# Check TravelSync
+if ! check_service_http "http://localhost:8000/api/health" 5; then
+    log "WARNING: TravelSync not responding. Restarting..."
+    cd /mnt/ssd/docker-projects/documents-to-calendar
     docker compose restart
-    sleep 10
+    sleep 3
 fi
 
-# ============================================================================
-# PHASE 4: Check all services
-# ============================================================================
-
-# KitchenOwl (shopping)
-if ! check_service_http "http://localhost:8092/" 5; then
-    restart_docker_service "KitchenOwl" "/mnt/ssd/docker-projects/kitchenowl"
-fi
-
-# Jellyfin
-if ! check_service_http "http://localhost:8096/" 5; then
-    restart_docker_service "Jellyfin" "/mnt/ssd/docker-projects/jellyfin"
-fi
-
-# Nextcloud
-if ! check_service_http "http://localhost:8081/" 5; then
-    restart_docker_service "Nextcloud" "/mnt/ssd/docker-projects/nextcloud"
-fi
-
-# Vaultwarden
-if ! check_service_http "http://localhost:8082/" 5; then
-    restart_docker_service "Vaultwarden" "/mnt/ssd/docker-projects/vaultwarden"
-fi
-
-# Uptime Kuma
-if ! check_service_http "http://localhost:3001/" 5; then
-    restart_docker_service "Uptime-Kuma" "/mnt/ssd/docker-projects/uptime-kuma"
-fi
-
-
-# GoatCounter (analytics)
-if ! check_service_http "http://localhost:8088/" 5; then
-    restart_docker_service "GoatCounter" "/mnt/ssd/docker-projects/goatcounter"
-fi
-
-# Gokapi (files)
-if ! check_service_http "http://localhost:8091/" 5; then
-    restart_docker_service "Gokapi" "/mnt/ssd/docker-projects/gokapi"
-fi
-
-# TravelSync
-if ! check_service_http "http://localhost:8000/" 5; then
-    restart_docker_service "TravelSync" "/mnt/ssd/docker-projects/travelsync"
-fi
-
-# Planning Poker
+# Check Planning Poker
 if ! check_service_http "http://localhost:3000/" 5; then
     log "WARNING: Planning Poker not responding. Restarting..."
-    sudo systemctl restart planning-poker.service 2>/dev/null || true
+    sudo systemctl restart planning-poker.service
     sleep 2
 fi
 
-# Bookmarks
-if ! systemctl is-active --quiet bookmarks.service 2>/dev/null; then
-    log "WARNING: Bookmarks service not running. Restarting..."
-    sudo systemctl restart bookmarks.service 2>/dev/null || true
+# Check Nextcloud
+if ! check_service_http "http://localhost:8081/" 5; then
+    log "WARNING: Nextcloud not responding. Restarting..."
+    cd /mnt/ssd/apps/nextcloud
+    docker compose restart app
+    sleep 3
 fi
 
-log "Health check complete - all services checked"
+# Check Jellyfin
+if ! check_service_http "http://localhost:8096/" 5; then
+    log "WARNING: Jellyfin not responding. Restarting..."
+    cd /mnt/ssd/docker-projects/jellyfin
+    docker compose restart
+    sleep 3
+fi
+
+# Check other services
+for service in "gokapi.service" "bookmarks.service"; do
+    if ! systemctl is-active --quiet "$service"; then
+        log "WARNING: $service not running. Restarting..."
+        sudo systemctl restart "$service"
+        sleep 2
+    fi
+done
+
+log "Health check complete"
