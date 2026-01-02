@@ -173,3 +173,6 @@ docker compose up -d  # Restart
 7. ✅ Cleaned up duplicate health checks
 8. ✅ Fixed Vaultwarden iOS DELETE method issue (via Nginx proxy)
 9. ✅ Added 2 Cloudflare Tunnel replicas for redundancy
+10. ✅ **Fixed health check script** (Jan 2, 2026) - Now correctly detects Docker containers instead of non-existent systemd service
+11. ✅ **Added Pi-hole setup guide** for Raspberry Pi 4 (192.168.1.137)
+12. ✅ **Investigated and fixed external access issues** - See `EXTERNAL_ACCESS_INVESTIGATION.md`
