@@ -51,14 +51,10 @@ FILE_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
 
 echo "✅ Backup created: $BACKUP_FILE ($FILE_SIZE)"
 
-# Keep only last 30 backups
-echo "🧹 Cleaning old backups (keeping last 30)..."
-cd "$BACKUP_DIR"
-ls -t vaultwarden-*.tar.gz 2>/dev/null | tail -n +31 | xargs -r rm -f
-
-# Count remaining backups
-BACKUP_COUNT=$(ls -1 vaultwarden-*.tar.gz 2>/dev/null | wc -l)
-echo "📊 Total backups: $BACKUP_COUNT"
+# Smart retention cleanup (multi-tier: hourly, daily, weekly, monthly, yearly)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/backup-retention-helper.sh"
+smart_retention_cleanup "$BACKUP_DIR" "vaultwarden-*.tar.gz" "Vaultwarden"
 
 echo "✅ Backup complete!"
 echo ""
