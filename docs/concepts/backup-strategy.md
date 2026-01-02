@@ -67,8 +67,8 @@ Backups are automatically synced to Backblaze B2:
 
 See also:
 - [Backup Setup Guide](../how-to-guides/setup-backup.md)
-- [Backup Options Comparison](../../CHEAPEST_BACKUP_OPTIONS.md)
-- [Replication Strategy](../../REPLICATION_STRATEGY.md)
+- [Backup Options Comparison](CHEAPEST_BACKUP_OPTIONS.md)
+- [Replication Strategy](REPLICATION_STRATEGY.md)
 
 ---
 

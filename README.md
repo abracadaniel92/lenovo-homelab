@@ -134,7 +134,7 @@ Pi-version-control/
 │   ├── NEXTCLOUD_FRESH_INSTALL.md
 │   ├── VAULTWARDEN_SETUP.md
 │   └── archive/              # Old documentation
-├── INFRASTRUCTURE_SUMMARY.md  # Quick reference
+├── docs/                      # Organized documentation (see docs/README.md)
 └── README.md                  # This file
 ```
 
