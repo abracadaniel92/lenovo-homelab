@@ -12,13 +12,13 @@ This log documents specific issues encountered on the server and their fixes.
 ### Issue 1: Cloudflare Tunnel Instability
 **Root Cause:**
 - Multiple `cloudflared` replicas (2) running on host network were creating too many connections (8 total).
-- UDP buffer sizes were too small (`net.core.wmem_max = 212992`), causing connection drops under load/instability.
-- Logs showed: `ERR Request failed error="Incoming request ended abruptly: context canceled"`
+- UDP buffer sizes were too small (`net.core.wmem_max` & `rmem_max` = 212992), causing connection drops under load/instability.
+- Logs showed: `ERR Request failed error="Incoming request ended abruptly: context canceled"` and `Application error 0x0` (QUIC packet loss).
 
 **Fix:**
-- Increased UDP buffer sizes to 8MB.
-- Command: `sudo sysctl -w net.core.wmem_max=8388608`
-- Persistence: Added `net.core.wmem_max=8388608` to `/etc/sysctl.d/99-cloudflared.conf`.
+- Increased BOTH UDP buffer sizes to **25MB** (Overkill setting for stability).
+- Command: `sudo sysctl -w net.core.wmem_max=26214400 net.core.rmem_max=26214400`
+- Persistence: Added both settings to `/etc/sysctl.d/99-cloudflared.conf`.
 
 ### Issue 2: Bookmarks Service (Flask) Port Conflict
 **Root Cause:**
