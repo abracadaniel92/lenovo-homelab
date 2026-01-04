@@ -27,6 +27,31 @@ check_service_http() {
     fi
 }
 
+check_udp_buffers() {
+    local rmem_max=$(sysctl -n net.core.rmem_max)
+    if [ "$rmem_max" -lt 8388608 ]; then
+        log "WARNING: UDP receive buffer too small ($rmem_max). Fixing..."
+        if sudo sysctl -w net.core.rmem_max=8388608 >> "$LOG_FILE" 2>&1; then
+            log "SUCCESS: UDP receive buffer increased to 8388608"
+        else
+            log "ERROR: Failed to increase UDP buffer"
+        fi
+    fi
+    
+    local wmem_max=$(sysctl -n net.core.wmem_max)
+    if [ "$wmem_max" -lt 8388608 ]; then
+        log "WARNING: UDP send buffer too small ($wmem_max). Fixing..."
+        if sudo sysctl -w net.core.wmem_max=8388608 >> "$LOG_FILE" 2>&1; then
+            log "SUCCESS: UDP send buffer increased to 8388608"
+        else
+            log "ERROR: Failed to increase UDP buffer"
+        fi
+    fi
+}
+
+# Check System Health
+check_udp_buffers
+
 # Check Docker
 if ! systemctl is-active --quiet docker; then
     log "ERROR: Docker not running. Starting..."
@@ -147,5 +172,26 @@ for service in "gokapi.service" "bookmarks.service"; do
         sleep 2
     fi
 done
+
+# Check Bookmarks specifically for port 5000 conflict
+if ! check_service_http "http://localhost:5000/" 5; then
+    log "WARNING: Bookmarks service not answering on port 5000"
+    
+    # Check if port 5000 is occupied by something else
+    PORT_USER=$(sudo lsof -t -i:5000 -sTCP:LISTEN 2>/dev/null)
+    BOOKMARKS_PID=$(systemctl show -p MainPID bookmarks.service | cut -d= -f2)
+    
+    if [ -n "$PORT_USER" ] && [ "$PORT_USER" != "$BOOKMARKS_PID" ] && [ "$BOOKMARKS_PID" != "0" ]; then
+        PROCESS_NAME=$(ps -p $PORT_USER -o comm=)
+        log "CRITICAL: Port 5000 conflict denied! Used by PID $PORT_USER ($PROCESS_NAME). Killing..."
+        sudo kill -9 $PORT_USER
+        sleep 2
+        sudo systemctl restart bookmarks.service
+        log "Restarted bookmarks service after preserving port 5000"
+    elif ! systemctl is-active --quiet bookmarks.service; then
+         log "WARNING: Bookmarks service stopped. Restarting..."
+         sudo systemctl restart bookmarks.service
+    fi
+fi
 
 log "Health check complete"
