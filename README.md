@@ -14,7 +14,7 @@ This repository contains all configuration files, scripts, and setup instruction
 - [Maintenance](#maintenance)
 - [Troubleshooting](#troubleshooting)
 
-## 🎯 Overview
+## <a name="overview"></a>🎯 Overview
 
 | Detail | Value |
 |--------|-------|
@@ -42,7 +42,7 @@ This repository contains all configuration files, scripts, and setup instruction
 - **Service Dashboard**: Homepage
 - **Auto-Updates**: Watchtower (with exclusions)
 
-## 💻 System Requirements
+## <a name="system-requirements"></a>💻 System Requirements
 
 - Lenovo ThinkCentre or similar x86_64 system
 - Docker and Docker Compose installed
@@ -60,7 +60,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 - [Common Commands](docs/reference/common-commands.md)
 - [How-To Guides](docs/how-to-guides/)
 
-## 📦 Running Services
+## <a name="running-services"></a>📦 Running Services
 
 ### Docker Containers (15 containers)
 
@@ -89,7 +89,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Bookmarks** | 5000 | bookmarks.gmojsoski.com |
 | **Gokapi** | 8091 | files.gmojsoski.com |
 
-## 📁 Directory Structure
+## <a name="directory-structure"></a>📁 Directory Structure
 
 ```
 Pi-version-control/
@@ -170,7 +170,7 @@ Pi-version-control/
     └── travelsync/
 ```
 
-## 🚀 Setup Instructions
+## <a name="setup-instructions"></a>🚀 Setup Instructions
 
 ### 1. Initial System Setup
 
@@ -211,7 +211,7 @@ sudo chown -R $USER:$USER /home/apps
 
 ```bash
 cd ~/Desktop/"Cursor projects"
-git clone https://github.com/abracadaniel92/lenovo-version-control.git Pi-version-control
+git clone https://github.com/abracadaniel92/lenovo-homelab.git Pi-version-control
 ```
 
 ### 4. Setup Services
@@ -222,7 +222,7 @@ See individual setup guides in `usefull files/`:
 - `KITCHENOWL_RECIPE_IMPORT.md` - Recipe import guide
 - `MONITORING_AND_RECOVERY.md` - Health check setup
 
-## 🛡️ Monitoring & Auto-Recovery
+## <a name="monitoring--auto-recovery"></a>🛡️ Monitoring & Auto-Recovery
 
 The server has a multi-layer monitoring system:
 
@@ -253,7 +253,7 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-all-services.sh"
 ```
 
-## 💾 Backup System
+## <a name="backup-system"></a>💾 Backup System
 
 **Automated daily backups** run at 2:00 AM for critical services.
 
@@ -281,7 +281,7 @@ bash scripts/backup-travelsync.sh
 
 **Retention**: Last 30 backups per service
 
-## 🔧 Maintenance
+## <a name="maintenance"></a>🔧 Maintenance
 
 ### Update Services
 
@@ -316,7 +316,7 @@ systemctl status planning-poker bookmarks gokapi
 curl -s -o /dev/null -w "%{http_code}\n" https://jellyfin.gmojsoski.com
 ```
 
-## 🐛 Troubleshooting
+## <a name="troubleshooting"></a>🐛 Troubleshooting
 
 ### Services not accessible externally
 
@@ -387,4 +387,4 @@ This repository contains configuration files for personal use. Please review and
 **Last Updated**: January 2026  
 **System**: Lenovo ThinkCentre (lemongrab)  
 **OS**: Linux (Debian)  
-**Repository**: https://github.com/abracadaniel92/lenovo-version-control
+**Repository**: https://github.com/abracadaniel92/lenovo-homelab
