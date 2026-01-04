@@ -28,21 +28,22 @@ check_service_http() {
 }
 
 check_udp_buffers() {
+    local TARGET_BUFFER=26214400 # 25MB
     local rmem_max=$(sysctl -n net.core.rmem_max)
-    if [ "$rmem_max" -lt 8388608 ]; then
+    if [ "$rmem_max" -lt $TARGET_BUFFER ]; then
         log "WARNING: UDP receive buffer too small ($rmem_max). Fixing..."
-        if sudo sysctl -w net.core.rmem_max=8388608 >> "$LOG_FILE" 2>&1; then
-            log "SUCCESS: UDP receive buffer increased to 8388608"
+        if sudo sysctl -w net.core.rmem_max=$TARGET_BUFFER >> "$LOG_FILE" 2>&1; then
+            log "SUCCESS: UDP receive buffer increased to 25MB"
         else
             log "ERROR: Failed to increase UDP buffer"
         fi
     fi
     
     local wmem_max=$(sysctl -n net.core.wmem_max)
-    if [ "$wmem_max" -lt 8388608 ]; then
+    if [ "$wmem_max" -lt $TARGET_BUFFER ]; then
         log "WARNING: UDP send buffer too small ($wmem_max). Fixing..."
-        if sudo sysctl -w net.core.wmem_max=8388608 >> "$LOG_FILE" 2>&1; then
-            log "SUCCESS: UDP send buffer increased to 8388608"
+        if sudo sysctl -w net.core.wmem_max=$TARGET_BUFFER >> "$LOG_FILE" 2>&1; then
+            log "SUCCESS: UDP send buffer increased to 25MB"
         else
             log "ERROR: Failed to increase UDP buffer"
         fi
