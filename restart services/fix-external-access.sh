@@ -46,7 +46,9 @@ fi
 echo ""
 echo "3. Restarting Cloudflare Tunnel (Docker)..."
 cd /home/docker-projects/cloudflared || cd /mnt/ssd/docker-projects/cloudflared || { echo "❌ ERROR: Cloudflared directory not found!"; exit 1; }
-docker compose restart
+docker compose down
+sleep 2
+docker compose up -d
 sleep 10
 
 # Check tunnel status
