@@ -382,6 +382,24 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 - [Vaultwarden Wiki](https://github.com/dani-garcia/vaultwarden/wiki)
 - [Nextcloud Documentation](https://docs.nextcloud.com/)
 
+## <a name="development"></a>🛠️ Development
+
+### Automation Tools
+- **Makefile (`lab` alias)**: Shortcuts for health checks, logs, and backups.
+    - See [Lab Command Cheat Sheet](restart%20services/LAB_COMMANDS.md) for full usage.
+- **Renovate Bot**: Automatically scans and opens PRs for Docker image updates.
+- **Pre-commit**: Automatically checks YAML and ensuring script syntax on commit.
+
+### Branching Strategy
+- **`main`**: Stable production code.
+- **`develop`**: Integration branch for new features and updates.
+
+**Contribution Workflow:**
+1.  Checkout `develop`: `git checkout develop`
+2.  Create feature branch: `git checkout -b feature/my-cool-feature`
+3.  Push and Open PR to `develop`.
+4.  Merge `develop` to `main` to release.
+
 ## 📄 License
 
 This repository contains configuration files for personal use. Please review and update all credentials and secrets before deploying.
