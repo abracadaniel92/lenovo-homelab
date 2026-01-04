@@ -116,7 +116,7 @@ fi
 # If external access is down, run fix-subdomains-down script
 if [ "$EXTERNAL_DOWN" = true ]; then
     log "CRITICAL: External access down detected. Running fix-subdomains-down.sh..."
-    FIX_SCRIPT="/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-subdomains-down.sh"
+    FIX_SCRIPT="/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-external-access.sh"
     if [ -f "$FIX_SCRIPT" ]; then
         # Run the fix script (it will handle sudo internally)
         bash "$FIX_SCRIPT" >> "$LOG_FILE" 2>&1
