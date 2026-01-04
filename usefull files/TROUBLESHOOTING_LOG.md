@@ -37,3 +37,31 @@ If 502 errors return, run the cleanup/recovery script:
 ```bash
 bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-external-access.sh"
 ```
+
+## [2026-01-04] Service Inaccessibility & Mobile "File Download" Issue
+
+### 🔴 Symptoms
+1.  **Global 502/503 Errors:** All services (`gmojsoski.com`, `jellyfin`, `cloud`, etc.) intermittently returning 502 Bad Gateway.
+2.  **Persistent 404 on Jellyfin:** Even when Root domain worked, Jellyfin maintained a 404 (Cloudflare page).
+3.  **Mobile Browsers "Downloading" file:** Instead of loading the Jellyfin/Vaultwarden login page, mobile browsers (Chrome/Safari) would attempt to download a blank file or show a white screen.
+4.  **Health Check Fails:** Automated health check couldn't find the repair script.
+
+### 🔍 Root Causes identified
+1.  **Cloudflared Networking:** The `cloudflared` container runs in `network_mode: host`. Attempts to bind ingress rules to `127.0.0.1` or the LAN IP (`192.168.1.97`) caused instability and 502s due to loopback/interface quirks in this mode.
+2.  **Ingress Mismatch (404):** The 404s were due to configuration drift where the running process held a different config state than the file on disk during debugging.
+3.  **Mobile "Blank Page" (Compression):** Caddy was applying `encode gzip` to Jellyfin and Vaultwarden. These applications (and their mobile clients) often handle compressed initial handshakes poorly, or Cloudflare double-compression caused issues.
+4.  **Missing SSL Signals:** Mobile clients were not receiving the `X-Forwarded-Ssl: on` header, causing them to treat the connection as insecure or improperly redirect.
+
+### ✅ Fixes Applied
+1.  **Ingress Configuration:** Reverted and locked `~/.cloudflared/config.yml` to use `http://localhost:8080` for ALL services. This is the correct way to address Caddy on the host when running in `network_mode: host`.
+2.  **Robust Restart:** Updated `fix-external-access.sh` to use `docker compose down && docker compose up -d` instead of just `restart`. This forces a clean state.
+3.  **Caddyfile Optimization:**
+    *   **Disabled Gzip:** Removed `encode gzip` for `@jellyfin` and `@vault` blocks.
+    *   **Added Headers:** Injected `header_up X-Forwarded-Ssl on` for these services.
+4.  **Health Check:** Updated `/usr/local/bin/enhanced-health-check.sh` to match the repo version, fixing the path to the repair script.
+5.  **Redundancy:** Confirmed `replicas: 2` in `docker-compose.yml` for Cloudflared.
+
+### 🧪 Verification
+*   `curl -I https://gmojsoski.com` -> **HTTP 200**
+*   `curl -I https://jellyfin.gmojsoski.com/web/index.html` -> **HTTP 200** (was 302 loop/download)
+*   **Mobile Test:** Validated login page loads correctly without downloading files.

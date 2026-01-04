@@ -94,6 +94,7 @@
 		# NO gzip encoding - Rocket/Vaultwarden doesn't handle it well
 		reverse_proxy http://172.17.0.1:8083 {
 			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Ssl on
 			header_up X-Real-IP {remote_host}
 		}
 	}
@@ -112,13 +113,11 @@
 	
 	@jellyfin host jellyfin.gmojsoski.com
 	handle @jellyfin {
-		encode gzip
-		header Cache-Control "no-cache, must-revalidate"
+		# format "text/html" workaround for blank page issues not needed if compression is off
 		reverse_proxy http://172.17.0.1:8096 {
 			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Ssl on
 			header_up X-Real-IP {remote_host}
-			header_up Host {host}
-			header_up X-Forwarded-Host {host}
 		}
 	}
 	
