@@ -1,6 +1,7 @@
 # Sensitive credentials
 *.json
 !gokapi/config.json.template  # Keep gokapi config template
+!renovate.json                  # Renovate configuration
 !cloudflare/config.yml  # Keep cloudflare config (no sensitive data)
 credentials.json
 token.pickle

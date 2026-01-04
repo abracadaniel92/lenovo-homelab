@@ -1,5 +1,9 @@
 # Lenovo ThinkCentre Configuration & Setup
 
+[![GitHub last commit](https://img.shields.io/github/last-commit/abracadaniel92/lenovo-homelab?style=flat-square&logo=github)](https://github.com/abracadaniel92/lenovo-homelab/commits/main)
+[![Docker](https://img.shields.io/badge/containers-15-blue?style=flat-square&logo=docker)](https://github.com/abracadaniel92/lenovo-homelab)
+
+
 This repository contains all configuration files, scripts, and setup instructions for a self-hosted home server. The server runs multiple services including Docker containers, reverse proxy (Caddy), Cloudflare Tunnel, and various applications.
 
 ## 📋 Table of Contents
