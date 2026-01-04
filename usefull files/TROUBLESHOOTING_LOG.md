@@ -16,8 +16,8 @@ This log documents specific issues encountered on the server and their fixes.
 - Logs showed: `ERR Request failed error="Incoming request ended abruptly: context canceled"` and `Application error 0x0` (QUIC packet loss).
 
 **Fix:**
-- Increased BOTH UDP buffer sizes to 8MB.
-- Command: `sudo sysctl -w net.core.wmem_max=8388608 net.core.rmem_max=8388608`
+- Increased BOTH UDP buffer sizes to **25MB** (Overkill setting for stability).
+- Command: `sudo sysctl -w net.core.wmem_max=26214400 net.core.rmem_max=26214400`
 - Persistence: Added both settings to `/etc/sysctl.d/99-cloudflared.conf`.
 
 ### Issue 2: Bookmarks Service (Flask) Port Conflict

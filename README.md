@@ -28,6 +28,15 @@ This repository contains all configuration files, scripts, and setup instruction
 | **Docker Data** | `/home/docker-projects/` (symlinked from `/mnt/ssd/docker-projects/`) |
 | **Backups** | `/mnt/ssd/backups/` |
 
+### Hardware Specs
+
+| Component | Specification |
+|-----------|---------------|
+| **CPU** | Intel Pentium G4560T @ 2.90GHz (2 Cores, 4 Threads) |
+| **RAM** | 32GB DDR4 |
+| **Storage** | 512GB NVMe SSD |
+| **Network** | Gigabit Ethernet |
+
 ### What This Server Runs
 
 - **Reverse Proxy**: Caddy (handles routing for all services)
