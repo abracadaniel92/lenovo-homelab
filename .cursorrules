@@ -20,3 +20,10 @@ This repository manages a live homelab environment. Any AI agent working here MU
 - The `develop` branch is the primary working branch.
 - Always `pull --rebase` before pushing to avoid conflicts.
 - Stash or commit local changes before pulling.
+
+## 5. Privacy & Sensitive Data
+- **Redact Network Identifiers**: NEVER commit public IP addresses or specific No-IP hostnames into the documentation. Use placeholders like `[REDACTED_PUBLIC_IP]`, `[REDACTED_INTERNAL_IP]`, or `[REDACTED_NOIP]`.
+- **Anonymize PII**: Avoid committing personal names (e.g., "Goce") in technical logs or investigation reports. Use `[USER]` instead.
+- **Credential Protection**: 
+    - Verify that `.env`, `*.pickle`, and credential files are correctly ignored by Git before doing any work.
+    - NEVER hardcode Slack webhooks, API tokens, or cleartext passwords in scripts or `docker-compose.yml` files. Use environment variables or secure placeholders.
