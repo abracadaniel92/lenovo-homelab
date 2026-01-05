@@ -5,7 +5,15 @@
 
 set -e
 
-SLACK_WEBHOOK_URL="https://hooks.slack.com/services/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"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    source "$SCRIPT_DIR/.env"
+fi
+
+if [ -z "$SLACK_WEBHOOK_URL" ]; then
+    echo "ERROR: SLACK_WEBHOOK_URL is not set. Please check scripts/.env"
+    exit 1
+fi
 
 # Get hostname
 HOSTNAME=$(hostname)

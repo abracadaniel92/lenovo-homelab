@@ -1,11 +1,23 @@
 #!/bin/bash
+###############################################################################
 # GoatCounter Weekly Analytics Report Script
 # Sends weekly analytics summary to Slack webhook
 # Runs every Sunday at 10 AM via systemd timer
+###############################################################################
 
 set -e
 
-SLACK_WEBHOOK_URL="https://hooks.slack.com/services/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"
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    source "$SCRIPT_DIR/.env"
+fi
+
+if [ -z "$SLACK_WEBHOOK_URL" ]; then
+    echo "ERROR: SLACK_WEBHOOK_URL is not set. Please check scripts/.env"
+    exit 1
+fi
+
 GOATCOUNTER_DB="/mnt/ssd/docker-projects/goatcounter/goatcounter-data/goatcounter.sqlite3"
 
 # Calculate date range (last 7 days)
@@ -27,34 +39,20 @@ query_db() {
 # Checkpoint WAL to ensure we see all data
 query_db "PRAGMA wal_checkpoint;" > /dev/null 2>&1
 
-# Get total pageviews (sum of all hourly stats arrays)
+# Get total pageviews from hit_counts (aggregated hourly data)
 TOTAL_PAGEVIEWS=$(query_db "
-    SELECT COALESCE(SUM(
-        CAST(REPLACE(REPLACE(REPLACE(stats, '[', ''), ']', ''), ',', '+') AS INTEGER)
-    ), 0) 
-    FROM hit_stats 
-    WHERE day >= date('now', '-7 days');
+    SELECT SUM(total)
+    FROM hit_counts 
+    WHERE hour >= datetime('now', '-7 days');
 " | head -1)
+TOTAL_PAGEVIEWS=${TOTAL_PAGEVIEWS:-0}
 
-# Fallback: count rows if above fails
-if [ -z "$TOTAL_PAGEVIEWS" ] || [ "$TOTAL_PAGEVIEWS" = "0" ]; then
-    TOTAL_PAGEVIEWS=$(query_db "SELECT COUNT(*) FROM hit_stats WHERE day >= date('now', '-7 days');" | head -1)
-fi
-
-# Get unique visitors (sessions)
-UNIQUE_VISITORS=$(query_db "
-    SELECT COUNT(DISTINCT session_id) 
-    FROM hits 
-    WHERE created_at >= datetime('now', '-7 days');
-" | head -1)
-UNIQUE_VISITORS=${UNIQUE_VISITORS:-0}
-
-# Get top 5 pages
+# Get top 5 pages using aggregated data
 TOP_PAGES=$(query_db "
-    SELECT p.path, COUNT(*) as visits 
-    FROM hits h 
-    JOIN paths p ON h.path_id = p.path_id 
-    WHERE h.created_at >= datetime('now', '-7 days')
+    SELECT p.path, SUM(hc.total) as visits 
+    FROM hit_counts hc
+    JOIN paths p ON hc.path_id = p.path_id 
+    WHERE hc.hour >= datetime('now', '-7 days')
     GROUP BY p.path 
     ORDER BY visits DESC 
     LIMIT 5;
@@ -62,14 +60,15 @@ TOP_PAGES=$(query_db "
     [ -n "$path" ] && echo "  • ${path:-/} — ${visits} views"
 done)
 
-# Get top 5 referrers (excluding direct)
+# Get top 5 referrers using aggregated data
 TOP_REFERRERS=$(query_db "
-    SELECT ref, COUNT(*) as visits 
-    FROM hits 
-    WHERE created_at >= datetime('now', '-7 days') 
-      AND ref IS NOT NULL 
-      AND ref != ''
-    GROUP BY ref 
+    SELECT r.ref, SUM(rc.total) as visits 
+    FROM ref_counts rc
+    JOIN refs r ON rc.ref_id = r.ref_id
+    WHERE rc.hour >= datetime('now', '-7 days')
+      AND r.ref IS NOT NULL 
+      AND r.ref != ''
+    GROUP BY r.ref 
     ORDER BY visits DESC 
     LIMIT 5;
 " | while IFS='|' read -r ref visits; do
@@ -81,6 +80,7 @@ done)
 [ -z "$TOP_REFERRERS" ] && TOP_REFERRERS="  • Direct traffic only"
 
 # Build Slack message with blocks for better formatting
+# Note: Unique Visitors removed as it requires non-aggregated data (hits table)
 read -r -d '' PAYLOAD << EOF || true
 {
     "blocks": [
@@ -88,7 +88,7 @@ read -r -d '' PAYLOAD << EOF || true
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": "📊 Weekly Analytics Report",
+                "text": "📊 Weekly Analytics Report (Portfolio)",
                 "emoji": true
             }
         },
@@ -109,11 +109,7 @@ read -r -d '' PAYLOAD << EOF || true
             "fields": [
                 {
                     "type": "mrkdwn",
-                    "text": "*Total Pageviews*\n${TOTAL_PAGEVIEWS:-0}"
-                },
-                {
-                    "type": "mrkdwn",
-                    "text": "*Unique Visitors*\n${UNIQUE_VISITORS:-0}"
+                    "text": "*Total Pageviews*\n${TOTAL_PAGEVIEWS}"
                 }
             ]
         },
@@ -130,6 +126,15 @@ read -r -d '' PAYLOAD << EOF || true
                 "type": "mrkdwn",
                 "text": "*Top Referrers*\n${TOP_REFERRERS}"
             }
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "See full analytics at <https://analytics.gmojsoski.com|analytics.gmojsoski.com>"
+                }
+            ]
         }
     ]
 }
