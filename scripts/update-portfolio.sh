@@ -4,6 +4,7 @@
 # Pulls latest changes from GitHub and syncs to Caddy's site directory
 ###############################################################################
 
+# Configuration
 PORTFOLIO_REPO="/home/goce/Desktop/Cursor projects/portfolio/portfolio"
 CADDY_SITE="/mnt/ssd/docker-projects/caddy/site"
 LOG_FILE="/var/log/portfolio-update.log"
@@ -11,6 +12,12 @@ LOG_FILE="/var/log/portfolio-update.log"
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
+
+# Create log file if it doesn't exist
+if [ ! -f "$LOG_FILE" ]; then
+    touch "$LOG_FILE"
+    chmod 664 "$LOG_FILE"
+fi
 
 # Check if repo exists
 if [ ! -d "$PORTFOLIO_REPO/.git" ]; then
@@ -20,10 +27,10 @@ fi
 
 # Pull latest changes
 cd "$PORTFOLIO_REPO" || exit 1
-log "Pulling latest changes..."
+log "Checking for updates..."
 
 # Fetch and check for updates
-git fetch origin
+git fetch origin > /dev/null 2>&1
 
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main 2>/dev/null || git rev-parse origin/master)
@@ -34,6 +41,7 @@ if [ "$LOCAL" = "$REMOTE" ]; then
 fi
 
 # Pull changes
+log "Updates detected! Pulling latest changes..."
 git pull origin main 2>/dev/null || git pull origin master
 
 if [ $? -eq 0 ]; then
@@ -54,7 +62,6 @@ else
     log "ERROR: Failed to pull changes"
     exit 1
 fi
-
 
 
 
