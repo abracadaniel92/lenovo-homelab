@@ -27,7 +27,7 @@ This repository contains all configuration files, scripts, and setup instruction
 | **Storage** | 512GB NVMe SSD |
 | **Docker Data** | `/home/docker-projects/` (symlinked from `/mnt/ssd/docker-projects/`) |
 | **Backups** | `/mnt/ssd/backups/` |
-| **Dynamic DNS** | `goces-devices.zapto.org` (No-IP) |
+| **Dynamic DNS** | No-IP (Self-hosted updater) |
 | **VPN** | WireGuard (`wg0` on port 51820) |
 
 ### Hardware Specs
@@ -256,8 +256,8 @@ The server is accessible from anywhere even with dynamic IPs at home and remote 
 
 - **Primary Access**: Cloudflare Tunnel (nameserver routing) via `*.gmojsoski.com`.
 - **VPN (WireGuard)**: A dedicated WireGuard VPN (`wg0`) allows direct encrypted access to the local network.
-    - **Endpoint**: `goces-devices.zapto.org:51820`
-    - **Dynamic DNS**: Handled by No-IP (`zapto.org`) to track the current home IP.
+    - **Endpoint**: `[REDACTED_NOIP]:51820`
+    - **Dynamic DNS**: Handled by No-IP to track the current home IP.
 - **Failover**: If the tunnel is down, the WireGuard VPN provides a secure back-channel for maintenance.
 
 ### Portfolio Auto-Sync
