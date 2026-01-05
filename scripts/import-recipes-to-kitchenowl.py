@@ -23,6 +23,7 @@ import os
 import sys
 import json
 import re
+import uuid
 from pathlib import Path
 from datetime import datetime
 
@@ -44,6 +45,7 @@ def parse_recipes_from_docx(doc_path):
     - ingredients: List of ingredient strings
     - instructions: Preparation instructions
     - calories_info: Calorie/macro information
+    - image_data: Dict with 'blob' and 'ext' if found
     """
     try:
         doc = Document(doc_path)
@@ -53,6 +55,9 @@ def parse_recipes_from_docx(doc_path):
 
     # Split paragraphs by internal newlines to get individual lines
     lines = []
+    # We'll store paragraphs with their raw objects to find images later
+    parsed_elements = []
+    
     for para in doc.paragraphs:
         text = para.text.strip()
         if text:
@@ -60,8 +65,18 @@ def parse_recipes_from_docx(doc_path):
                 line = line.strip()
                 if line:
                     lines.append(line)
+                    parsed_elements.append({'text': line, 'para': para})
+        else:
+            # Keep empty paragraphs if they might contain images
+            has_image = False
+            for run in para.runs:
+                if 'pic:pic' in run.element.xml:
+                    has_image = True
+                    break
+            if has_image:
+                parsed_elements.append({'text': '', 'para': para})
     
-    if not lines:
+    if not parsed_elements:
         return []
 
     recipes = []
@@ -89,7 +104,10 @@ def parse_recipes_from_docx(doc_path):
     # Match both regular and ВЕГЕ (vegan) calorie lines
     calories_value_pattern = re.compile(r'^Калории(\s+ВЕГЕ)?\s*:', re.IGNORECASE)
     
-    for line in lines:
+    for elem in parsed_elements:
+        line = elem['text']
+        para = elem['para']
+        
         # Check for day marker with workout
         day_match = day_pattern.match(line)
         if day_match:
@@ -119,9 +137,31 @@ def parse_recipes_from_docx(doc_path):
                 'workout_tag': current_workout,
                 'ingredients': [],
                 'instructions': '',
-                'calories_info': ''
+                'calories_info': '',
+                'image_data': None
             }
             current_section = None
+            continue
+
+        # --- Image Detection ---
+        # Look for images in the current paragraph
+        if current_recipe and not current_recipe['image_data']:
+            for run in para.runs:
+                if 'pic:pic' in run.element.xml:
+                    rIds = re.findall(r'r:embed="([^"]+)"', run.element.xml)
+                    if rIds:
+                        rId = rIds[0]
+                        try:
+                            image_part = doc.part.related_parts[rId]
+                            current_recipe['image_data'] = {
+                                'blob': image_part.blob,
+                                'ext': image_part.content_type.split('/')[-1]
+                            }
+                            break # Only one image per recipe for now
+                        except KeyError:
+                            pass
+        
+        if not line: # Empty paragraph used only for image check
             continue
         
         # Check for section headers
@@ -262,10 +302,20 @@ def main():
     print('='*50)
     
     if dry_run:
-        # Output JSON
+        # Output JSON (remove raw blobs as they are not serializable)
+        dry_run_data = []
+        for r in all_recipes:
+            r_copy = r.copy()
+            if r_copy.get('image_data'):
+                r_copy['image_data'] = {
+                    'size_bytes': len(r_copy['image_data']['blob']),
+                    'ext': r_copy['image_data']['ext']
+                }
+            dry_run_data.append(r_copy)
+            
         output_file = '/tmp/parsed_recipes.json'
         with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(all_recipes, f, ensure_ascii=False, indent=2)
+            json.dump(dry_run_data, f, ensure_ascii=False, indent=2)
         print(f"\nDry run - saved to {output_file}")
         print("To import, copy to container and run import script:")
         print("  docker cp /tmp/parsed_recipes.json kitchenowl:/data/")
@@ -287,6 +337,15 @@ def main():
     if not os.path.exists(DB_PATH):
         print(f"ERROR: Database not found. Run inside container or use --dry-run")
         sys.exit(1)
+    
+    # Image storage path
+    UPLOAD_PATH = "/data/upload"
+    if not os.path.exists(UPLOAD_PATH):
+        UPLOAD_PATH = "/mnt/ssd/docker-projects/kitchenowl/data/upload"
+    
+    if not os.path.exists(UPLOAD_PATH):
+        print(f"WARNING: Upload directory not found: {UPLOAD_PATH}. Images will not be saved.")
+        UPLOAD_PATH = None
     
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -376,12 +435,23 @@ def main():
         description = '\n\n'.join(desc_parts)
         
         # Insert recipe
+        photo_filename = None
+        if recipe.get('image_data') and UPLOAD_PATH:
+            ext = recipe['image_data']['ext']
+            photo_filename = f"{uuid.uuid4().hex}.{ext}"
+            try:
+                with open(os.path.join(UPLOAD_PATH, photo_filename), 'wb') as f:
+                    f.write(recipe['image_data']['blob'])
+            except Exception as e:
+                print(f"  ⚠️  Failed to save photo: {e}")
+                photo_filename = None
+
         cursor.execute("""
-            INSERT INTO recipe (name, description, created_at, updated_at,
+            INSERT INTO recipe (name, description, photo, created_at, updated_at,
                 household_id, visibility, server_curated, server_scrapes,
                 suggestion_score, suggestion_rank)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (recipe['name'], description, now, now, household_id, 'PRIVATE', 0, 0, 0, 0))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (recipe['name'], description, photo_filename, now, now, household_id, 'PRIVATE', 0, 0, 0, 0))
         
         recipe_id = cursor.lastrowid
         
