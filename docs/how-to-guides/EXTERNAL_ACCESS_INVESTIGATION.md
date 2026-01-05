@@ -56,8 +56,8 @@
 ## Investigation Findings
 
 ### 1. **Not a Dynamic IP Issue** ❌
-- **Public IP**: `77.28.191.158` (current, likely unchanged)
-- **Private IP**: `192.168.1.97` (static lease, confirmed)
+- **Public IP**: `[REDACTED_PUBLIC_IP]` (current, likely unchanged)
+- **Private IP**: `[REDACTED_PRIVATE_IP]` (static lease, confirmed)
 - **IP changes don't affect Cloudflare Tunnel** - it works regardless of public IP
 
 ### 2. **Not a DNS Issue** ❌
@@ -122,7 +122,7 @@ The installed health check script needs to be updated to check Docker containers
 sudo cp /usr/local/bin/enhanced-health-check.sh /usr/local/bin/enhanced-health-check.sh.backup
 
 # Update script from repository version
-sudo cp "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/enhanced-health-check.sh" /usr/local/bin/enhanced-health-check.sh
+sudo cp "/home/[USER]/Desktop/Cursor projects/Pi-version-control/scripts/enhanced-health-check.sh" /usr/local/bin/enhanced-health-check.sh
 
 # Verify it's correct
 sudo grep -A 5 "Cloudflare Tunnel" /usr/local/bin/enhanced-health-check.sh
@@ -197,5 +197,5 @@ The health check misconfiguration is causing:
 
 *Investigation completed: January 2, 2026 08:25 AM*
 *Investigator: AI Assistant*
-*System: lemongrab (192.168.1.97)*
+*System: lemongrab ([REDACTED_PRIVATE_IP])*
 
