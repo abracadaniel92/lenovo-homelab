@@ -23,6 +23,7 @@ import os
 import sys
 import json
 import re
+import uuid
 from pathlib import Path
 from datetime import datetime
 
@@ -44,6 +45,7 @@ def parse_recipes_from_docx(doc_path):
     - ingredients: List of ingredient strings
     - instructions: Preparation instructions
     - calories_info: Calorie/macro information
+    - image_data: Dict with 'blob' and 'ext' if found
     """
     try:
         doc = Document(doc_path)
@@ -53,6 +55,9 @@ def parse_recipes_from_docx(doc_path):
 
     # Split paragraphs by internal newlines to get individual lines
     lines = []
+    # We'll store paragraphs with their raw objects to find images later
+    parsed_elements = []
+    
     for para in doc.paragraphs:
         text = para.text.strip()
         if text:
@@ -60,8 +65,18 @@ def parse_recipes_from_docx(doc_path):
                 line = line.strip()
                 if line:
                     lines.append(line)
+                    parsed_elements.append({'text': line, 'para': para})
+        else:
+            # Keep empty paragraphs if they might contain images
+            has_image = False
+            for run in para.runs:
+                if 'pic:pic' in run.element.xml:
+                    has_image = True
+                    break
+            if has_image:
+                parsed_elements.append({'text': '', 'para': para})
     
-    if not lines:
+    if not parsed_elements:
         return []
 
     recipes = []
@@ -89,7 +104,10 @@ def parse_recipes_from_docx(doc_path):
     # Match both regular and ВЕГЕ (vegan) calorie lines
     calories_value_pattern = re.compile(r'^Калории(\s+ВЕГЕ)?\s*:', re.IGNORECASE)
     
-    for line in lines:
+    for elem in parsed_elements:
+        line = elem['text']
+        para = elem['para']
+        
         # Check for day marker with workout
         day_match = day_pattern.match(line)
         if day_match:
@@ -119,9 +137,31 @@ def parse_recipes_from_docx(doc_path):
                 'workout_tag': current_workout,
                 'ingredients': [],
                 'instructions': '',
-                'calories_info': ''
+                'calories_info': '',
+                'image_data': None
             }
             current_section = None
+            continue
+
+        # --- Image Detection ---
+        # Look for images in the current paragraph
+        if current_recipe and not current_recipe['image_data']:
+            for run in para.runs:
+                if 'pic:pic' in run.element.xml:
+                    rIds = re.findall(r'r:embed="([^"]+)"', run.element.xml)
+                    if rIds:
+                        rId = rIds[0]
+                        try:
+                            image_part = doc.part.related_parts[rId]
+                            current_recipe['image_data'] = {
+                                'blob': image_part.blob,
+                                'ext': image_part.content_type.split('/')[-1]
+                            }
+                            break # Only one image per recipe for now
+                        except KeyError:
+                            pass
+        
+        if not line: # Empty paragraph used only for image check
             continue
         
         # Check for section headers
@@ -149,14 +189,41 @@ def parse_recipes_from_docx(doc_path):
         
         # Process content based on current section
         if current_recipe:
+            clean_line = line.strip()
+            
+            # --- Fallback Heuristic: Auto-switch to instructions ---
+            # If we are in 'ingredients' (or no section) and see something that looks like instructions:
+            is_probably_instruction = (
+                # Starts with a number followed by . or ) e.g. "1. ", "1) "
+                # (Avoiding "150 gr" which is an ingredient)
+                re.match(r'^\d+[\.\)]\s', clean_line) or
+                # Very long line (>100 chars) without bullet points
+                (len(clean_line) > 100 and not clean_line.startswith(('–', '-', '*', '•'))) or
+                # Contains specific instruction verbs at the start
+                re.match(r'^(Печете|Ставете|Измешајте|Додадете|Пржете|Варете|Сварете|Исецкајте|Изблендирајте|Подгответе|Сервирајте)', clean_line, re.IGNORECASE)
+            )
+            
+            # Additional check: If it contains measure units, it's NOT an instruction
+            if is_probably_instruction and re.search(r'\b(гр|гр\.|кг|лажици|лажица|мл|ml|kcal|калории)\b', clean_line, re.IGNORECASE):
+                is_probably_instruction = False
+            
+            if current_section != 'instructions' and current_section != 'calories' and is_probably_instruction:
+                # If we were in ingredients, switch to instructions
+                current_section = 'instructions'
+            
             if current_section == 'ingredients':
-                ingredient = line.strip()
+                ingredient = clean_line
                 # Remove bullet point
-                if ingredient.startswith('–') or ingredient.startswith('-'):
+                if ingredient.startswith(('–', '-', '*', '•')):
                     ingredient = ingredient[1:].strip()
                 
+                # Check if this line is actually a section header that we missed 
+                # (sometimes they are bulleted or slightly different)
+                if ingredients_pattern.match(ingredient) or instructions_pattern.match(ingredient) or calories_header_pattern.match(ingredient):
+                    continue
+                
                 # Check if this is a "Зачини:" (spices) line - move to instructions instead
-                if ingredient and re.match(r'^Зачини\s*:', ingredient, re.IGNORECASE):
+                if ingredient and re.search(r'Зачини\s*:', ingredient, re.IGNORECASE):
                     # Add spices to instructions/description, not ingredients
                     if 'spices_info' not in current_recipe:
                         current_recipe['spices_info'] = ''
@@ -192,6 +259,7 @@ def main():
     
     input_path = Path(sys.argv[1])
     dry_run = '--dry-run' in sys.argv
+    update_mode = '--update' in sys.argv
     
     if not input_path.exists():
         print(f"ERROR: Path does not exist: {input_path}")
@@ -234,10 +302,20 @@ def main():
     print('='*50)
     
     if dry_run:
-        # Output JSON
+        # Output JSON (remove raw blobs as they are not serializable)
+        dry_run_data = []
+        for r in all_recipes:
+            r_copy = r.copy()
+            if r_copy.get('image_data'):
+                r_copy['image_data'] = {
+                    'size_bytes': len(r_copy['image_data']['blob']),
+                    'ext': r_copy['image_data']['ext']
+                }
+            dry_run_data.append(r_copy)
+            
         output_file = '/tmp/parsed_recipes.json'
         with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(all_recipes, f, ensure_ascii=False, indent=2)
+            json.dump(dry_run_data, f, ensure_ascii=False, indent=2)
         print(f"\nDry run - saved to {output_file}")
         print("To import, copy to container and run import script:")
         print("  docker cp /tmp/parsed_recipes.json kitchenowl:/data/")
@@ -259,6 +337,15 @@ def main():
     if not os.path.exists(DB_PATH):
         print(f"ERROR: Database not found. Run inside container or use --dry-run")
         sys.exit(1)
+    
+    # Image storage path
+    UPLOAD_PATH = "/data/upload"
+    if not os.path.exists(UPLOAD_PATH):
+        UPLOAD_PATH = "/mnt/ssd/docker-projects/kitchenowl/data/upload"
+    
+    if not os.path.exists(UPLOAD_PATH):
+        print(f"WARNING: Upload directory not found: {UPLOAD_PATH}. Images will not be saved.")
+        UPLOAD_PATH = None
     
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -305,10 +392,21 @@ def main():
         # Check if exists
         cursor.execute("SELECT id FROM recipe WHERE household_id = ? AND name = ?",
                        (household_id, recipe['name']))
-        if cursor.fetchone():
-            print(f"  Skip (exists): {recipe['name']}")
-            skipped += 1
-            continue
+        existing = cursor.fetchone()
+        
+        if existing:
+            if update_mode:
+                print(f"  🔄 Updating: {recipe['name']}")
+                # Delete existing recipe tags and items first to avoid orphaned records
+                recipe_id = existing[0]
+                cursor.execute("DELETE FROM recipe_tags WHERE recipe_id = ?", (recipe_id,))
+                cursor.execute("DELETE FROM recipe_items WHERE recipe_id = ?", (recipe_id,))
+                cursor.execute("DELETE FROM recipe WHERE id = ?", (recipe_id,))
+                # Fall through to insert new version
+            else:
+                print(f"  Skip (exists): {recipe['name']}")
+                skipped += 1
+                continue
         
         # Build description: instructions first, then spices, then calories at end
         desc_parts = []
@@ -337,12 +435,29 @@ def main():
         description = '\n\n'.join(desc_parts)
         
         # Insert recipe
+        photo_filename = None
+        if recipe.get('image_data') and UPLOAD_PATH:
+            ext = recipe['image_data']['ext']
+            photo_filename = f"{uuid.uuid4().hex}.{ext}"
+            try:
+                with open(os.path.join(UPLOAD_PATH, photo_filename), 'wb') as f:
+                    f.write(recipe['image_data']['blob'])
+                
+                # Register in 'file' table so KitchenOwl serves it
+                cursor.execute("""
+                    INSERT OR IGNORE INTO file (filename, created_at, updated_at, created_by)
+                    VALUES (?, ?, ?, ?)
+                """, (photo_filename, now, now, household_id)) # Using household_id as a proxy for user_id 1
+            except Exception as e:
+                print(f"  ⚠️  Failed to save photo or register in file table: {e}")
+                photo_filename = None
+
         cursor.execute("""
-            INSERT INTO recipe (name, description, created_at, updated_at,
+            INSERT INTO recipe (name, description, photo, created_at, updated_at,
                 household_id, visibility, server_curated, server_scrapes,
                 suggestion_score, suggestion_rank)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (recipe['name'], description, now, now, household_id, 'PRIVATE', 0, 0, 0, 0))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (recipe['name'], description, photo_filename, now, now, household_id, 'PRIVATE', 0, 0, 0, 0))
         
         recipe_id = cursor.lastrowid
         
