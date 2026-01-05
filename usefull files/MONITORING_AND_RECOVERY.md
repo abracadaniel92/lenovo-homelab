@@ -9,9 +9,10 @@ The server has a multi-layer monitoring system that ensures services stay online
 | Layer | Tool | Frequency | Purpose |
 |-------|------|-----------|---------|
 | 1 | enhanced-health-check.timer | Every 30 seconds | Check & restart all services |
-| 2 | service-watchdog.service | Continuous (20s loop) | Monitor critical services |
-| 3 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
-| 4 | Docker restart policies | On failure | Auto-restart containers |
+| 2 | portfolio-update.timer | Every 5 minutes | Auto-sync portfolio from GitHub |
+| 3 | service-watchdog.service | Continuous (20s loop) | Monitor critical services |
+| 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
+| 5 | Docker restart policies | On failure | Auto-restart containers |
 
 ## Active Monitoring Services
 
@@ -56,7 +57,20 @@ tail -50 /var/log/enhanced-health-check.log
 systemctl status service-watchdog.service
 ```
 
-### 3. Uptime Kuma
+### 3. Portfolio Auto-Update Timer
+
+**Service**: `portfolio-update.timer`  
+**Script**: `/usr/local/bin/update-portfolio.sh`  
+**Frequency**: Every 5 minutes  
+**Log**: `/var/log/portfolio-update.log`
+
+**Check Status**:
+```bash
+systemctl status portfolio-update.timer
+tail -50 /var/log/portfolio-update.log
+```
+
+### 4. Uptime Kuma
 
 **URL**: http://localhost:3001 (internal only)  
 **Container**: uptime-kuma  

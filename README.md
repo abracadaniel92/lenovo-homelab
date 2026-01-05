@@ -91,6 +91,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Portainer** | 9000 | - | Docker management UI |
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
+| **Portfolio** | - | gmojsoski.com | Personal portfolio website |
 | **Watchtower** | - | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |
 
@@ -244,7 +245,8 @@ The server has a multi-layer monitoring system:
 | 1 | enhanced-health-check.timer | Every 30 seconds | Check & restart all services |
 | 2 | Docker restart policies | On failure | Auto-restart containers |
 | 3 | Cloudflare Tunnel (2 replicas) | Continuous | Redundant external access |
-| 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
+| 4 | portfolio-update.timer | Every 5 minutes | Auto-sync portfolio from GitHub |
+| 5 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
 
 ### Check Monitoring Status
 
