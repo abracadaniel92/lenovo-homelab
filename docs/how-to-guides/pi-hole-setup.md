@@ -1,8 +1,8 @@
 # Pi-hole Setup on Raspberry Pi 4
 
 ## Network Configuration
-- **Raspberry Pi 4 IP:** `192.168.1.137`
-- **lemongrab (main server) IP:** `192.168.1.97`
+- **Raspberry Pi 4 IP:** `[REDACTED_INTERNAL_IP_2]`
+- **lemongrab (main server) IP:** `[REDACTED_INTERNAL_IP_1]`
 
 ## Purpose
 Pi-hole provides:
@@ -56,7 +56,7 @@ services:
     environment:
       TZ: 'Europe/Skopje'
       WEBPASSWORD: 'changeme'  # CHANGE THIS PASSWORD!
-      FTLCONF_LOCAL_IPV4: '192.168.1.137'
+      FTLCONF_LOCAL_IPV4: '[REDACTED_INTERNAL_IP_2]'
       PIHOLE_DNS_: '1.1.1.1;1.0.0.1'  # Upstream DNS (Cloudflare)
     volumes:
       - ./etc-pihole:/etc/pihole
@@ -77,24 +77,24 @@ mkdir -p etc-dnsmasq.d
 
 cat > etc-dnsmasq.d/02-local-dns.conf << 'EOF'
 # Local DNS entries for gmojsoski.com services
-# Points to lemongrab (192.168.1.97) for local network access
+# Points to lemongrab ([REDACTED_INTERNAL_IP_1]) for local network access
 # This fixes NAT hairpinning issues
 
 # Main domain
-address=/gmojsoski.com/192.168.1.97
-address=/www.gmojsoski.com/192.168.1.97
+address=/gmojsoski.com/[REDACTED_INTERNAL_IP_1]
+address=/www.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
 
 # Services
-address=/jellyfin.gmojsoski.com/192.168.1.97
-address=/cloud.gmojsoski.com/192.168.1.97
-address=/vault.gmojsoski.com/192.168.1.97
-address=/shopping.gmojsoski.com/192.168.1.97
-address=/files.gmojsoski.com/192.168.1.97
-address=/analytics.gmojsoski.com/192.168.1.97
-address=/poker.gmojsoski.com/192.168.1.97
-address=/bookmarks.gmojsoski.com/192.168.1.97
-address=/tickets.gmojsoski.com/192.168.1.97
-address=/travelsync.gmojsoski.com/192.168.1.97
+address=/jellyfin.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
+address=/cloud.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
+address=/vault.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
+address=/shopping.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
+address=/files.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
+address=/analytics.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
+address=/poker.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
+address=/bookmarks.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
+address=/tickets.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
+address=/travelsync.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
 EOF
 ```
 
@@ -121,7 +121,7 @@ docker logs pihole
 ```bash
 # Test that Pi-hole resolves local services correctly
 dig @127.0.0.1 jellyfin.gmojsoski.com +short
-# Expected output: 192.168.1.97
+# Expected output: [REDACTED_INTERNAL_IP_1]
 
 dig @127.0.0.1 google.com +short
 # Expected output: Google's IP addresses
@@ -139,14 +139,14 @@ dig @127.0.0.1 ads.google.com +short
 
 1. Access your router admin panel (usually `http://192.168.1.1`)
 2. Find **DHCP Settings** or **LAN Settings**
-3. Set **Primary DNS Server** to: `192.168.1.137`
+3. Set **Primary DNS Server** to: `[REDACTED_INTERNAL_IP_2]`
 4. Optionally set **Secondary DNS Server** to: `1.1.1.1` (fallback)
 5. Save and reboot router
 
 ### Option B: Manual Device Configuration
 
 If you can't change router settings, manually set DNS on each device:
-- DNS Server: `192.168.1.137`
+- DNS Server: `[REDACTED_INTERNAL_IP_2]`
 
 ---
 
@@ -173,8 +173,8 @@ After changing router DNS, devices need to get the new settings:
 nslookup jellyfin.gmojsoski.com
 
 # Should show:
-# Server: 192.168.1.137
-# Address: 192.168.1.97
+# Server: [REDACTED_INTERNAL_IP_2]
+# Address: [REDACTED_INTERNAL_IP_1]
 ```
 
 ### In browser
@@ -185,7 +185,7 @@ nslookup jellyfin.gmojsoski.com
 
 ## Pi-hole Admin Interface
 
-- **URL:** `http://192.168.1.137/admin`
+- **URL:** `http://[REDACTED_INTERNAL_IP_2]/admin`
 - **Password:** Whatever you set in `WEBPASSWORD` (default: `changeme`)
 
 ### Useful Admin Pages
@@ -229,14 +229,14 @@ When you add a new service to lemongrab, add a DNS entry:
 ### Option 1: Edit config file and restart
 ```bash
 # Add to ~/pihole/etc-dnsmasq.d/02-local-dns.conf
-echo "address=/newservice.gmojsoski.com/192.168.1.97" >> ~/pihole/etc-dnsmasq.d/02-local-dns.conf
+echo "address=/newservice.gmojsoski.com/[REDACTED_INTERNAL_IP_1]" >> ~/pihole/etc-dnsmasq.d/02-local-dns.conf
 
 # Restart Pi-hole
 docker restart pihole
 ```
 
 ### Option 2: Use Pi-hole Admin UI
-1. Go to `http://192.168.1.137/admin`
+1. Go to `http://[REDACTED_INTERNAL_IP_2]/admin`
 2. Local DNS → DNS Records
 3. Add domain and IP
 4. Click Add
@@ -268,7 +268,7 @@ sudo netstat -tulpn | grep :53
 docker logs pihole | tail -50
 
 # Test DNS directly
-dig @192.168.1.137 google.com
+dig @[REDACTED_INTERNAL_IP_2] google.com
 ```
 
 ### Local services still going through Cloudflare
@@ -277,8 +277,8 @@ dig @192.168.1.137 google.com
 docker exec pihole cat /etc/dnsmasq.d/02-local-dns.conf
 
 # Check resolution
-dig @192.168.1.137 jellyfin.gmojsoski.com +short
-# Should return 192.168.1.97, not Cloudflare IP
+dig @[REDACTED_INTERNAL_IP_2] jellyfin.gmojsoski.com +short
+# Should return [REDACTED_INTERNAL_IP_1], not Cloudflare IP
 
 # If wrong, restart Pi-hole
 docker restart pihole
@@ -291,9 +291,9 @@ docker restart pihole
 # macOS/Linux: cat /etc/resolv.conf
 
 # If still showing router or ISP DNS:
-# 1. Verify router DHCP is set to 192.168.1.137
+# 1. Verify router DHCP is set to [REDACTED_INTERNAL_IP_2]
 # 2. Renew DHCP lease on device
-# 3. Or manually set DNS to 192.168.1.137
+# 3. Or manually set DNS to [REDACTED_INTERNAL_IP_2]
 ```
 
 ---
@@ -332,7 +332,7 @@ Internet
 │                                                  │
 │  ┌──────────────┐      ┌──────────────────────┐ │
 │  │ Raspberry Pi │      │ lemongrab            │ │
-│  │ 192.168.1.137│      │ 192.168.1.97         │ │
+│  │ [REDACTED_INTERNAL_IP_2]│      │ [REDACTED_INTERNAL_IP_1]         │ │
 │  │              │      │                      │ │
 │  │ ┌──────────┐ │      │ ┌──────────────────┐ │ │
 │  │ │ Pi-hole  │ │ DNS  │ │ Caddy (8080)     │ │ │
@@ -358,9 +358,9 @@ Internet
 
 | Item | Value |
 |------|-------|
-| Pi-hole IP | `192.168.1.137` |
-| lemongrab IP | `192.168.1.97` |
-| Pi-hole Admin | `http://192.168.1.137/admin` |
+| Pi-hole IP | `[REDACTED_INTERNAL_IP_2]` |
+| lemongrab IP | `[REDACTED_INTERNAL_IP_1]` |
+| Pi-hole Admin | `http://[REDACTED_INTERNAL_IP_2]/admin` |
 | DNS Port | `53` |
 | Web Port | `80` |
 | Config Location | `~/pihole/` |

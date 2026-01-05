@@ -27,6 +27,8 @@ This repository contains all configuration files, scripts, and setup instruction
 | **Storage** | 512GB NVMe SSD |
 | **Docker Data** | `/home/docker-projects/` (symlinked from `/mnt/ssd/docker-projects/`) |
 | **Backups** | `/mnt/ssd/backups/` |
+| **Dynamic DNS** | No-IP (Self-hosted updater) |
+| **VPN** | WireGuard (`wg0` on port 51820) |
 
 ### Hardware Specs
 
@@ -91,7 +93,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Portainer** | 9000 | - | Docker management UI |
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
-| **Portfolio** | - | gmojsoski.com | Personal portfolio website |
+| **Portfolio** | - | gmojsoski.com | Personal portfolio website (Auto-synced) |
 | **Watchtower** | - | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |
 
@@ -245,8 +247,25 @@ The server has a multi-layer monitoring system:
 | 1 | enhanced-health-check.timer | Every 30 seconds | Check & restart all services |
 | 2 | Docker restart policies | On failure | Auto-restart containers |
 | 3 | Cloudflare Tunnel (2 replicas) | Continuous | Redundant external access |
-| 4 | portfolio-update.timer | Every 5 minutes | Auto-sync portfolio from GitHub |
+| 4 | portfolio-update.timer | Every 5 minutes | Auto-sync portfolio from GitHub repo |
 | 5 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
+
+### <a name="network-access"></a>🌐 Network & Remote Access
+
+The server is accessible from anywhere even with dynamic IPs at home and remote locations:
+
+- **Primary Access**: Cloudflare Tunnel (nameserver routing) via `*.gmojsoski.com`.
+- **VPN (WireGuard)**: A dedicated WireGuard VPN (`wg0`) allows direct encrypted access to the local network.
+    - **Endpoint**: `[REDACTED_NOIP]:51820`
+    - **Dynamic DNS**: Handled by No-IP to track the current home IP.
+- **Failover**: If the tunnel is down, the WireGuard VPN provides a secure back-channel for maintenance.
+
+### Portfolio Auto-Sync
+
+My personal portfolio at [gmojsoski.com](https://gmojsoski.com) is self-hosted and fully automated:
+- **Source**: Synced from a local Git repository at `~/Desktop/Cursor projects/portfolio/portfolio`.
+- **Automation**: A systemd timer (`portfolio-update.timer`) runs every 5 minutes to pull the latest changes from GitHub and rsync them to the Caddy site directory.
+- **Script**: `scripts/update-portfolio.sh` handles the git pull and directory sync.
 
 ### Check Monitoring Status
 

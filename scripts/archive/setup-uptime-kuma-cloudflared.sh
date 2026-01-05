@@ -5,7 +5,7 @@
 ###############################################################################
 
 UPTIME_KUMA_URL="http://localhost:3001"
-SLACK_WEBHOOK_URL="https://hooks.slack.com/services/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"
+SLACK_WEBHOOK_URL="[REDACTED_SLACK_WEBHOOK]"
 
 echo "=========================================="
 echo "Setting up Cloudflared monitor in Uptime Kuma"
