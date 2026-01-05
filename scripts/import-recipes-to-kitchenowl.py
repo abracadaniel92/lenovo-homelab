@@ -149,14 +149,41 @@ def parse_recipes_from_docx(doc_path):
         
         # Process content based on current section
         if current_recipe:
+            clean_line = line.strip()
+            
+            # --- Fallback Heuristic: Auto-switch to instructions ---
+            # If we are in 'ingredients' (or no section) and see something that looks like instructions:
+            is_probably_instruction = (
+                # Starts with a number followed by . or ) e.g. "1. ", "1) "
+                # (Avoiding "150 gr" which is an ingredient)
+                re.match(r'^\d+[\.\)]\s', clean_line) or
+                # Very long line (>100 chars) without bullet points
+                (len(clean_line) > 100 and not clean_line.startswith(('–', '-', '*', '•'))) or
+                # Contains specific instruction verbs at the start
+                re.match(r'^(Печете|Ставете|Измешајте|Додадете|Пржете|Варете|Сварете|Исецкајте|Изблендирајте|Подгответе|Сервирајте)', clean_line, re.IGNORECASE)
+            )
+            
+            # Additional check: If it contains measure units, it's NOT an instruction
+            if is_probably_instruction and re.search(r'\b(гр|гр\.|кг|лажици|лажица|мл|ml|kcal|калории)\b', clean_line, re.IGNORECASE):
+                is_probably_instruction = False
+            
+            if current_section != 'instructions' and current_section != 'calories' and is_probably_instruction:
+                # If we were in ingredients, switch to instructions
+                current_section = 'instructions'
+            
             if current_section == 'ingredients':
-                ingredient = line.strip()
+                ingredient = clean_line
                 # Remove bullet point
-                if ingredient.startswith('–') or ingredient.startswith('-'):
+                if ingredient.startswith(('–', '-', '*', '•')):
                     ingredient = ingredient[1:].strip()
                 
+                # Check if this line is actually a section header that we missed 
+                # (sometimes they are bulleted or slightly different)
+                if ingredients_pattern.match(ingredient) or instructions_pattern.match(ingredient) or calories_header_pattern.match(ingredient):
+                    continue
+                
                 # Check if this is a "Зачини:" (spices) line - move to instructions instead
-                if ingredient and re.match(r'^Зачини\s*:', ingredient, re.IGNORECASE):
+                if ingredient and re.search(r'Зачини\s*:', ingredient, re.IGNORECASE):
                     # Add spices to instructions/description, not ingredients
                     if 'spices_info' not in current_recipe:
                         current_recipe['spices_info'] = ''
@@ -192,6 +219,7 @@ def main():
     
     input_path = Path(sys.argv[1])
     dry_run = '--dry-run' in sys.argv
+    update_mode = '--update' in sys.argv
     
     if not input_path.exists():
         print(f"ERROR: Path does not exist: {input_path}")
@@ -305,10 +333,21 @@ def main():
         # Check if exists
         cursor.execute("SELECT id FROM recipe WHERE household_id = ? AND name = ?",
                        (household_id, recipe['name']))
-        if cursor.fetchone():
-            print(f"  Skip (exists): {recipe['name']}")
-            skipped += 1
-            continue
+        existing = cursor.fetchone()
+        
+        if existing:
+            if update_mode:
+                print(f"  🔄 Updating: {recipe['name']}")
+                # Delete existing recipe tags and items first to avoid orphaned records
+                recipe_id = existing[0]
+                cursor.execute("DELETE FROM recipe_tags WHERE recipe_id = ?", (recipe_id,))
+                cursor.execute("DELETE FROM recipe_items WHERE recipe_id = ?", (recipe_id,))
+                cursor.execute("DELETE FROM recipe WHERE id = ?", (recipe_id,))
+                # Fall through to insert new version
+            else:
+                print(f"  Skip (exists): {recipe['name']}")
+                skipped += 1
+                continue
         
         # Build description: instructions first, then spices, then calories at end
         desc_parts = []
