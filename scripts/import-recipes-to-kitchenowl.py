@@ -442,8 +442,14 @@ def main():
             try:
                 with open(os.path.join(UPLOAD_PATH, photo_filename), 'wb') as f:
                     f.write(recipe['image_data']['blob'])
+                
+                # Register in 'file' table so KitchenOwl serves it
+                cursor.execute("""
+                    INSERT OR IGNORE INTO file (filename, created_at, updated_at, created_by)
+                    VALUES (?, ?, ?, ?)
+                """, (photo_filename, now, now, household_id)) # Using household_id as a proxy for user_id 1
             except Exception as e:
-                print(f"  ⚠️  Failed to save photo: {e}")
+                print(f"  ⚠️  Failed to save photo or register in file table: {e}")
                 photo_filename = None
 
         cursor.execute("""
