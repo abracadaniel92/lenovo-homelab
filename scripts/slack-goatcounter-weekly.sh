@@ -13,8 +13,11 @@ if [ -f "$SCRIPT_DIR/.env" ]; then
     source "$SCRIPT_DIR/.env"
 fi
 
+# Prioritize analytics-specific webhook
+[ -n "$ANALYTICS_SLACK_WEBHOOK_URL" ] && SLACK_WEBHOOK_URL="$ANALYTICS_SLACK_WEBHOOK_URL"
+
 if [ -z "$SLACK_WEBHOOK_URL" ]; then
-    echo "ERROR: SLACK_WEBHOOK_URL is not set. Please check scripts/.env"
+    echo "ERROR: SLACK_WEBHOOK_URL or ANALYTICS_SLACK_WEBHOOK_URL is not set. Please check scripts/.env"
     exit 1
 fi
 
