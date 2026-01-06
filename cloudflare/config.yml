@@ -45,5 +45,13 @@ ingress:
   - hostname: shopping.gmojsoski.com
     service: http://127.0.0.1:8080
 
+  # Paperless (routed through Caddy)
+  - hostname: paperless.gmojsoski.com
+    service: http://127.0.0.1:8080
+
+  # Jellyfin (routed through Caddy)
+  - hostname: jellyfin.gmojsoski.com
+    service: http://127.0.0.1:8080
+
   # Catch-all (must be last)
   - service: http_status:404
