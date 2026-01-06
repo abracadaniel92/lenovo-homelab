@@ -31,3 +31,9 @@ This file defines the strict operating rules for this repository. FAILURE TO FOL
 
 ## 📝 Documentation
 5.  **Logging**: All major changes and troubleshooting steps must be logged in `usefull files/TROUBLESHOOTING_LOG.md`.
+
+## 🚧 Scope Enforcement (The "Surgical" Rule)
+6.  **Isolation**:
+    *   When troubleshooting "Service A", you are **FORBIDDEN** from editing the configuration of "Service B".
+    *   If a global change seems necessary (e.g., global Caddy settings), you must **STOP and ASK** the user for explicit permission first.
+    *   **Files**: changes should primarily be limited to `docker/<service>/` and the specific block in `Caddyfile`. DO NOT touch `enhanced-health-check.sh` or `config.yml` unless you are specifically fixing a regression in those files.
