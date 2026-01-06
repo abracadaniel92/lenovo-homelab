@@ -1,29 +1,61 @@
-# AI Safety & Operation Rules
+# Cursor Rules & Governance (AI Constitution)
 
-This repository manages a live homelab environment. Any AI agent working here MUST follow these rules to prevent data loss or service disruption.
+This file defines the strict operating rules for this repository. FAILURE TO FOLLOW THESE RULES will result in service outages.
 
-## 1. Live Service Updates
-- **ALWAYS Verify Live Paths**: Live docker services often run from `/home/docker-projects/`, NOT the workspace directory.
-- **NEVER Assume Workspace is Live**: Before running `docker compose` commands, run `docker inspect <container-name>` to find the absolute path of the `com.docker.compose.project.working_dir`.
-- **Use Workflows**: Always check `.agent/workflows/` for standardized procedures. Specifically, use the `/update-service` logic for any container updates.
+## 🔴 CRITICAL: Networking & Ingress (NEVER CHANGE)
+1.  **Cloudflare Tunnel Binding**:
+    *   **RULE**: In `~/.cloudflared/config.yml` (and repo copies), the `service` URL must ALWAYS be `http://localhost:8080`.
+    *   **PROHIBITED**: NEVER use `127.0.0.1:8080`. This causes intermittent connection failures due to the `network_mode: host` and `systemd-resolved` interactions on this specific machine.
+    *   **WHY**: The tunnel runs in Docker with host networking; `localhost` resolves reliably via `/etc/hosts`, while `127.0.0.1` has caused loopback routing issues.
 
-## 2. Path Management
-- **Workspace**: `/home/goce/Desktop/Cursor projects/Pi-version-control` is for version control and configuration management.
-- **Production**: `/home/docker-projects/` contains the live running data and active `docker-compose.yml` files.
-- **Rule**: Sync changes from the workspace to production only after verification, or use the live path directly if performing an update.
+2.  **Caddy Reverse Proxy**:
+    *   **Source of Truth**: `docker/caddy/Caddyfile` is the ONLY valid configuration file. Ignore `site/` or `config/` subdirectories.
+    *   **Standard Block**: When adding a new service, use this EXACT template:
+        ```caddyfile
+        handle @subdomain {
+            reverse_proxy http://172.17.0.1:PORT
+        }
+        ```
+    *   **NO Header Overrides**: DO NOT add `header_up Host {host}` or `X-Forwarded-*` unless explicitly required by the documentation for *reverse proxies* (not just general use).
+    *   **Media Servers**: For Jellyfin/Plex/Navidrome, explicit `encode gzip` is PROHIBITED as it breaks mobile streaming.
 
-## 3. Data Integrity
-- Prioritize preserving volume data (`./data` folders) during any operation.
-- If a volume mount looks suspicious or different from the expected production mount, STOP and ask the user.
+## 🛡️ Operational Safety
+3.  **Governance**:
+    *   **NEVER** modify existing, working Caddyfile blocks while troubleshooting a new service.
+    *   **ALWAYS** check `usefull files/TROUBLESHOOTING_LOG.md` before suggesting a fix.
+    *   **ALWAYS** run `scripts/verify-services.sh` after any network change.
 
-## 4. Git Hygiene
-- The `develop` branch is the primary working branch.
-- Always `pull --rebase` before pushing to avoid conflicts.
-- Stash or commit local changes before pulling.
+4.  **Service Addition Protocol**:
+    *   Read `SERVICE_ADDITION_CHECKLIST.md` before generating config.
+    *   Check for port conflicts (`sudo ss -tulpn`) before assigning a port.
 
-## 5. Privacy & Sensitive Data
-- **Redact Network Identifiers**: NEVER commit public IP addresses or specific No-IP hostnames into the documentation. Use placeholders like `[REDACTED_PUBLIC_IP]`, `[REDACTED_INTERNAL_IP]`, or `[REDACTED_NOIP]`.
-- **Anonymize PII**: Avoid committing personal names (e.g., "Goce") in technical logs or investigation reports. Use `[USER]` instead.
-- **Credential Protection**: 
-    - Verify that `.env`, `*.pickle`, and credential files are correctly ignored by Git before doing any work.
-    - NEVER hardcode Slack webhooks, API tokens, or cleartext passwords in scripts or `docker-compose.yml` files. Use environment variables or secure placeholders.
+## 📝 Documentation
+5.  **Logging**: All major changes and troubleshooting steps must be logged in `usefull files/TROUBLESHOOTING_LOG.md`.
+
+## 🚧 Scope Enforcement (The "Surgical" Rule)
+6.  **Isolation**:
+    *   When troubleshooting "Service A", you are **FORBIDDEN** from editing the configuration of "Service B".
+    *   If a global change seems necessary (e.g., global Caddy settings), you must **STOP and ASK** the user for explicit permission first.
+    *   **Files**: changes should primarily be limited to `docker/<service>/` and the specific block in `Caddyfile`. DO NOT touch `enhanced-health-check.sh` or `config.yml` unless you are specifically fixing a regression in those files.
+
+## 🟢 Allowed Extensions (Append Only)
+7.  **Sacred but Extendable Files**:
+    The following files are CRITICAL infrastructure. You may **ONLY** add new entries to them. **NEVER** modify or delete existing entries without explicit permission.
+    *   `~/.cloudflared/config.yml`: Add new ingress rules to the list. Do NOT change the `tunnel` ID or credentials file.
+    *   `docker/caddy/Caddyfile`: Add new `handle @service` blocks. Do NOT change global settings or existing reverse proxies.
+    *   `scripts/verify-services.sh`: Add new domains to the `SUBDOMAINS` array.
+    *   `README.md`: Add new service descriptions.
+
+## 🔴 Read-Only (Core Infrastructure)
+8.  **Do Not Touch**:
+    The following files are the "operating system" of the homelab. Never edit them as part of a routine service addition. Only touch them if the **Explicit User Goal** is to upgrade the monitoring/recovery system itself.
+    *   `scripts/enhanced-health-check.sh`
+    *   `scripts/fix-external-access.sh`
+    *   `scripts/backup-retention-helper.sh`
+    *   All files in `systemd/*.service` or `systemd/*.timer`
+
+## 🟡 Scope-Locked (Service Configs)
+9.  **Service Isolation**:
+    *   `docker/<service>/docker-compose.yml` and `.env` files are **LOCKED** to that service.
+    *   **Rule**: You may edit `docker/paperless/docker-compose.yml` ONLY if the user asks to "Fix Paperless" or "Update Paperless".
+    *   **Forbidden**: Never edit `docker/jellyfin/...` when working on Paperless.
