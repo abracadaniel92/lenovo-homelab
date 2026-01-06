@@ -1,7 +1,7 @@
 # Lenovo ThinkCentre Configuration & Setup
 
 [![GitHub last commit](https://img.shields.io/github/last-commit/abracadaniel92/lenovo-homelab?style=flat-square&logo=github)](https://github.com/abracadaniel92/lenovo-homelab/commits/main)
-[![Docker](https://img.shields.io/badge/containers-15-blue?style=flat-square&logo=docker)](https://github.com/abracadaniel92/lenovo-homelab)
+[![Docker](https://img.shields.io/badge/containers-17-blue?style=flat-square&logo=docker)](https://github.com/abracadaniel92/lenovo-homelab)
 
 
 This repository contains all configuration files, scripts, and setup instructions for a self-hosted home server. The server runs multiple services including Docker containers, reverse proxy (Caddy), Cloudflare Tunnel, and various applications.
@@ -27,8 +27,6 @@ This repository contains all configuration files, scripts, and setup instruction
 | **Storage** | 512GB NVMe SSD |
 | **Docker Data** | `/home/docker-projects/` (symlinked from `/mnt/ssd/docker-projects/`) |
 | **Backups** | `/mnt/ssd/backups/` |
-| **Dynamic DNS** | No-IP (Self-hosted updater) |
-| **VPN** | WireGuard (`wg0` on port 51820) |
 
 ### Hardware Specs
 
@@ -46,6 +44,7 @@ This repository contains all configuration files, scripts, and setup instruction
 - **Media Server**: Jellyfin (movies, TV, music, books)
 - **Cloud Storage**: Nextcloud
 - **Password Manager**: Vaultwarden (Bitwarden-compatible)
+- **Document Management**: Paperless-ngx (document digitization and organization)
 - **Recipe Manager**: KitchenOwl (shopping lists & recipes)
 - **File Sharing**: Gokapi
 - **Monitoring**: Uptime Kuma
@@ -77,7 +76,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 
 ## <a name="running-services"></a>📦 Running Services
 
-### Docker Containers (15 containers)
+### Docker Containers (17 containers, 15 services)
 
 | Service | Port | External URL | Description |
 |---------|------|--------------|-------------|
@@ -87,13 +86,13 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **KitchenOwl** | 8092 | shopping.gmojsoski.com | Recipe manager & shopping lists |
 | **Vaultwarden** | 8082 | vault.gmojsoski.com | Password manager |
 | **Nextcloud** | 8081 | cloud.gmojsoski.com | Cloud storage (PostgreSQL) |
+| **Paperless** | 8097 | paperless.gmojsoski.com | Document management (PostgreSQL) |
 | **Uptime Kuma** | 3001 | - | Monitoring & alerts |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Web analytics |
 | **Homepage** | 8000 | - | Service dashboard |
 | **Portainer** | 9000 | - | Docker management UI |
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
-| **Portfolio** | - | gmojsoski.com | Personal portfolio website (Auto-synced) |
 | **Watchtower** | - | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |
 
@@ -118,6 +117,7 @@ Pi-version-control/
 │   ├── kavita/                # (deprecated - using Jellyfin for books)
 │   ├── nextcloud/
 │   ├── nginx-vaultwarden/
+│   ├── paperless/
 │   ├── pihole/
 │   ├── portainer/
 │   ├── uptime-kuma/
@@ -165,6 +165,7 @@ Pi-version-control/
 ├── jellyfin/
 ├── kitchenowl/
 ├── nginx-vaultwarden/
+├── paperless/
 ├── portainer/
 ├── uptime-kuma/
 ├── vaultwarden/
@@ -238,6 +239,8 @@ See individual setup guides in `usefull files/`:
 - `KITCHENOWL_RECIPE_IMPORT.md` - Recipe import guide
 - `MONITORING_AND_RECOVERY.md` - Health check setup
 
+**Paperless Setup**: See `docker/paperless/README.md` for installation and configuration details.
+
 ## <a name="monitoring--auto-recovery"></a>🛡️ Monitoring & Auto-Recovery
 
 The server has a multi-layer monitoring system:
@@ -247,25 +250,7 @@ The server has a multi-layer monitoring system:
 | 1 | enhanced-health-check.timer | Every 30 seconds | Check & restart all services |
 | 2 | Docker restart policies | On failure | Auto-restart containers |
 | 3 | Cloudflare Tunnel (2 replicas) | Continuous | Redundant external access |
-| 4 | portfolio-update.timer | Every 5 minutes | Auto-sync portfolio from GitHub repo |
-| 5 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
-
-### <a name="network-access"></a>🌐 Network & Remote Access
-
-The server is accessible from anywhere even with dynamic IPs at home and remote locations:
-
-- **Primary Access**: Cloudflare Tunnel (nameserver routing) via `*.gmojsoski.com`.
-- **VPN (WireGuard)**: A dedicated WireGuard VPN (`wg0`) allows direct encrypted access to the local network.
-    - **Endpoint**: `[REDACTED_NOIP]:51820`
-    - **Dynamic DNS**: Handled by No-IP to track the current home IP.
-- **Failover**: If the tunnel is down, the WireGuard VPN provides a secure back-channel for maintenance.
-
-### Portfolio Auto-Sync
-
-My personal portfolio at [gmojsoski.com](https://gmojsoski.com) is self-hosted and fully automated:
-- **Source**: Synced from a local Git repository at `~/Desktop/Cursor projects/portfolio/portfolio`.
-- **Automation**: A systemd timer (`portfolio-update.timer`) runs every 5 minutes to pull the latest changes from GitHub and rsync them to the Caddy site directory.
-- **Script**: `scripts/update-portfolio.sh` handles the git pull and directory sync.
+| 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
 
 ### Check Monitoring Status
 
@@ -310,6 +295,7 @@ bash scripts/backup-travelsync.sh
 |---------|----------|------------|
 | Vaultwarden | `/mnt/ssd/backups/vaultwarden/` | CRITICAL |
 | Nextcloud | `/mnt/ssd/backups/nextcloud/` | High |
+| Paperless | Docker volumes (data, media) | High |
 | KitchenOwl | `/mnt/ssd/backups/kitchenowl/` | Medium |
 | Travelsync | `/mnt/ssd/backups/travelsync/` | Medium |
 
@@ -408,6 +394,7 @@ docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 - [Caddy Documentation](https://caddyserver.com/docs/)
 - [Cloudflare Tunnel Docs](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)
 - [Jellyfin Documentation](https://jellyfin.org/docs/)
+- [Paperless-ngx Documentation](https://docs.paperless-ngx.com/)
 - [KitchenOwl GitHub](https://github.com/TomBursch/kitchenowl)
 - [Vaultwarden Wiki](https://github.com/dani-garcia/vaultwarden/wiki)
 - [Nextcloud Documentation](https://docs.nextcloud.com/)

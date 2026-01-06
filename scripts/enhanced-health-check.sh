@@ -27,6 +27,18 @@ check_service_http() {
     fi
 }
 
+# Function to check configuration integrity (prevents regression to 127.0.0.1)
+check_config_integrity() {
+    CONFIG_FILE="/home/goce/.cloudflared/config.yml"
+    if [ -f "$CONFIG_FILE" ]; then
+        if grep -q "127.0.0.1:8080" "$CONFIG_FILE"; then
+            log "WARNING: Detected 127.0.0.1 in cloudflared config. Fixing to localhost for stability..."
+            sed -i 's/127.0.0.1:8080/localhost:8080/g' "$CONFIG_FILE"
+            # We don't restart here, the main loop will catch service down if this was the cause
+        fi
+    fi
+}
+
 check_udp_buffers() {
     local TARGET_BUFFER=26214400 # 25MB
     local rmem_max=$(sysctl -n net.core.rmem_max)
@@ -51,6 +63,7 @@ check_udp_buffers() {
 }
 
 # Check System Health
+check_config_integrity
 check_udp_buffers
 
 # Check Docker

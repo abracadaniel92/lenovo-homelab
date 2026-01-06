@@ -200,7 +200,7 @@ docker compose up -d  # Restart
 8. ✅ Fixed Vaultwarden iOS DELETE method issue (via Nginx proxy)
 9. ✅ Added 2 Cloudflare Tunnel replicas for redundancy
 10. ✅ **Fixed health check script** (Jan 2, 2026) - Now correctly detects Docker containers instead of non-existent systemd service
-11. ✅ **Added Pi-hole setup guide** for Raspberry Pi 4 ([REDACTED_INTERNAL_IP_2])
+11. ✅ **Added Pi-hole setup guide** for Raspberry Pi 4 (192.168.1.137)
 12. ✅ **Investigated and fixed external access issues** - See `docs/how-to-guides/EXTERNAL_ACCESS_INVESTIGATION.md`
 13. ✅ **Configured Backblaze B2 offsite backup** (Jan 2, 2026) - rclone sync to B2 daily at 3 AM
 14. ✅ **Added Cloudflare Tunnel metrics endpoint** (Jan 2, 2026) - Metrics exposed on port 2000, accessible at http://localhost:2000/metrics

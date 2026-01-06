@@ -1,0 +1,46 @@
+services:
+  broker:
+    image: docker.io/library/redis:8
+    container_name: paperless-redis
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    networks:
+      - default
+
+  webserver:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless-webserver
+    restart: unless-stopped
+    depends_on:
+      - broker
+    ports:
+      - "8097:8000"
+    volumes:
+      - data:/usr/src/paperless/data
+      - media:/usr/src/paperless/media
+      - ./export:/usr/src/paperless/export
+      - ./consume:/usr/src/paperless/consume
+    env_file: .env
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      # Connect to existing Nextcloud PostgreSQL container
+      PAPERLESS_DBHOST: nextcloud-postgres
+      PAPERLESS_DBNAME: paperless
+      PAPERLESS_DBUSER: nextcloud
+      PAPERLESS_DBPASS: change_me_strong
+      PAPERLESS_DBPORT: 5432
+    networks:
+      - default
+      - nextcloud-net
+
+volumes:
+  data:
+  media:
+  redisdata:
+
+networks:
+  nextcloud-net:
+    external: true
+    name: nextcloud_nextcloud-net
+
