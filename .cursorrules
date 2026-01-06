@@ -37,3 +37,11 @@ This file defines the strict operating rules for this repository. FAILURE TO FOL
     *   When troubleshooting "Service A", you are **FORBIDDEN** from editing the configuration of "Service B".
     *   If a global change seems necessary (e.g., global Caddy settings), you must **STOP and ASK** the user for explicit permission first.
     *   **Files**: changes should primarily be limited to `docker/<service>/` and the specific block in `Caddyfile`. DO NOT touch `enhanced-health-check.sh` or `config.yml` unless you are specifically fixing a regression in those files.
+
+## 🟢 Allowed Extensions (Append Only)
+7.  **Sacred but Extendable Files**:
+    The following files are CRITICAL infrastructure. You may **ONLY** add new entries to them. **NEVER** modify or delete existing entries without explicit permission.
+    *   `~/.cloudflared/config.yml`: Add new ingress rules to the list. Do NOT change the `tunnel` ID or credentials file.
+    *   `docker/caddy/Caddyfile`: Add new `handle @service` blocks. Do NOT change global settings or existing reverse proxies.
+    *   `scripts/verify-services.sh`: Add new domains to the `SUBDOMAINS` array.
+    *   `README.md`: Add new service descriptions.
