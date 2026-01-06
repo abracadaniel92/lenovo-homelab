@@ -65,3 +65,32 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix
 *   `curl -I https://gmojsoski.com` -> **HTTP 200**
 *   `curl -I https://jellyfin.gmojsoski.com/web/index.html` -> **HTTP 200** (was 302 loop/download)
 *   **Mobile Test:** Validated login page loads correctly without downloading files.
+
+
+## [2026-01-06] Paperless-ngx Addition Caused Global 502 Outage
+
+### 🔴 Symptoms
+1.  **Global 502/503 Errors:** After adding Paperless-ngx, external access to ALL services (Jellyfin, Nextcloud, etc.) began failing with 502 Bad Gateway.
+2.  **Paperless CSRF Failed:** Paperless logs showed `Forbidden (403) CSRF verification failed. Request aborted.` and `DisallowedHost` errors.
+3.  **Config Drift:** `~/.cloudflared/config.yml` was found to have reverted to `127.0.0.1` instead of `localhost`.
+
+### 🔍 Root Causes identified
+1.  **Configuration Reversion:** Some process or manual edit reverted `~/.cloudflared/config.yml` ingress rules from `http://localhost:8080` (stable) to `http://127.0.0.1:8080` (unstable on this host setup). This caused the Cloudfared tunnel to lose connectivity to Caddy intermittently.
+2.  **Over-Engineering Caddy:** The initial Caddyfile entry for Paperless included unnecessary headers (`X-Forwarded-Host`, `Host`) that conflicted with the reverse proxy flow, causing CSRF validation in Django (Paperless) to fail.
+3.  **Missing SSL Header:** Initially missing `X-Forwarded-Ssl: on` caused redirect loops.
+
+### ✅ Fixes Applied
+1.  **Simplified Caddy Config:** Removed all manual header overrides from the Paperless Caddy block. Used the standard `reverse_proxy` directive.
+    ```caddyfile
+    handle @paperless {
+        reverse_proxy http://172.17.0.1:8097
+    }
+    ```
+2.  **Enforced Localhost:** Reverted `~/.cloudflared/config.yml` to use `http://localhost:8080` for the Paperless ingress rule and all other services.
+3.  **Integrity Check:** Added `check_config_integrity` function to `enhanced-health-check.sh` to automatically detect and fix if the config reverts to `127.0.0.1` again.
+4.  **Service Verification:** Created `scripts/verify-services.sh` to quickly validate HTTP 200/302 status for all subdomains.
+
+### 🧪 Verification
+*   Paperless now accessible at `https://paperless.gmojsoski.com` (HTTP 200).
+*   All other services restored.
+*   Mobile access confirmed.

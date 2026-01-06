@@ -1,48 +1,33 @@
-# AI Safety & Operation Rules
+# Cursor Rules & Governance (AI Constitution)
 
-This repository manages a live homelab environment. Any AI agent working here MUST follow these rules to prevent data loss or service disruption.
+This file defines the strict operating rules for this repository. FAILURE TO FOLLOW THESE RULES will result in service outages.
 
-## 1. Live Service Updates
-- **ALWAYS Verify Live Paths**: Live docker services often run from `/home/docker-projects/`, NOT the workspace directory.
-- **NEVER Assume Workspace is Live**: Before running `docker compose` commands, run `docker inspect <container-name>` to find the absolute path of the `com.docker.compose.project.working_dir`.
-- **Use Workflows**: Always check `.agent/workflows/` for standardized procedures. Specifically, use the `/update-service` logic for any container updates.
+## 🔴 CRITICAL: Networking & Ingress (NEVER CHANGE)
+1.  **Cloudflare Tunnel Binding**:
+    *   **RULE**: In `~/.cloudflared/config.yml` (and repo copies), the `service` URL must ALWAYS be `http://localhost:8080`.
+    *   **PROHIBITED**: NEVER use `127.0.0.1:8080`. This causes intermittent connection failures due to the `network_mode: host` and `systemd-resolved` interactions on this specific machine.
+    *   **WHY**: The tunnel runs in Docker with host networking; `localhost` resolves reliably via `/etc/hosts`, while `127.0.0.1` has caused loopback routing issues.
 
-## 2. Path Management
-- **Workspace**: `/home/goce/Desktop/Cursor projects/Pi-version-control` is for version control and configuration management.
-- **Production**: `/home/docker-projects/` contains the live running data and active `docker-compose.yml` files.
-- **Rule**: Sync changes from the workspace to production only after verification, or use the live path directly if performing an update.
+2.  **Caddy Reverse Proxy**:
+    *   **Source of Truth**: `docker/caddy/Caddyfile` is the ONLY valid configuration file. Ignore `site/` or `config/` subdirectories.
+    *   **Standard Block**: When adding a new service, use this EXACT template:
+        ```caddyfile
+        handle @subdomain {
+            reverse_proxy http://172.17.0.1:PORT
+        }
+        ```
+    *   **NO Header Overrides**: DO NOT add `header_up Host {host}` or `X-Forwarded-*` unless explicitly required by the documentation for *reverse proxies* (not just general use).
+    *   **Media Servers**: For Jellyfin/Plex/Navidrome, explicit `encode gzip` is PROHIBITED as it breaks mobile streaming.
 
-## 3. Configuration File Updates
-- **NEVER Overwrite Production Configs Blindly**: Before copying configuration files from workspace to production, ALWAYS compare them first using `diff` or by reading both files.
-- **Merge, Don't Replace**: Production files may contain entries not in version control (e.g., services added manually). When updating configs like `cloudflare/config.yml` or `caddy/Caddyfile`:
-  1. Read the production file first: Check `/home/docker-projects/<service>/` or `/home/goce/.cloudflared/config.yml`
-  2. Compare with workspace version: Use `diff` to see differences
-  3. Merge changes: Add new entries while preserving existing production entries
-  4. Verify: Check that all expected services are present before copying
-- **Example**: If adding Paperless to Cloudflare config, ensure Jellyfin and other services remain in the production file.
+## 🛡️ Operational Safety
+3.  **Governance**:
+    *   **NEVER** modify existing, working Caddyfile blocks while troubleshooting a new service.
+    *   **ALWAYS** check `usefull files/TROUBLESHOOTING_LOG.md` before suggesting a fix.
+    *   **ALWAYS** run `scripts/verify-services.sh` after any network change.
 
-## 4. Data Integrity
-- Prioritize preserving volume data (`./data` folders) during any operation.
-- If a volume mount looks suspicious or different from the expected production mount, STOP and ask the user.
+4.  **Service Addition Protocol**:
+    *   Read `SERVICE_ADDITION_CHECKLIST.md` before generating config.
+    *   Check for port conflicts (`sudo ss -tulpn`) before assigning a port.
 
-## 5. Git Hygiene
-- The `develop` branch is the primary working branch.
-- Always `pull --rebase` before pushing to avoid conflicts.
-- Stash or commit local changes before pulling.
-
-## 6. Privacy & Sensitive Data
-- **Redact Network Identifiers**: NEVER commit public IP addresses or specific No-IP hostnames into the documentation. Use placeholders like `[REDACTED_PUBLIC_IP]`, `[REDACTED_INTERNAL_IP]`, or `[REDACTED_NOIP]`.
-- **Anonymize PII**: Avoid committing personal names (e.g., "Goce") in technical logs or investigation reports. Use `[USER]` instead.
-- **Credential Protection**: 
-    - Verify that `.env`, `*.pickle`, and credential files are correctly ignored by Git before doing any work.
-    - NEVER hardcode Slack webhooks, API tokens, or cleartext passwords in scripts or `docker-compose.yml` files. Use environment variables or secure placeholders.
-
-## 7. Infrastructure Stability
-- **Preserve Core Configs**: The current Caddy and Cloudflare (`cloudflared`) configurations are in a stable, optimized state. Do NOT modify them unless explicitly requested to add a new service.
-- **Monitoring Scripts**: Never modify `enhanced-health-check.sh` without a direct request; it is critical for server uptime.
-- **Safety Protocol for New Services/Subdomains**: When adding a new subdomain or service that requires a Cloudflare Tunnel or Caddy update:
-    1. **REQUIRED**: Stop the health check timer first: `sudo systemctl stop enhanced-health-check.timer`.
-    2. Implement the change.
-    3. Verify connectivity.
-    4. **CRITICAL REMINDER**: Restart the timer: `sudo systemctl start enhanced-health-check.timer`. **DO NOT FORGET THIS STEP** - the health check must be restarted after any configuration changes.
-    *This prevents the health check from entering a restart loop while configurations are in flux.*
+## 📝 Documentation
+5.  **Logging**: All major changes and troubleshooting steps must be logged in `usefull files/TROUBLESHOOTING_LOG.md`.
