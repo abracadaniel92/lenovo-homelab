@@ -45,6 +45,7 @@ This repository contains all configuration files, scripts, and setup instruction
 - **Cloud Storage**: Nextcloud
 - **Password Manager**: Vaultwarden (Bitwarden-compatible)
 - **Document Management**: Paperless-ngx (document digitization and organization)
+- **Knowledge Base**: Outline (wiki and documentation)
 - **Recipe Manager**: KitchenOwl (shopping lists & recipes)
 - **File Sharing**: Gokapi
 - **Monitoring**: Uptime Kuma
@@ -76,7 +77,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 
 ## <a name="running-services"></a>📦 Running Services
 
-### Docker Containers (17 containers, 15 services)
+### Docker Containers (20 containers, 16 services)
 
 | Service | Port | External URL | Description |
 |---------|------|--------------|-------------|
@@ -87,6 +88,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Vaultwarden** | 8082 | vault.gmojsoski.com | Password manager |
 | **Nextcloud** | 8081 | cloud.gmojsoski.com | Cloud storage (PostgreSQL) |
 | **Paperless** | 8097 | paperless.gmojsoski.com | Document management (PostgreSQL) |
+| **Outline** | 8098 | - | Wiki & knowledge base (local only, PostgreSQL + Redis) |
 | **Uptime Kuma** | 3001 | - | Monitoring & alerts |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Web analytics |
 | **Homepage** | 8000 | - | Service dashboard |

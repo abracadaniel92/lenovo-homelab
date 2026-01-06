@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  outline:
+    image: outlinewiki/outline:latest
+    container_name: outline
+    restart: unless-stopped
+    ports:
+      - "8098:3000"
+    environment:
+      # Database
+      DATABASE_URL: "postgres://outline:outline@outline-postgres:5432/outline"
+      PGSSLMODE: disable
+      
+      # Redis
+      REDIS_URL: "redis://outline-redis:6379"
+      
+      # URLs (internal only - accessed via Caddy)
+      URL: "http://outline.local:8080"
+      
+      # Security
+      SECRET_KEY: "220398c7431ea1e887a112357be9a03ced099542dd8ec58e8d8938094be7f6d3"
+      UTILS_SECRET: "a09b2122c0c9383477c9b33c2052a32100ad4320acf3a87086b98c74aa6919e5"
+      
+      # Authentication - Email/Password (simplest for local use)
+      # To create first user: docker exec -it outline yarn db:seed
+      FORCE_HTTPS: "false"
+      ENABLE_UPDATES: "true"
+      
+      # File storage (local)
+      FILE_STORAGE: "local"
+      FILE_STORAGE_LOCAL_ROOT_DIR: "/var/lib/outline/data"
+      FILE_STORAGE_UPLOAD_MAX_SIZE: "26214400"
+      
+      # Collaboration
+      COLLABORATION_URL: ""
+      
+      # Rate limiting
+      RATE_LIMITER_ENABLED: "true"
+      
+    volumes:
+      - outline-data:/var/lib/outline/data
+    depends_on:
+      - outline-postgres
+      - outline-redis
+    networks:
+      - outline-net
+
+  outline-postgres:
+    image: postgres:15-alpine
+    container_name: outline-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: outline
+      POSTGRES_PASSWORD: outline
+      POSTGRES_DB: outline
+    volumes:
+      - outline-postgres-data:/var/lib/postgresql/data
+    networks:
+      - outline-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outline"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  outline-redis:
+    image: redis:7-alpine
+    container_name: outline-redis
+    restart: unless-stopped
+    volumes:
+      - outline-redis-data:/data
+    networks:
+      - outline-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  outline-data:
+  outline-postgres-data:
+  outline-redis-data:
+
+networks:
+  outline-net:
+    driver: bridge
+
