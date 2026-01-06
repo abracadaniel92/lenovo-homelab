@@ -45,3 +45,17 @@ This file defines the strict operating rules for this repository. FAILURE TO FOL
     *   `docker/caddy/Caddyfile`: Add new `handle @service` blocks. Do NOT change global settings or existing reverse proxies.
     *   `scripts/verify-services.sh`: Add new domains to the `SUBDOMAINS` array.
     *   `README.md`: Add new service descriptions.
+
+## 🔴 Read-Only (Core Infrastructure)
+8.  **Do Not Touch**:
+    The following files are the "operating system" of the homelab. Never edit them as part of a routine service addition. Only touch them if the **Explicit User Goal** is to upgrade the monitoring/recovery system itself.
+    *   `scripts/enhanced-health-check.sh`
+    *   `scripts/fix-external-access.sh`
+    *   `scripts/backup-retention-helper.sh`
+    *   All files in `systemd/*.service` or `systemd/*.timer`
+
+## 🟡 Scope-Locked (Service Configs)
+9.  **Service Isolation**:
+    *   `docker/<service>/docker-compose.yml` and `.env` files are **LOCKED** to that service.
+    *   **Rule**: You may edit `docker/paperless/docker-compose.yml` ONLY if the user asks to "Fix Paperless" or "Update Paperless".
+    *   **Forbidden**: Never edit `docker/jellyfin/...` when working on Paperless.
