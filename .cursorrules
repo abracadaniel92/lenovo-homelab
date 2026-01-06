@@ -12,18 +12,37 @@ This repository manages a live homelab environment. Any AI agent working here MU
 - **Production**: `/home/docker-projects/` contains the live running data and active `docker-compose.yml` files.
 - **Rule**: Sync changes from the workspace to production only after verification, or use the live path directly if performing an update.
 
-## 3. Data Integrity
+## 3. Configuration File Updates
+- **NEVER Overwrite Production Configs Blindly**: Before copying configuration files from workspace to production, ALWAYS compare them first using `diff` or by reading both files.
+- **Merge, Don't Replace**: Production files may contain entries not in version control (e.g., services added manually). When updating configs like `cloudflare/config.yml` or `caddy/Caddyfile`:
+  1. Read the production file first: Check `/home/docker-projects/<service>/` or `/home/goce/.cloudflared/config.yml`
+  2. Compare with workspace version: Use `diff` to see differences
+  3. Merge changes: Add new entries while preserving existing production entries
+  4. Verify: Check that all expected services are present before copying
+- **Example**: If adding Paperless to Cloudflare config, ensure Jellyfin and other services remain in the production file.
+
+## 4. Data Integrity
 - Prioritize preserving volume data (`./data` folders) during any operation.
 - If a volume mount looks suspicious or different from the expected production mount, STOP and ask the user.
 
-## 4. Git Hygiene
+## 5. Git Hygiene
 - The `develop` branch is the primary working branch.
 - Always `pull --rebase` before pushing to avoid conflicts.
 - Stash or commit local changes before pulling.
 
-## 5. Privacy & Sensitive Data
+## 6. Privacy & Sensitive Data
 - **Redact Network Identifiers**: NEVER commit public IP addresses or specific No-IP hostnames into the documentation. Use placeholders like `[REDACTED_PUBLIC_IP]`, `[REDACTED_INTERNAL_IP]`, or `[REDACTED_NOIP]`.
 - **Anonymize PII**: Avoid committing personal names (e.g., "Goce") in technical logs or investigation reports. Use `[USER]` instead.
 - **Credential Protection**: 
     - Verify that `.env`, `*.pickle`, and credential files are correctly ignored by Git before doing any work.
     - NEVER hardcode Slack webhooks, API tokens, or cleartext passwords in scripts or `docker-compose.yml` files. Use environment variables or secure placeholders.
+
+## 7. Infrastructure Stability
+- **Preserve Core Configs**: The current Caddy and Cloudflare (`cloudflared`) configurations are in a stable, optimized state. Do NOT modify them unless explicitly requested to add a new service.
+- **Monitoring Scripts**: Never modify `enhanced-health-check.sh` without a direct request; it is critical for server uptime.
+- **Safety Protocol for New Services/Subdomains**: When adding a new subdomain or service that requires a Cloudflare Tunnel or Caddy update:
+    1. **REQUIRED**: Stop the health check timer first: `sudo systemctl stop enhanced-health-check.timer`.
+    2. Implement the change.
+    3. Verify connectivity.
+    4. **CRITICAL REMINDER**: Restart the timer: `sudo systemctl start enhanced-health-check.timer`. **DO NOT FORGET THIS STEP** - the health check must be restarted after any configuration changes.
+    *This prevents the health check from entering a restart loop while configurations are in flux.*
