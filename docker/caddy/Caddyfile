@@ -127,10 +127,6 @@
     handle @paperless {
         reverse_proxy http://172.17.0.1:8097
     }
-			header_up Host {host}
-			header_up X-Forwarded-Host {host}
-		}
-	}
 	
 	handle {
 		encode gzip
