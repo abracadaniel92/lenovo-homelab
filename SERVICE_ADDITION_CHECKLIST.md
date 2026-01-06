@@ -42,3 +42,30 @@ Follow this checklist whenever adding a new service to the homelab. This ensures
 ## 5. Updates
 - [ ] **Scripts**: Update `scripts/verify-services.sh` to include the new domain.
 - [ ] **Documentation**: Update `README.md` with the new service details and port number.
+
+## ❓ Operational Procedures & FAQ
+
+### 1. Restart Sequence
+**Order Matters:**
+1.  **Restart Caddy First**: `docker compose restart caddy` (loads new internal routing).
+2.  **Restart Tunnel Second**: `docker compose restart` in the cloudflared folder (registers new ingress rule).
+*Why?* The tunnel needs to see the internal route is ready.
+
+### 2. Verification
+**Mandatory**: YES. Always run `./scripts/verify-services.sh` after any change. This is your safety net.
+
+### 3. Logging
+**Troubleshooting Log**: Only log here if you encountered *problems* or had to do non-standard fix.
+**Standard Additions**: No need to log smooth additions in TROUBLESHOOTING_LOG.md. Just update `README.md`.
+
+### 4. Port Allocation
+**Preferred Range**: 8000-8100 is your current active range.
+*   **Procedure**: Always run `sudo ss -tulpn` first.
+*   **Avoid**: 5000 (AirPlay conflict), 9000 (Portainer).
+
+### 5. Rollback Procedure
+If a new service breaks things:
+1.  **Revert**: Delete the lines you added to `Caddyfile` and `config.yml`.
+2.  **Reset**: Run `docker compose restart caddy`.
+3.  **Recover**: Run `./restart services/fix-external-access.sh` (this resets the tunnel cleanly).
+4.  **Verify**: Run `./scripts/verify-services.sh` to confirm you are back to green.
