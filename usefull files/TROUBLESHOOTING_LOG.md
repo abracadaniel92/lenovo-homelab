@@ -2,6 +2,32 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-01-07] Cloudflare Tunnel Certificate Configuration Error
+
+**Symptoms:**
+- Cloudflare tunnel replicas showing error: `ERR Cannot determine default origin certificate path`
+- Error appeared in logs but tunnel was still functioning
+- Both replicas (cloudflared-1 and cloudflared-2) showing the same error on startup
+
+**Root Cause:**
+- The `cert.pem` file exists at `/home/goce/.cloudflared/cert.pem` on the host
+- Docker containers mount the directory but cloudflared couldn't find the certificate in default search paths
+- Config file didn't explicitly specify the `origincert` path
+
+**Fix:**
+- Added `origincert: /home/goce/.cloudflared/cert.pem` to `~/.cloudflared/config.yml`
+- Restarted tunnel containers: `cd /home/docker-projects/cloudflared && docker compose restart`
+- Verified in logs: Settings now show `origincert:/home/goce/.cloudflared/cert.pem`
+- Error eliminated from logs
+
+**Verification:**
+- External access working (HTTP 200)
+- Both replicas running without certificate errors
+- Tunnel connections established successfully
+
+**Files Modified:**
+- `/home/goce/.cloudflared/config.yml` - Added `origincert` line
+
 ## [2026-01-04] Service Down (502 Errors) after System Freeze
 
 **Symptoms:**

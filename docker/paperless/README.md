@@ -124,3 +124,5 @@ docker run --rm -v paperless_media:/data -v $(pwd):/backup alpine tar xzf /backu
 - [Paperless-ngx Documentation](https://docs.paperless-ngx.com/)
 - Fork: `/home/goce/Desktop/Cursor projects/paperless-ngx`
 
+
+
