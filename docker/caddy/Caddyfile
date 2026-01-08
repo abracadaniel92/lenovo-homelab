@@ -123,17 +123,14 @@
 		}
 	}
 	
-    @paperless host paperless.gmojsoski.com
-    handle @paperless {
-        reverse_proxy http://172.17.0.1:8097
-    }
-	
-	@outline host outline.local
-	handle @outline {
-		encode gzip
-		reverse_proxy http://172.17.0.1:8098 {
-			header_up X-Forwarded-Proto http
+	@paperless host paperless.gmojsoski.com
+	handle @paperless {
+		# NO gzip encoding - Granian/Paperless doesn't handle it well (causes blank screens)
+		reverse_proxy http://172.17.0.1:8097 {
+			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {remote_host}
+			header_up Host {host}
+			header_up X-Forwarded-Host {host}
 		}
 	}
 	
