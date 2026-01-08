@@ -39,6 +39,23 @@ check_config_integrity() {
     fi
 }
 
+# Function to check Caddyfile for problematic gzip settings (prevents mobile download issues)
+check_caddyfile_integrity() {
+    CADDYFILE="/home/docker-projects/caddy/config/Caddyfile"
+    if [ -f "$CADDYFILE" ]; then
+        # Check for encode gzip in mobile-sensitive services (causes Cloudflare double-compression)
+        PROBLEMATIC_SERVICES=("@jellyfin" "@paperless" "@vault" "@tickets" "@cloud")
+        for service in "${PROBLEMATIC_SERVICES[@]}"; do
+            # Check if service block has encode gzip
+            if grep -A10 "$service" "$CADDYFILE" | grep -q "encode gzip"; then
+                log "WARNING: Detected 'encode gzip' in $service block. This causes mobile download/blank page issues!"
+                log "ACTION REQUIRED: Remove 'encode gzip' from $service in Caddyfile to fix mobile access"
+                # Don't auto-fix - requires manual review to ensure proper headers are in place
+            fi
+        done
+    fi
+}
+
 check_udp_buffers() {
     local TARGET_BUFFER=26214400 # 25MB
     local rmem_max=$(sysctl -n net.core.rmem_max)
@@ -64,6 +81,7 @@ check_udp_buffers() {
 
 # Check System Health
 check_config_integrity
+check_caddyfile_integrity
 check_udp_buffers
 
 # Check Docker

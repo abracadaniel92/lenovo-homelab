@@ -120,3 +120,48 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix
 *   Paperless now accessible at `https://paperless.gmojsoski.com` (HTTP 200).
 *   All other services restored.
 *   Mobile access confirmed.
+
+## [2026-01-08] Mobile Download/Blank Page Issue - Health Check Gap
+
+### 🔴 Symptoms
+1. **Mobile browsers downloading .txt files** instead of rendering pages for Jellyfin, Paperless, Tickets, Cloud
+2. **Services returning HTTP 200/302** (appearing healthy to health check)
+3. **Desktop/WiFi working fine** - only mobile network affected
+4. **Issue persisted after Cloudflare cache purge**
+
+### 🔍 Root Causes Identified
+1. **Caddyfile Configuration Drift:** `encode gzip` was re-added to mobile-sensitive services (Jellyfin, Paperless, Tickets, Cloud)
+2. **Cloudflare Double-Compression:** Caddy compresses → Cloudflare compresses again → Mobile browsers get confused
+3. **Health Check Limitation:** Script only checks HTTP status codes (200/302), not:
+   - Content-Type headers
+   - Compression settings
+   - Mobile browser compatibility
+   - Caddyfile configuration integrity
+
+### ✅ Fixes Applied
+1. **Removed `encode gzip`** from mobile-sensitive services:
+   - `@jellyfin` - removed gzip, kept `X-Forwarded-Ssl on`
+   - `@paperless` - removed gzip, added `X-Forwarded-Ssl on`
+   - `@tickets` - removed gzip, added `X-Forwarded-Ssl on`
+   - `@cloud` - removed gzip, simplified headers
+2. **Removed problematic headers:** `Host` and `X-Forwarded-Host` (Caddy handles these automatically)
+3. **Added Caddyfile integrity check** to `enhanced-health-check.sh`:
+   - Warns if `encode gzip` detected in mobile-sensitive service blocks
+   - Prevents silent configuration drift
+4. **Scaled Cloudflare tunnel to 1 replica** (reduced complexity)
+
+### 🧪 Verification
+*   All services returning HTTP 200/302 ✅
+*   Mobile browsers now render pages correctly ✅
+*   Health check now monitors Caddyfile configuration ✅
+
+### 📝 Lessons Learned
+- **Health checks must validate configuration, not just status codes**
+- **Mobile clients are more sensitive to compression issues than desktop**
+- **Cloudflare edge caching can persist issues even after server fixes**
+- **Configuration drift detection is critical for preventing regressions**
+
+### 🔧 Prevention
+- Health check now includes `check_caddyfile_integrity()` function
+- Monitors for `encode gzip` in: `@jellyfin`, `@paperless`, `@vault`, `@tickets`, `@cloud`
+- Logs warnings when problematic config detected (requires manual fix to ensure proper headers)
