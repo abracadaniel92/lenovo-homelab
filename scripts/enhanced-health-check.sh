@@ -16,6 +16,41 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
+# Email notification function
+send_email() {
+    local subject="$1"
+    local body="$2"
+    local recipient="grmojsoski@gmail.com"
+    
+    # Try multiple email methods
+    # Method 1: msmtp (if installed)
+    if command -v msmtp >/dev/null 2>&1; then
+        echo -e "Subject: $subject\n\n$body" | msmtp "$recipient" 2>/dev/null && return 0
+    fi
+    
+    # Method 2: mail command (if installed)
+    if command -v mail >/dev/null 2>&1; then
+        echo "$body" | mail -s "$subject" "$recipient" 2>/dev/null && return 0
+    fi
+    
+    # Method 3: sendmail (if available)
+    if command -v sendmail >/dev/null 2>&1; then
+        {
+            echo "To: $recipient"
+            echo "Subject: $subject"
+            echo ""
+            echo "$body"
+        } | sendmail "$recipient" 2>/dev/null && return 0
+    fi
+    
+    # Method 4: curl to mail API (if mailgun/sendgrid configured)
+    # This would require API keys - skipping for now
+    
+    # If all methods fail, log that email couldn't be sent
+    log "WARNING: Could not send email notification (no mail tools available). Install msmtp or mailutils."
+    return 1
+}
+
 check_service_http() {
     local url=$1
     local timeout=${2:-5}
@@ -48,8 +83,28 @@ check_caddyfile_integrity() {
         for service in "${PROBLEMATIC_SERVICES[@]}"; do
             # Check if service block has encode gzip
             if grep -A10 "$service" "$CADDYFILE" | grep -q "encode gzip"; then
-                log "WARNING: Detected 'encode gzip' in $service block. This causes mobile download/blank page issues!"
-                log "ACTION REQUIRED: Remove 'encode gzip' from $service in Caddyfile to fix mobile access"
+                local warning_msg="WARNING: Detected 'encode gzip' in $service block. This causes mobile download/blank page issues!"
+                local action_msg="ACTION REQUIRED: Remove 'encode gzip' from $service in Caddyfile to fix mobile access"
+                log "$warning_msg"
+                log "$action_msg"
+                
+                # Send email notification
+                local email_subject="[Homelab Alert] Caddyfile Configuration Issue - $service"
+                local email_body="Health check detected a problematic configuration in your Caddyfile.
+
+$warning_msg
+$action_msg
+
+Service: $service
+Caddyfile: $CADDYFILE
+Time: $(date '+%Y-%m-%d %H:%M:%S')
+
+This issue causes mobile browsers to download .txt files instead of rendering pages.
+Fix by removing 'encode gzip' from the $service block in the Caddyfile.
+
+View full log: sudo tail -50 /var/log/enhanced-health-check.log"
+                
+                send_email "$email_subject" "$email_body"
                 # Don't auto-fix - requires manual review to ensure proper headers are in place
             fi
         done
@@ -147,6 +202,19 @@ fi
 # If external access is down, run fix-subdomains-down script
 if [ "$EXTERNAL_DOWN" = true ]; then
     log "CRITICAL: External access down detected. Running fix-external-access.sh..."
+    
+    # Send email notification for critical outage
+    local email_subject="[Homelab CRITICAL] External Access Down - All Services Unreachable"
+    local email_body="Health check detected that external access is down.
+
+Domain: gmojsoski.com
+Status: Not accessible (502/404/503)
+Time: $(date '+%Y-%m-%d %H:%M:%S')
+
+The fix-external-access.sh script is being executed automatically.
+Check the log for details: sudo tail -50 /var/log/enhanced-health-check.log"
+    send_email "$email_subject" "$email_body"
+    
     FIX_SCRIPT="/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-external-access.sh"
     if [ -f "$FIX_SCRIPT" ]; then
         # Run the fix script (it will handle sudo internally)
@@ -157,11 +225,16 @@ if [ "$EXTERNAL_DOWN" = true ]; then
         # Verify fix worked
         if check_external_access "gmojsoski.com"; then
             log "SUCCESS: External access restored after fix"
+            # Send recovery email
+            send_email "[Homelab Recovery] External Access Restored" "External access has been restored successfully after running the fix script."
         else
             log "WARNING: External access still down after fix. May need manual intervention."
+            # Send failure email
+            send_email "[Homelab CRITICAL] External Access Still Down" "The fix script was executed but external access is still down. Manual intervention may be required.\n\nCheck logs: sudo tail -50 /var/log/enhanced-health-check.log"
         fi
     else
         log "ERROR: Fix script not found at $FIX_SCRIPT"
+        send_email "[Homelab ERROR] Fix Script Not Found" "The fix-external-access.sh script was not found at:\n$FIX_SCRIPT\n\nManual intervention required."
     fi
 fi
 
