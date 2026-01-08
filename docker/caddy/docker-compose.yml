@@ -8,25 +8,9 @@ services:
       - "8443:443"
       - "8443:443/udp"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./config/Caddyfile:/etc/caddy/Caddyfile
       - ./data:/data
       - ./config:/config
       - ./site:/srv/site
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    networks:
-      - default
-      - nextcloud-net
-      - jellyfin-net
-      - kitchenowl-net
-
-networks:
-  nextcloud-net:
-    external: true
-    name: nextcloud_nextcloud-net
-  jellyfin-net:
-    external: true
-    name: jellyfin_default
-  kitchenowl-net:
-    external: true
-    name: kitchenowl_kitchenowl-net
