@@ -16,39 +16,73 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-# Email notification function
-send_email() {
-    local subject="$1"
-    local body="$2"
-    local recipient="grmojsoski@gmail.com"
+# Slack notification function
+send_slack_notification() {
+    local title="$1"
+    local message="$2"
+    local emoji="${3:-⚠️}"
     
-    # Try multiple email methods
-    # Method 1: msmtp (if installed)
-    if command -v msmtp >/dev/null 2>&1; then
-        echo -e "Subject: $subject\n\n$body" | msmtp "$recipient" 2>/dev/null && return 0
+    # Load webhook URL from .env if available
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        source "$SCRIPT_DIR/.env"
     fi
     
-    # Method 2: mail command (if installed)
-    if command -v mail >/dev/null 2>&1; then
-        echo "$body" | mail -s "$subject" "$recipient" 2>/dev/null && return 0
+    # Prioritize monitoring-specific webhook
+    [ -n "$MONITORING_SLACK_WEBHOOK_URL" ] && SLACK_WEBHOOK_URL="$MONITORING_SLACK_WEBHOOK_URL"
+    
+    if [ -z "$SLACK_WEBHOOK_URL" ]; then
+        log "WARNING: SLACK_WEBHOOK_URL not set. Cannot send Slack notification."
+        return 1
     fi
     
-    # Method 3: sendmail (if available)
-    if command -v sendmail >/dev/null 2>&1; then
+    # Build Slack message payload
+    read -r -d '' PAYLOAD << EOF || true
+{
+    "blocks": [
         {
-            echo "To: $recipient"
-            echo "Subject: $subject"
-            echo ""
-            echo "$body"
-        } | sendmail "$recipient" 2>/dev/null && return 0
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "${emoji} ${title}",
+                "emoji": true
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "${message}"
+            }
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "Time: $(date '+%Y-%m-%d %H:%M:%S') | Host: $(hostname)"
+                }
+            ]
+        }
+    ]
+}
+EOF
+
+    # Send to Slack
+    RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -H 'Content-type: application/json' \
+        --data "$PAYLOAD" \
+        "$SLACK_WEBHOOK_URL" 2>/dev/null)
+    
+    HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+    BODY=$(echo "$RESPONSE" | head -n -1)
+    
+    if [ "$HTTP_CODE" = "200" ] && [ "$BODY" = "ok" ]; then
+        log "Slack notification sent successfully"
+        return 0
+    else
+        log "WARNING: Failed to send Slack notification (HTTP $HTTP_CODE: $BODY)"
+        return 1
     fi
-    
-    # Method 4: curl to mail API (if mailgun/sendgrid configured)
-    # This would require API keys - skipping for now
-    
-    # If all methods fail, log that email couldn't be sent
-    log "WARNING: Could not send email notification (no mail tools available). Install msmtp or mailutils."
-    return 1
 }
 
 check_service_http() {
@@ -88,23 +122,20 @@ check_caddyfile_integrity() {
                 log "$warning_msg"
                 log "$action_msg"
                 
-                # Send email notification
-                local email_subject="[Homelab Alert] Caddyfile Configuration Issue - $service"
-                local email_body="Health check detected a problematic configuration in your Caddyfile.
+                # Send Slack notification
+                local slack_title="Homelab Alert: Caddyfile Configuration Issue"
+                local slack_message="*Service:* \`$service\`
+*Issue:* \`encode gzip\` detected in Caddyfile
+*Impact:* Mobile browsers download .txt files instead of rendering pages
 
-$warning_msg
-$action_msg
+*Action Required:*
+Remove \`encode gzip\` from the \`$service\` block in:
+\`$CADDYFILE\`
 
-Service: $service
-Caddyfile: $CADDYFILE
-Time: $(date '+%Y-%m-%d %H:%M:%S')
-
-This issue causes mobile browsers to download .txt files instead of rendering pages.
-Fix by removing 'encode gzip' from the $service block in the Caddyfile.
-
-View full log: sudo tail -50 /var/log/enhanced-health-check.log"
+*View log:*
+\`sudo tail -50 /var/log/enhanced-health-check.log\`"
                 
-                send_email "$email_subject" "$email_body"
+                send_slack_notification "$slack_title" "$slack_message" "⚠️"
                 # Don't auto-fix - requires manual review to ensure proper headers are in place
             fi
         done
@@ -203,17 +234,15 @@ fi
 if [ "$EXTERNAL_DOWN" = true ]; then
     log "CRITICAL: External access down detected. Running fix-external-access.sh..."
     
-    # Send email notification for critical outage
-    local email_subject="[Homelab CRITICAL] External Access Down - All Services Unreachable"
-    local email_body="Health check detected that external access is down.
+    # Send Slack notification for critical outage
+    local slack_title="🚨 CRITICAL: External Access Down"
+    local slack_message="*Domain:* gmojsoski.com
+*Status:* Not accessible (502/404/503)
+*Action:* Running fix-external-access.sh automatically
 
-Domain: gmojsoski.com
-Status: Not accessible (502/404/503)
-Time: $(date '+%Y-%m-%d %H:%M:%S')
-
-The fix-external-access.sh script is being executed automatically.
-Check the log for details: sudo tail -50 /var/log/enhanced-health-check.log"
-    send_email "$email_subject" "$email_body"
+*Check log:*
+\`sudo tail -50 /var/log/enhanced-health-check.log\`"
+    send_slack_notification "$slack_title" "$slack_message" "🚨"
     
     FIX_SCRIPT="/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-external-access.sh"
     if [ -f "$FIX_SCRIPT" ]; then
@@ -225,16 +254,16 @@ Check the log for details: sudo tail -50 /var/log/enhanced-health-check.log"
         # Verify fix worked
         if check_external_access "gmojsoski.com"; then
             log "SUCCESS: External access restored after fix"
-            # Send recovery email
-            send_email "[Homelab Recovery] External Access Restored" "External access has been restored successfully after running the fix script."
+            # Send recovery Slack notification
+            send_slack_notification "✅ External Access Restored" "External access has been restored successfully after running the fix script." "✅"
         else
             log "WARNING: External access still down after fix. May need manual intervention."
-            # Send failure email
-            send_email "[Homelab CRITICAL] External Access Still Down" "The fix script was executed but external access is still down. Manual intervention may be required.\n\nCheck logs: sudo tail -50 /var/log/enhanced-health-check.log"
+            # Send failure Slack notification
+            send_slack_notification "🚨 External Access Still Down" "The fix script was executed but external access is still down. Manual intervention may be required.\n\n*Check logs:* \`sudo tail -50 /var/log/enhanced-health-check.log\`" "🚨"
         fi
     else
         log "ERROR: Fix script not found at $FIX_SCRIPT"
-        send_email "[Homelab ERROR] Fix Script Not Found" "The fix-external-access.sh script was not found at:\n$FIX_SCRIPT\n\nManual intervention required."
+        send_slack_notification "❌ Fix Script Not Found" "The fix-external-access.sh script was not found at:\n\`$FIX_SCRIPT\`\n\n*Manual intervention required.*" "❌"
     fi
 fi
 
