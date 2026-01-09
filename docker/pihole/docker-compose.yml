@@ -2,16 +2,19 @@ services:
   pihole:
     image: pihole/pihole:latest
     container_name: pihole
+    hostname: pihole
     network_mode: host
-    restart: always
+    restart: unless-stopped
     cap_add:
       - CAP_NET_ADMIN
     volumes:
       - pihole_config:/etc/pihole
       - dnsmasq_config:/etc/dnsmasq.d
     environment:
-      TZ: 'America/New_York'  # Update with your timezone
-      WEBPASSWORD: ''  # Set a password for the web interface
+      TZ: 'Europe/Skopje'  # Updated to match system timezone
+      WEBPASSWORD: 'CHANGE_THIS_PASSWORD'  # Set a secure password for the web interface
+      FTLCONF_LOCAL_IPV4: '192.168.1.XXX'  # Pi IP address - UPDATE WITH YOUR PI'S IP
+      PIHOLE_DNS_: '1.1.1.1;1.0.0.1'  # Upstream DNS (Cloudflare)
 
 volumes:
   pihole_config:

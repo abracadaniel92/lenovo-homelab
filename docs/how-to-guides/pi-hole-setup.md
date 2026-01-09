@@ -1,8 +1,13 @@
 # Pi-hole Setup on Raspberry Pi 4
 
+## Hardware
+- **Model**: Raspberry Pi 4 Model B
+- **RAM**: 4GB
+- **Network**: Gigabit Ethernet (primary), WiFi (secondary)
+
 ## Network Configuration
-- **Raspberry Pi 4 IP:** `[REDACTED_INTERNAL_IP_2]`
-- **lemongrab (main server) IP:** `[REDACTED_INTERNAL_IP_1]`
+- **Raspberry Pi 4 IP:** `[REDACTED_INTERNAL_IP_2]` (configure via router DHCP reservation)
+- **lemongrab (main server) IP:** `[REDACTED_INTERNAL_IP_1]` (ThinkCentre IP)
 
 ## Purpose
 Pi-hole provides:
@@ -41,77 +46,69 @@ cd ~/pihole
 
 ## Step 3: Create docker-compose.yml
 
+The docker-compose.yml file is located in this repository at `docker/pihole/docker-compose.yml`.
+
+**Key Configuration:**
+- Uses `network_mode: host` for direct DNS access (ports 53, 80)
+- Docker volumes for data persistence (not bind mounts)
+- Timezone: `Europe/Skopje` (update if needed)
+- Upstream DNS: Cloudflare (`1.1.1.1`, `1.0.0.1`)
+
+**Important:** Update the following before starting:
+1. `WEBPASSWORD`: Set a secure password for the admin interface
+2. `FTLCONF_LOCAL_IPV4`: Set to your Pi's IP address
+
 ```bash
-cat > docker-compose.yml << 'EOF'
-services:
-  pihole:
-    image: pihole/pihole:latest
-    container_name: pihole
-    hostname: pihole
-    restart: unless-stopped
-    ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "80:80/tcp"
-    environment:
-      TZ: 'Europe/Skopje'
-      WEBPASSWORD: 'changeme'  # CHANGE THIS PASSWORD!
-      FTLCONF_LOCAL_IPV4: '[REDACTED_INTERNAL_IP_2]'
-      PIHOLE_DNS_: '1.1.1.1;1.0.0.1'  # Upstream DNS (Cloudflare)
-    volumes:
-      - ./etc-pihole:/etc/pihole
-      - ./etc-dnsmasq.d:/etc/dnsmasq.d
-    cap_add:
-      - NET_ADMIN
-EOF
+cd /path/to/repo/docker/pihole
+# Edit docker-compose.yml and update WEBPASSWORD and FTLCONF_LOCAL_IPV4
+nano docker-compose.yml
 ```
 
 ---
 
-## Step 4: Create Local DNS Entries
+## Step 4: Add Local DNS Entries
 
-This is the key configuration that makes local access to your services work without going through Cloudflare.
+This is the key configuration that makes local access to your services work without going through Cloudflare. This resolves `*.gmojsoski.com` domains to your ThinkCentre IP for local network access (fixes NAT hairpinning).
 
-```bash
-mkdir -p etc-dnsmasq.d
+**Recommended Method: Use Pi-hole Admin UI**
 
-cat > etc-dnsmasq.d/02-local-dns.conf << 'EOF'
-# Local DNS entries for gmojsoski.com services
-# Points to lemongrab ([REDACTED_INTERNAL_IP_1]) for local network access
-# This fixes NAT hairpinning issues
+1. Start Pi-hole first (see Step 5)
+2. Go to `http://[REDACTED_INTERNAL_IP_2]/admin`
+3. Navigate to: **Local DNS → DNS Records**
+4. Add each subdomain individually:
+   - Domain: `gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `www.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `cloud.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `files.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `jellyfin.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `vault.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `shopping.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `analytics.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `poker.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `bookmarks.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `tickets.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `paperless.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - (Add any other subdomains you have)
 
-# Main domain
-address=/gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-address=/www.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-
-# Services
-address=/jellyfin.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-address=/cloud.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-address=/vault.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-address=/shopping.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-address=/files.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-address=/analytics.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-address=/poker.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-address=/bookmarks.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-address=/tickets.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-address=/travelsync.gmojsoski.com/[REDACTED_INTERNAL_IP_1]
-EOF
-```
+**Note:** Pi-hole Admin UI doesn't support wildcard syntax (`*.domain.com`), so each subdomain must be added individually. However, this ensures precise control and is the recommended approach.
 
 ---
 
 ## Step 5: Start Pi-hole
 
 ```bash
-cd ~/pihole
+cd /path/to/repo/docker/pihole
 docker compose up -d
 
 # Wait for Pi-hole to fully start (about 30-60 seconds)
 sleep 30
 
-# Check if it's running
-docker ps
-docker logs pihole
+# Check if it's running and healthy
+docker ps | grep pihole
+docker logs pihole --tail 20
+
+# Verify it's listening on ports 53 (DNS) and 80 (Web)
+sudo ss -tulpn | grep -E ":(53|80)" | grep pihole
 ```
 
 ---
@@ -222,24 +219,33 @@ docker exec pihole pihole -v
 
 ---
 
+## Recommended Blocklists
+
+Pi-hole comes with Steven Black hosts list by default. Recommended additional blocklists:
+
+### OISD (Recommended - Low False Positives)
+- **Small**: `https://small.oisd.nl`
+- **Big**: `https://big.oisd.nl` (more comprehensive)
+
+To add:
+1. Go to Pi-hole Admin UI → **Group Management → Adlists**
+2. Click **Add** and paste the URL
+3. Click **Save**
+4. Go to **Tools → Update Gravity** to download
+
+**Note:** Requires Pi-hole FTL v5.22+ (v6.x is compatible)
+
 ## Adding New Services
 
-When you add a new service to lemongrab, add a DNS entry:
+When you add a new service to lemongrab, add a DNS entry via Pi-hole Admin UI:
 
-### Option 1: Edit config file and restart
-```bash
-# Add to ~/pihole/etc-dnsmasq.d/02-local-dns.conf
-echo "address=/newservice.gmojsoski.com/[REDACTED_INTERNAL_IP_1]" >> ~/pihole/etc-dnsmasq.d/02-local-dns.conf
-
-# Restart Pi-hole
-docker restart pihole
-```
-
-### Option 2: Use Pi-hole Admin UI
 1. Go to `http://[REDACTED_INTERNAL_IP_2]/admin`
-2. Local DNS → DNS Records
-3. Add domain and IP
-4. Click Add
+2. Navigate to: **Local DNS → DNS Records**
+3. Click **Add**
+4. Enter: Domain: `newservice.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+5. Click **Add**
+
+Pi-hole will automatically reload DNS - no restart needed.
 
 ---
 
@@ -363,9 +369,24 @@ Internet
 | Pi-hole Admin | `http://[REDACTED_INTERNAL_IP_2]/admin` |
 | DNS Port | `53` |
 | Web Port | `80` |
-| Config Location | `~/pihole/` |
-| Local DNS File | `~/pihole/etc-dnsmasq.d/02-local-dns.conf` |
+| Config Location | `docker/pihole/` (in repository) |
+| Local DNS | Configured via Admin UI (Local DNS → DNS Records) |
+| Docker Volumes | `pihole_config`, `dnsmasq_config` (persistent) |
 | Upstream DNS | `1.1.1.1`, `1.0.0.1` (Cloudflare) |
+
+---
+
+## Current Configuration (January 2026)
+
+- **Hardware**: Raspberry Pi 4 Model B (4GB RAM)
+- **Pi-hole Version**: v6.3+ (Core v6.3, Web v6.4, FTL v6.4.1)
+- **Deployment**: Docker (network_mode: host)
+- **Data Storage**: Docker volumes (persistent across container updates)
+- **Local DNS**: Configured via Admin UI (12 subdomains pointing to ThinkCentre)
+- **Blocklists**: 
+  - Default: Steven Black hosts (75,488 domains)
+  - Recommended: OISD Small (`https://small.oisd.nl`)
+- **Status**: ✅ Operational - All devices using Pi-hole for DNS
 
 ---
 
