@@ -16,6 +16,75 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
+# Slack notification function
+send_slack_notification() {
+    local title="$1"
+    local message="$2"
+    local emoji="${3:-⚠️}"
+    
+    # Load webhook URL from .env if available
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        source "$SCRIPT_DIR/.env"
+    fi
+    
+    # Prioritize monitoring-specific webhook
+    [ -n "$MONITORING_SLACK_WEBHOOK_URL" ] && SLACK_WEBHOOK_URL="$MONITORING_SLACK_WEBHOOK_URL"
+    
+    if [ -z "$SLACK_WEBHOOK_URL" ]; then
+        log "WARNING: SLACK_WEBHOOK_URL not set. Cannot send Slack notification."
+        return 1
+    fi
+    
+    # Build Slack message payload
+    read -r -d '' PAYLOAD << EOF || true
+{
+    "blocks": [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "${emoji} ${title}",
+                "emoji": true
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "${message}"
+            }
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "Time: $(date '+%Y-%m-%d %H:%M:%S') | Host: $(hostname)"
+                }
+            ]
+        }
+    ]
+}
+EOF
+
+    # Send to Slack
+    RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -H 'Content-type: application/json' \
+        --data "$PAYLOAD" \
+        "$SLACK_WEBHOOK_URL" 2>/dev/null)
+    
+    HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+    BODY=$(echo "$RESPONSE" | head -n -1)
+    
+    if [ "$HTTP_CODE" = "200" ] && [ "$BODY" = "ok" ]; then
+        log "Slack notification sent successfully"
+        return 0
+    else
+        log "WARNING: Failed to send Slack notification (HTTP $HTTP_CODE: $BODY)"
+        return 1
+    fi
+}
+
 check_service_http() {
     local url=$1
     local timeout=${2:-5}
@@ -36,6 +105,40 @@ check_config_integrity() {
             sed -i 's/127.0.0.1:8080/localhost:8080/g' "$CONFIG_FILE"
             # We don't restart here, the main loop will catch service down if this was the cause
         fi
+    fi
+}
+
+# Function to check Caddyfile for problematic gzip settings (prevents mobile download issues)
+check_caddyfile_integrity() {
+    CADDYFILE="/home/docker-projects/caddy/config/Caddyfile"
+    if [ -f "$CADDYFILE" ]; then
+        # Check for encode gzip in mobile-sensitive services (causes Cloudflare double-compression)
+        PROBLEMATIC_SERVICES=("@jellyfin" "@paperless" "@vault" "@tickets" "@cloud")
+        for service in "${PROBLEMATIC_SERVICES[@]}"; do
+            # Check if service block has encode gzip
+            if grep -A10 "$service" "$CADDYFILE" | grep -q "encode gzip"; then
+                local warning_msg="WARNING: Detected 'encode gzip' in $service block. This causes mobile download/blank page issues!"
+                local action_msg="ACTION REQUIRED: Remove 'encode gzip' from $service in Caddyfile to fix mobile access"
+                log "$warning_msg"
+                log "$action_msg"
+                
+                # Send Slack notification
+                local slack_title="Homelab Alert: Caddyfile Configuration Issue"
+                local slack_message="*Service:* \`$service\`
+*Issue:* \`encode gzip\` detected in Caddyfile
+*Impact:* Mobile browsers download .txt files instead of rendering pages
+
+*Action Required:*
+Remove \`encode gzip\` from the \`$service\` block in:
+\`$CADDYFILE\`
+
+*View log:*
+\`sudo tail -50 /var/log/enhanced-health-check.log\`"
+                
+                send_slack_notification "$slack_title" "$slack_message" "⚠️"
+                # Don't auto-fix - requires manual review to ensure proper headers are in place
+            fi
+        done
     fi
 }
 
@@ -64,6 +167,7 @@ check_udp_buffers() {
 
 # Check System Health
 check_config_integrity
+check_caddyfile_integrity
 check_udp_buffers
 
 # Check Docker
@@ -129,6 +233,17 @@ fi
 # If external access is down, run fix-subdomains-down script
 if [ "$EXTERNAL_DOWN" = true ]; then
     log "CRITICAL: External access down detected. Running fix-external-access.sh..."
+    
+    # Send Slack notification for critical outage
+    local slack_title="🚨 CRITICAL: External Access Down"
+    local slack_message="*Domain:* gmojsoski.com
+*Status:* Not accessible (502/404/503)
+*Action:* Running fix-external-access.sh automatically
+
+*Check log:*
+\`sudo tail -50 /var/log/enhanced-health-check.log\`"
+    send_slack_notification "$slack_title" "$slack_message" "🚨"
+    
     FIX_SCRIPT="/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-external-access.sh"
     if [ -f "$FIX_SCRIPT" ]; then
         # Run the fix script (it will handle sudo internally)
@@ -139,11 +254,16 @@ if [ "$EXTERNAL_DOWN" = true ]; then
         # Verify fix worked
         if check_external_access "gmojsoski.com"; then
             log "SUCCESS: External access restored after fix"
+            # Send recovery Slack notification
+            send_slack_notification "✅ External Access Restored" "External access has been restored successfully after running the fix script." "✅"
         else
             log "WARNING: External access still down after fix. May need manual intervention."
+            # Send failure Slack notification
+            send_slack_notification "🚨 External Access Still Down" "The fix script was executed but external access is still down. Manual intervention may be required.\n\n*Check logs:* \`sudo tail -50 /var/log/enhanced-health-check.log\`" "🚨"
         fi
     else
         log "ERROR: Fix script not found at $FIX_SCRIPT"
+        send_slack_notification "❌ Fix Script Not Found" "The fix-external-access.sh script was not found at:\n\`$FIX_SCRIPT\`\n\n*Manual intervention required.*" "❌"
     fi
 fi
 

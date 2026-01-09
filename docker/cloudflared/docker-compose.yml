@@ -12,7 +12,7 @@ services:
       - /home/goce/.cloudflared:/home/goce/.cloudflared:ro
     deploy:
       mode: replicated
-      replicas: 2  # Run 2 instances for redundancy
+      replicas: 1  # Run 2 instances for redundancy
       restart_policy:
         condition: any
         delay: 5s
