@@ -319,11 +319,57 @@ Address: 192.168.1.97
 - Wait a few minutes for DNS cache to expire (TTL)
 - Try again: `nslookup mattermost.gmojsoski.com`
 
-**Alternative Solution** (if you need IPv6 for other services):
-Use Pi-hole's Group Management to block AAAA (IPv6) queries for specific domains:
+**Alternative Solution 1**: Use custom dnsmasq configuration file (ON PI-HOLE DEVICE):
+
+If disabling IPv6 in the admin UI doesn't work, create a custom dnsmasq config file:
+
+1. **On your Raspberry Pi (Pi-hole device)**, SSH into it
+2. **Create the config file**:
+   ```bash
+   sudo nano /etc/dnsmasq.d/99-block-ipv6-local-domains.conf
+   ```
+3. **Add this content**:
+   ```conf
+   # Block AAAA (IPv6) queries for local domains with Local DNS Records
+   # This prevents forwarding IPv6 queries upstream for domains that have Local DNS Records
+   
+   # Block AAAA queries for specific domains (uncomment as needed):
+   server=/mattermost.gmojsoski.com/#
+   server=/jellyfin.gmojsoski.com/#
+   server=/cloud.gmojsoski.com/#
+   server=/files.gmojsoski.com/#
+   server=/paperless.gmojsoski.com/#
+   server=/bookmarks.gmojsoski.com/#
+   server=/tickets.gmojsoski.com/#
+   server=/poker.gmojsoski.com/#
+   server=/analytics.gmojsoski.com/#
+   ```
+4. **Save** (Ctrl+O, Enter, Ctrl+X)
+5. **Restart Pi-hole**:
+   ```bash
+   docker restart pihole
+   # OR if not using Docker:
+   sudo systemctl restart pihole-FTL
+   ```
+
+**Alternative Solution 2**: Use Pi-hole's Group Management to block AAAA (IPv6) queries:
 1. Pi-hole Admin → Group Management → Domains
 2. Add domain: `*.gmojsoski.com` with query type: `AAAA` (IPv6)
 3. Add to "Blocked" group
+
+**Why the Admin UI setting might not work**:
+Pi-hole's "Disable IPv6" setting might not prevent it from forwarding AAAA queries upstream when a Local DNS Record exists. The Local DNS Record creates an A record (IPv4), but Pi-hole still forwards the AAAA query upstream. Using the custom dnsmasq config above explicitly prevents forwarding for those domains.
+
+**Quick Workaround (Client-Side)**: If you can't modify Pi-hole right now, add entries to `/etc/hosts` on your devices:
+```bash
+# On lemongrab (main server) - add to /etc/hosts
+192.168.1.97    mattermost.gmojsoski.com
+192.168.1.97    jellyfin.gmojsoski.com
+192.168.1.97    cloud.gmojsoski.com
+# Add other services as needed
+```
+
+This bypasses DNS and forces local IP resolution. Note: This only works on the device where you edit `/etc/hosts`. For network-wide fix, use the Pi-hole solution above.
 
 **Original troubleshooting steps**:
 ```bash
