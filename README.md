@@ -71,7 +71,7 @@ The home lab consists of two devices working together:
 - **Password Manager**: Vaultwarden (Bitwarden-compatible)
 - **Document Management**: Paperless-ngx (document digitization and organization)
 - **Knowledge Base**: Outline (wiki and documentation)
-- **Team Communication**: Mattermost (Slack alternative)
+- **Team Communication**: Mattermost (Slack alternative), Zulip (Slack alternative with excellent webhook support)
 - **Recipe Manager**: KitchenOwl (shopping lists & recipes)
 - **File Sharing**: Gokapi
 - **Monitoring**: Uptime Kuma
@@ -128,7 +128,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Nextcloud** | 8081 | cloud.gmojsoski.com | Cloud storage (PostgreSQL) |
 | **Paperless** | 8097 | paperless.gmojsoski.com | Document management (PostgreSQL) |
 | **Outline** | 8098 | - | Wiki & knowledge base (local only, PostgreSQL + Redis) |
-| **Mattermost** | 8065 | mattermost.gmojsoski.com | Team communication platform (PostgreSQL) |
+| **Zulip** | 8070 | zulip.gmojsoski.com | Team communication platform with webhooks (PostgreSQL) |
 | **Uptime Kuma** | 3001 | - | Monitoring & alerts |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Web analytics |
 | **Homepage** | 8000 | - | Service dashboard |
@@ -162,7 +162,7 @@ Pi-version-control/
 │   ├── paperless/
 │   ├── pihole/
 │   ├── portainer/
-│   ├── mattermost/
+│   ├── zulip/
 │   ├── uptime-kuma/
 │   ├── vaultwarden/
 │   └── watchtower/
@@ -207,7 +207,7 @@ Pi-version-control/
 ├── homepage/
 ├── jellyfin/
 ├── kitchenowl/
-├── mattermost/
+├── zulip/
 ├── nginx-vaultwarden/
 ├── paperless/
 ├── portainer/
@@ -285,7 +285,7 @@ See individual setup guides in `usefull files/`:
 
 **Paperless Setup**: See `docker/paperless/README.md` for installation and configuration details.
 
-**Mattermost Setup**: See `docker/mattermost/README.md` for installation and configuration details.
+**Zulip Setup**: See `docker/zulip/README.md` for installation and configuration details.
 
 ## <a name="monitoring--auto-recovery"></a>🛡️ Monitoring & Auto-Recovery
 

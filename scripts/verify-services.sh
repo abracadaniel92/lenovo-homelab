@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-SUBDOMAINS=("gmojsoski.com" "jellyfin.gmojsoski.com" "cloud.gmojsoski.com" "vault.gmojsoski.com" "paperless.gmojsoski.com" "files.gmojsoski.com" "mattermost.gmojsoski.com")
+SUBDOMAINS=("gmojsoski.com" "jellyfin.gmojsoski.com" "cloud.gmojsoski.com" "vault.gmojsoski.com" "paperless.gmojsoski.com" "files.gmojsoski.com" "zulip.gmojsoski.com" "mattermost.gmojsoski.com")
 LOG_FILE="/home/goce/Desktop/Cursor projects/Pi-version-control/logs/verification.log"
 
 mkdir -p "$(dirname "$LOG_FILE")"
