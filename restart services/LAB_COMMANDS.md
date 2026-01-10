@@ -21,3 +21,17 @@ If you have configured the alias `alias lab='make -C ~/Desktop/"Cursor projects"
     Trigger the manual backup script for all critical services immediately.
 *   **`lab update`**
     Run Watchtower once to check for and apply pending Docker updates.
+
+## 💬 Mattermost
+*   **`lab lab-mattermost`**
+    Show Mattermost service management help and available commands.
+*   **`lab lab-mattermost-start`**
+    Start the Mattermost service. Access at http://localhost:8065
+*   **`lab lab-mattermost-stop`**
+    Stop the Mattermost service.
+*   **`lab lab-mattermost-restart`**
+    Restart the Mattermost service.
+*   **`lab lab-mattermost-logs`**
+    View Mattermost logs (Ctrl+C to exit).
+*   **`lab lab-mattermost-status`**
+    Check Mattermost service status (shows container status).

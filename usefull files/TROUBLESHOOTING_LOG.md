@@ -2,6 +2,116 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-01-10] Mattermost Installation & Configuration
+
+**Date:** 2026-01-10
+**Service:** Mattermost Team Communication Platform
+
+### Initial Installation
+**Completed:**
+- Created Mattermost docker-compose.yml with PostgreSQL 15 database
+- Configured for local-only access initially on port 8065
+- Set up proper volume persistence for data, config, logs, and plugins
+- Created comprehensive README.md with setup instructions
+
+**Configuration Details:**
+- Port: 8065 (mapped to host)
+- Database: PostgreSQL 15 (separate container)
+- Storage: Local filesystem (Docker volumes)
+- Authentication: Email/password enabled
+
+### External Exposure Setup
+**Completed:**
+- Added Caddyfile entry for `mattermost.gmojsoski.com` → `http://172.17.0.1:8065`
+- Added Cloudflare Tunnel ingress rule: `mattermost.gmojsoski.com` → `http://localhost:8080`
+- Updated Mattermost SITEURL to `https://mattermost.gmojsoski.com`
+- Added domain to verify-services.sh script
+- Created admin user via API: username `admin`, password `TempPass123!`
+- Created initial team "Main Team" via API
+
+**Issues Encountered:**
+
+1. **Caddyfile Configuration Location:**
+   - **Issue:** Mattermost routing not working - requests falling through to default portfolio site
+   - **Root Cause:** Added Mattermost block to repo Caddyfile at `docker/caddy/Caddyfile`, but production Caddyfile is at `/home/docker-projects/caddy/config/Caddyfile`
+   - **Fix:** Added Mattermost block to production Caddyfile at `/home/docker-projects/caddy/config/Caddyfile`
+   - **Lesson:** Always check where Docker volumes mount config files vs repo copies
+
+2. **Health Check Failure:**
+   - **Issue:** Container marked as "unhealthy" due to default healthcheck using `mmctl system status --local`
+   - **Root Cause:** Healthcheck requires local mode enabled, but we disabled it for external access (`MM_SERVICESETTINGS_ENABLELOCALMODE: false`)
+   - **Fix:** Updated healthcheck to use process check: `pgrep -f mattermost || exit 1`
+   - **Status:** Mattermost is functional despite healthcheck showing "starting" - API responds correctly
+
+3. **Sign-In Methods Disabled:**
+   - **Issue:** Users couldn't log in - "This server doesn't have any sign-in methods enabled"
+   - **Root Cause:** Email authentication was disabled in initial config (set for local-only)
+   - **Fix:** Enabled email authentication:
+     - `MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL: true`
+     - `MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL: true`
+     - `MM_SERVICESETTINGS_ENABLEOPENSERVER: true` (for initial account creation)
+
+4. **Team Creation Required:**
+   - **Issue:** After login, Mattermost required team selection but no teams existed
+   - **Fix:** Created "Main Team" via Mattermost API using admin authentication
+   - **Method:** Used login token from response header (`Token:` header) for API authentication
+
+5. **DNS Propagation Delay:**
+   - **Issue:** External DNS not resolving immediately after CNAME creation
+   - **Solution:** Waited for DNS propagation (5-15 minutes). External DNS resolvers (8.8.8.8, 1.1.1.1) resolved correctly, local Pi-hole DNS took longer to update
+
+### Known Issues / Stability Concerns
+**Reported:** Service appears "a bit unstable" and drops from time to time
+
+**Potential Causes to Monitor:**
+- Health check configuration may need refinement
+- Resource constraints (Mattermost + PostgreSQL on same host)
+- Network connectivity issues
+- Database connection pool exhaustion
+
+**Recommendations for Stability:**
+- Monitor logs: `docker compose logs -f mattermost`
+- Check container resource usage: `docker stats mattermost mattermost-postgres`
+- Verify database connection health
+- Consider adjusting healthcheck interval/start_period if startup is slow
+- Monitor Mattermost application logs for errors: `/mattermost/logs/`
+
+### Files Modified/Created:
+- `docker/mattermost/docker-compose.yml` (created)
+- `docker/mattermost/README.md` (created)
+- `docker/mattermost/fix-auth.sh` (created - helper script, not used)
+- `/home/docker-projects/caddy/config/Caddyfile` (added Mattermost block - production file)
+- `docker/caddy/Caddyfile` (added Mattermost block - repo copy)
+- `Makefile` (added `lab-mattermost-*` commands)
+- `restart services/LAB_COMMANDS.md` (added Mattermost commands)
+- `scripts/verify-services.sh` (added `mattermost.gmojsoski.com`)
+- `README.md` (added Mattermost to services list)
+- `~/.cloudflared/config.yml` (added Mattermost ingress - production file, not in repo)
+
+### Commands Added to Makefile:
+- `make lab-mattermost` - Show help
+- `make lab-mattermost-start` - Start Mattermost
+- `make lab-mattermost-stop` - Stop Mattermost
+- `make lab-mattermost-restart` - Restart Mattermost
+- `make lab-mattermost-logs` - View logs
+- `make lab-mattermost-status` - Check status
+
+### Access Information:
+- **External URL:** https://mattermost.gmojsoski.com
+- **Local URL:** http://localhost:8065
+- **Admin Username:** admin
+- **Admin Email:** admin@gmojsoski.com
+- **Initial Password:** TempPass123! (CHANGE THIS!)
+- **Default Team:** Main Team
+
+### Next Steps (Future Improvements):
+1. ✅ Change default admin password after first login
+2. ✅ Monitor stability and investigate drops
+3. Consider enabling SMTP for email notifications
+4. Set up backup strategy for Mattermost database
+5. Configure team permissions and policies
+6. Add Mattermost to backup scripts if needed
+
 ## [2026-01-07] Cloudflare Tunnel Certificate Configuration Error
 
 **Symptoms:**

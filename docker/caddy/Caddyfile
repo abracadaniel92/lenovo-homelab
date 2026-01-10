@@ -130,6 +130,15 @@
 		}
 	}
 	
+	@mattermost host mattermost.gmojsoski.com
+	handle @mattermost {
+		reverse_proxy http://172.17.0.1:8065 {
+			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Ssl on
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
 	handle {
 		encode gzip
 		root * /srv/site
