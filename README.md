@@ -116,7 +116,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 
 ## <a name="running-services"></a>📦 Running Services
 
-### Docker Containers (24 containers, 18 services)
+### Docker Containers (24 containers, 17 services)
 
 | Service | Port | External URL | Description |
 |---------|------|--------------|-------------|
