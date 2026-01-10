@@ -85,8 +85,8 @@ The home lab consists of two devices working together:
 
 **On Raspberry Pi 4 (pihole):**
 - **DNS Server**: Pi-hole (network-wide DNS & ad blocking)
-- **Local DNS**: Resolves `*.gmojsoski.com` domains to ThinkCentre for local network access
 - **Ad Blocking**: Network-wide ad blocking with custom blocklists
+- **Note**: Do NOT add Local DNS Records for `*.gmojsoski.com` domains using Cloudflare Tunnel - all devices should use Cloudflare DNS for consistent access
 
 ## <a name="system-requirements"></a>💻 System Requirements
 
@@ -116,7 +116,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 
 ## <a name="running-services"></a>📦 Running Services
 
-### Docker Containers (22 containers, 17 services)
+### Docker Containers (24 containers, 18 services)
 
 | Service | Port | External URL | Description |
 |---------|------|--------------|-------------|
@@ -128,6 +128,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Nextcloud** | 8081 | cloud.gmojsoski.com | Cloud storage (PostgreSQL) |
 | **Paperless** | 8097 | paperless.gmojsoski.com | Document management (PostgreSQL) |
 | **Outline** | 8098 | - | Wiki & knowledge base (local only, PostgreSQL + Redis) |
+| **Mattermost** | 8066 | mattermost.gmojsoski.com | Team communication platform (Slack alternative, PostgreSQL) |
 | **Zulip** | 8070 | zulip.gmojsoski.com | Team communication platform with webhooks (PostgreSQL) |
 | **Uptime Kuma** | 3001 | - | Monitoring & alerts |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Web analytics |
@@ -160,6 +161,7 @@ Pi-version-control/
 │   ├── nextcloud/
 │   ├── nginx-vaultwarden/
 │   ├── paperless/
+│   ├── mattermost/
 │   ├── pihole/
 │   ├── portainer/
 │   ├── zulip/
@@ -207,6 +209,7 @@ Pi-version-control/
 ├── homepage/
 ├── jellyfin/
 ├── kitchenowl/
+├── mattermost/
 ├── zulip/
 ├── nginx-vaultwarden/
 ├── paperless/
@@ -284,6 +287,8 @@ See individual setup guides in `usefull files/`:
 - `MONITORING_AND_RECOVERY.md` - Health check setup
 
 **Paperless Setup**: See `docker/paperless/README.md` for installation and configuration details.
+
+**Mattermost Setup**: See `docker/mattermost/README.md` for installation and configuration details.
 
 **Zulip Setup**: See `docker/zulip/README.md` for installation and configuration details.
 
