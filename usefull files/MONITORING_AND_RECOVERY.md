@@ -8,8 +8,8 @@ The server has a multi-layer monitoring system that ensures services stay online
 
 | Layer | Tool | Frequency | Purpose |
 |-------|------|-----------|---------|
-| 1 | enhanced-health-check.timer | Every 30 seconds | Check & restart all services |
-| 2 | portfolio-update.timer | Every 5 minutes | Auto-sync portfolio from GitHub |
+| 1 | enhanced-health-check.timer | Every 3 minutes | Check & restart all services |
+| 2 | Portfolio Update | Manual (via `make portfolio-update`) | Sync portfolio from GitHub |
 | 3 | service-watchdog.service | Continuous (20s loop) | Monitor critical services |
 | 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
 | 5 | Docker restart policies | On failure | Auto-restart containers |
@@ -20,7 +20,7 @@ The server has a multi-layer monitoring system that ensures services stay online
 
 **Service**: `enhanced-health-check.timer`  
 **Script**: `/usr/local/bin/enhanced-health-check.sh`  
-**Frequency**: Every 30 seconds  
+**Frequency**: Every 3 minutes  
 **Log**: `/var/log/enhanced-health-check.log`
 
 **Services Monitored**:
@@ -57,18 +57,20 @@ tail -50 /var/log/enhanced-health-check.log
 systemctl status service-watchdog.service
 ```
 
-### 3. Portfolio Auto-Update Timer
+### 3. Portfolio Update (Manual)
 
-**Service**: `portfolio-update.timer`  
-**Script**: `/usr/local/bin/update-portfolio.sh`  
-**Frequency**: Every 5 minutes  
+**Command**: `make portfolio-update`  
+**Script**: `scripts/update-portfolio.sh`  
+**Frequency**: Manual (run when needed)  
 **Log**: `/var/log/portfolio-update.log`
 
-**Check Status**:
+**Usage**:
 ```bash
-systemctl status portfolio-update.timer
+make portfolio-update
 tail -50 /var/log/portfolio-update.log
 ```
+
+**Note**: The portfolio update timer has been disabled to reduce CPU usage. Run manually when you need to sync portfolio changes from GitHub.
 
 ### 4. Uptime Kuma
 
@@ -266,7 +268,7 @@ To prevent downtime:
 
 2. **Docker Restart Policies** - All containers have `restart: always`
 
-3. **Health Checks** - Running every 30 seconds
+3. **Health Checks** - Running every 3 minutes
 
 4. **Service Watchdog** - Continuous monitoring
 

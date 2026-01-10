@@ -101,7 +101,7 @@ ExecStart=$(which node) server.js
 Restart=always
 RestartSec=10
 Environment="PORT=3000"
-Environment="HOST_PASSWORD=admin123"
+Environment="HOST_PASSWORD=CHANGE_ME_IN_PRODUCTION"
 Environment="NODE_ENV=production"
 
 [Install]

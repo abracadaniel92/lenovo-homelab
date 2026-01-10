@@ -47,7 +47,6 @@ The lab consists of two devices:
 | **Nextcloud** | 8081 | cloud.gmojsoski.com | PostgreSQL backend |
 | **Paperless** | 8097 | paperless.gmojsoski.com | Document management (PostgreSQL) |
 | **Mattermost** | 8066 | mattermost.gmojsoski.com | Team communication (PostgreSQL) |
-| **Zulip** | 8070 | zulip.gmojsoski.com | Team communication with webhooks (PostgreSQL) |
 | **Uptime Kuma** | 3001 | - | Monitoring |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Analytics |
 | **Homepage** | 8000 | - | Dashboard |
@@ -76,7 +75,6 @@ The lab consists of two devices:
 /home/docker-projects/vaultwarden/docker-compose.yml
 /home/docker-projects/paperless/docker-compose.yml
 /home/docker-projects/mattermost/docker-compose.yml
-/home/docker-projects/zulip/docker-compose.yml
 /home/docker-projects/uptime-kuma/docker-compose.yml
 /home/docker-projects/goatcounter/docker-compose.yml
 /home/docker-projects/watchtower/docker-compose.yml
@@ -234,5 +232,5 @@ docker compose up -d  # Restart
 14. ✅ **Added Cloudflare Tunnel metrics endpoint** (Jan 2, 2026) - Metrics exposed on port 2000, accessible at http://localhost:2000/metrics
 15. ✅ **Created Uptime Kuma + ntfy.sh notification setup guide** - See `docs/UPTIME_KUMA_NTFY_SETUP.md`
 16. ✅ **Fixed WiFi access issue** (Jan 10, 2026) - Removed Pi-hole Local DNS Records for services using Cloudflare Tunnel
-17. ✅ **Reinstalled Mattermost** (Jan 10, 2026) - Using Zulip's proven configuration pattern, PostgreSQL 15, port 8066
+17. ✅ **Reinstalled Mattermost** (Jan 10, 2026) - PostgreSQL 15, port 8066
 18. ✅ **Mattermost fully operational** - All devices (WiFi and mobile) access via Cloudflare Tunnel
