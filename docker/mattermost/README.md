@@ -210,13 +210,53 @@ Mattermost is already exposed externally. If you need to reconfigure:
 
 ## Local Network Access Explained
 
+### How Other Services Work Locally
+
+All services follow the same pattern:
+- **Caddy listens on port 8080** (not port 80) on the host
+- **Pi-hole DNS resolves** domain names to the server IP (192.168.1.97) for local access
+- **HTTP access requires port 8080**: `http://service.gmojsoski.com:8080` (when Pi-hole resolves to local IP)
+- **HTTPS via Cloudflare**: `https://service.gmojsoski.com` (only works if DNS resolves to Cloudflare IP, not local IP)
+
+**Note**: The documentation saying `http://jellyfin.gmojsoski.com` (without port) is outdated. All services require port 8080 for HTTP local access when using Pi-hole DNS that resolves to local IP. For HTTPS to work through Cloudflare, DNS must resolve to Cloudflare's IP (not the local IP).
+
 ### Why Port 8080 for Local Domain Access?
 
 When accessing Mattermost via domain name on your local network:
 - **Port 80 is not available**: Caddy listens on port 8080 on the host (mapped from container port 80)
+- **Port 80 is not bound** on the host to avoid conflicts with other services
 - **Pi-hole DNS resolves correctly**: `mattermost.gmojsoski.com` → `192.168.1.97`
 - **Solution**: Use `http://mattermost.gmojsoski.com:8080` for local HTTP access
-- **Alternative**: Use `https://mattermost.gmojsoski.com` which goes through Cloudflare Tunnel (works fine)
+- **Alternative**: Use `https://mattermost.gmojsoski.com` which goes through Cloudflare Tunnel (works both locally and externally)
+
+### Pi-hole Configuration (On Different Device)
+
+Since Pi-hole is on a different device (Raspberry Pi), you need to:
+
+1. **Access Pi-hole Admin**:
+   - Go to `http://[PI-HOLE-IP]/admin` on your Pi-hole device
+   - Navigate to: **Local DNS → DNS Records**
+
+2. **Add Mattermost DNS Record**:
+   - Domain: `mattermost.gmojsoski.com`
+   - IP: `192.168.1.97` (your server IP)
+   - Click **Add**
+
+3. **Verify DNS Resolution** (from any device on network):
+   ```bash
+   nslookup mattermost.gmojsoski.com
+   # Should show: 192.168.1.97
+   ```
+
+4. **Access Mattermost**:
+   - **HTTP (local, fast)**: `http://mattermost.gmojsoski.com:8080` ✅ (requires port 8080)
+   - **HTTPS (via Cloudflare)**: `https://mattermost.gmojsoski.com` (only works if DNS resolves to Cloudflare IP, not local IP)
+   - **Direct IP (bypasses Caddy)**: `http://192.168.1.97:8065` ✅
+
+**Important Notes**:
+- **For local HTTP access**: Pi-hole DNS should resolve to local IP (192.168.1.97), use port 8080
+- **For HTTPS via Cloudflare**: DNS should resolve to Cloudflare IP (not local IP). If Pi-hole resolves to local IP, HTTPS will fail because there's no listener on port 443
+- **Recommendation**: Use `http://mattermost.gmojsoski.com:8080` for fast local access, or `https://mattermost.gmojsoski.com` if you want to go through Cloudflare (requires DNS to resolve to Cloudflare IP)
 
 ### Is Nginx Needed?
 
