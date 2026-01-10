@@ -281,9 +281,75 @@ The setup uses:
 
 No nginx needed!
 
+## Troubleshooting
+
+### Intermittent 530 Errors with ntfy.sh Webhooks
+
+**Issue**: Mattermost webhooks to ntfy.sh return 530 errors intermittently (~50% failure rate).
+
+**Possible Causes**:
+1. **Rate Limiting**: ntfy.sh has rate limits for public topics. Too many requests can cause temporary failures.
+2. **DNS Resolution**: Mattermost container might have DNS resolution issues (similar to Pi-hole IPv6 issue).
+3. **Network Connectivity**: Intermittent network issues from Mattermost container to ntfy.sh.
+4. **Cloudflare Proxy**: If webhook URL goes through Cloudflare, proxy issues can cause 530 errors.
+
+**Troubleshooting Steps**:
+
+1. **Test connectivity from Mattermost container**:
+   ```bash
+   docker exec mattermost curl -X POST https://ntfy.sh/test-topic -d "Test message"
+   ```
+   If this works, DNS/network is fine. If it fails, there's a container network issue.
+
+2. **Check webhook URL in Mattermost**:
+   - Go to: System Console → Integrations → Webhooks (or Slash Commands)
+   - Verify webhook URL is exactly: `https://ntfy.sh/<topic-name>` (not `ntfy.gmojsoski.com`)
+   - Check for typos or incorrect protocol (should be `https://`, not `http://`)
+
+3. **Rate Limiting**:
+   - ntfy.sh public topics have limits (~10 messages/minute)
+   - If sending many notifications, consider:
+     - Using a unique topic name (not shared with others)
+     - Implementing retry logic in Mattermost
+     - Self-hosting ntfy (see below)
+
+4. **Check Mattermost logs for webhook errors**:
+   ```bash
+   docker compose logs mattermost | grep -iE "(webhook|ntfy|530|outgoing)"
+   ```
+
+5. **DNS Resolution** (if container can't reach ntfy.sh):
+   ```bash
+   # Test DNS from container
+   docker exec mattermost nslookup ntfy.sh
+   # Should resolve to: 159.203.148.75 or IPv6 address
+   ```
+
+**Solutions**:
+
+**Option 1: Fix Webhook URL** (if incorrectly configured)
+- Ensure URL is `https://ntfy.sh/<topic>` (not a self-hosted domain)
+- Check for typos or missing protocol
+
+**Option 2: Reduce Rate** (if rate limiting)
+- Reduce notification frequency in Mattermost
+- Use different topic names for different notification types
+- Implement exponential backoff retry logic
+
+**Option 3: Self-Host ntfy** (for more reliability)
+- Deploy ntfy container alongside Mattermost
+- Configure Mattermost webhook to use `http://ntfy:8080/<topic>`
+- No rate limits, better reliability
+
+**Option 4: Use Mattermost Built-in Notifications**
+- Instead of webhooks, use Mattermost's built-in email/SMS notifications
+- Or use Mattermost's native mobile push notifications
+
 ## Resources
 
 - [Mattermost Documentation](https://docs.mattermost.com/)
 - [Mattermost Configuration Options](https://docs.mattermost.com/configure/configuration-settings.html)
 - [Mattermost Docker Installation](https://docs.mattermost.com/install/docker-local-machine.html)
+- [Mattermost Webhooks](https://docs.mattermost.com/developer/webhooks-incoming.html)
+- [ntfy.sh Documentation](https://docs.ntfy.sh/)
 
