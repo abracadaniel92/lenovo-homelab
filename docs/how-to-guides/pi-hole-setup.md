@@ -88,6 +88,7 @@ This is the key configuration that makes local access to your services work with
    - Domain: `bookmarks.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
    - Domain: `tickets.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
    - Domain: `paperless.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `mattermost.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
    - (Add any other subdomains you have)
 
 **Note:** Pi-hole Admin UI doesn't support wildcard syntax (`*.domain.com`), so each subdomain must be added individually. However, this ensures precise control and is the recommended approach.
@@ -175,8 +176,10 @@ nslookup jellyfin.gmojsoski.com
 ```
 
 ### In browser
-- Open `http://jellyfin.gmojsoski.com`
-- Should load locally (fast) instead of going through Cloudflare
+- **HTTP (local, fast)**: Open `http://jellyfin.gmojsoski.com:8080` (port 8080 required)
+- **HTTPS (via Cloudflare)**: Open `https://jellyfin.gmojsoski.com` (works both locally and externally)
+
+**Note**: Port 8080 is required for local HTTP access because Caddy listens on port 8080 (not port 80) on the host. This applies to all services. For HTTPS, Cloudflare Tunnel handles routing automatically.
 
 ---
 
@@ -242,8 +245,11 @@ When you add a new service to lemongrab, add a DNS entry via Pi-hole Admin UI:
 1. Go to `http://[REDACTED_INTERNAL_IP_2]/admin`
 2. Navigate to: **Local DNS → DNS Records**
 3. Click **Add**
-4. Enter: Domain: `newservice.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+4. Enter: Domain: `newservice.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]` (server IP)
 5. Click **Add**
+6. **Access the service**:
+   - HTTP (local): `http://newservice.gmojsoski.com:8080` (port 8080 required)
+   - HTTPS (via Cloudflare): `https://newservice.gmojsoski.com` (no port needed)
 
 Pi-hole will automatically reload DNS - no restart needed.
 
@@ -277,7 +283,95 @@ docker logs pihole | tail -50
 dig @[REDACTED_INTERNAL_IP_2] google.com
 ```
 
-### Local services still going through Cloudflare
+### Local services still going through Cloudflare / Multiple IPs returned
+
+**Problem**: `nslookup` shows both local IP (192.168.1.97) AND Cloudflare IPv6 addresses. This causes browsers to try IPv6 (Cloudflare) first instead of IPv4 (local).
+
+**Root Cause**: Pi-hole forwards DNS queries upstream even when a Local DNS Record exists, causing both local IPv4 and upstream IPv6 to be returned.
+
+**Solution (Recommended)**: Disable IPv6 in Pi-hole Admin UI:
+
+1. **Access Pi-hole Admin**: `http://192.168.1.98/admin` (or your Pi-hole IP)
+2. **Login** with your Pi-hole admin password
+3. **Navigate to**: Settings → DNS (left sidebar)
+4. **Scroll down** to "Advanced DNS settings"
+5. **Uncheck**: "Enable IPv6 support" (or "Enable IPv6" depending on Pi-hole version)
+6. **Click**: "Save" button
+7. **Wait**: 30-60 seconds for Pi-hole to reload DNS settings
+8. **On the Pi-hole device**, restart if needed: `docker restart pihole`
+
+**Verify fix** (from any device on network):
+```bash
+nslookup mattermost.gmojsoski.com
+```
+
+**Expected output (fixed)** - should show ONLY IPv4:
+```
+Server:         192.168.1.98
+Address:        192.168.1.98#53
+
+Name:   mattermost.gmojsoski.com
+Address: 192.168.1.97
+```
+
+**If you still see IPv6 addresses**:
+- Clear DNS cache on your device: `sudo systemd-resolve --flush-caches` (Linux) or `ipconfig /flushdns` (Windows)
+- Wait a few minutes for DNS cache to expire (TTL)
+- Try again: `nslookup mattermost.gmojsoski.com`
+
+**Alternative Solution 1**: Use custom dnsmasq configuration file (ON PI-HOLE DEVICE):
+
+If disabling IPv6 in the admin UI doesn't work, create a custom dnsmasq config file:
+
+1. **On your Raspberry Pi (Pi-hole device)**, SSH into it
+2. **Create the config file**:
+   ```bash
+   sudo nano /etc/dnsmasq.d/99-block-ipv6-local-domains.conf
+   ```
+3. **Add this content**:
+   ```conf
+   # Block AAAA (IPv6) queries for local domains with Local DNS Records
+   # This prevents forwarding IPv6 queries upstream for domains that have Local DNS Records
+   
+   # Block AAAA queries for specific domains (uncomment as needed):
+   server=/mattermost.gmojsoski.com/#
+   server=/jellyfin.gmojsoski.com/#
+   server=/cloud.gmojsoski.com/#
+   server=/files.gmojsoski.com/#
+   server=/paperless.gmojsoski.com/#
+   server=/bookmarks.gmojsoski.com/#
+   server=/tickets.gmojsoski.com/#
+   server=/poker.gmojsoski.com/#
+   server=/analytics.gmojsoski.com/#
+   ```
+4. **Save** (Ctrl+O, Enter, Ctrl+X)
+5. **Restart Pi-hole**:
+   ```bash
+   docker restart pihole
+   # OR if not using Docker:
+   sudo systemctl restart pihole-FTL
+   ```
+
+**Alternative Solution 2**: Use Pi-hole's Group Management to block AAAA (IPv6) queries:
+1. Pi-hole Admin → Group Management → Domains
+2. Add domain: `*.gmojsoski.com` with query type: `AAAA` (IPv6)
+3. Add to "Blocked" group
+
+**Why the Admin UI setting might not work**:
+Pi-hole's "Disable IPv6" setting might not prevent it from forwarding AAAA queries upstream when a Local DNS Record exists. The Local DNS Record creates an A record (IPv4), but Pi-hole still forwards the AAAA query upstream. Using the custom dnsmasq config above explicitly prevents forwarding for those domains.
+
+**Quick Workaround (Client-Side)**: If you can't modify Pi-hole right now, add entries to `/etc/hosts` on your devices:
+```bash
+# On lemongrab (main server) - add to /etc/hosts
+192.168.1.97    mattermost.gmojsoski.com
+192.168.1.97    jellyfin.gmojsoski.com
+192.168.1.97    cloud.gmojsoski.com
+# Add other services as needed
+```
+
+This bypasses DNS and forces local IP resolution. Note: This only works on the device where you edit `/etc/hosts`. For network-wide fix, use the Pi-hole solution above.
+
+**Original troubleshooting steps**:
 ```bash
 # Verify local DNS entries are loaded
 docker exec pihole cat /etc/dnsmasq.d/02-local-dns.conf
