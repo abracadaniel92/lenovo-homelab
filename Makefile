@@ -41,6 +41,41 @@ update:
 		containrrr/watchtower \
 		--run-once
 
+# Zulip service management (usage: make lab-zulip-[start|stop|restart|logs|status])
+lab-zulip:
+	@echo "💬 Zulip Service Management"
+	@echo "Usage: make lab-zulip-[start|stop|restart|logs|status]"
+	@echo ""
+	@echo "Commands:"
+	@echo "  make lab-zulip-start    - Start Zulip service"
+	@echo "  make lab-zulip-stop     - Stop Zulip service"
+	@echo "  make lab-zulip-restart  - Restart Zulip service"
+	@echo "  make lab-zulip-logs     - View Zulip logs"
+	@echo "  make lab-zulip-status   - Check Zulip status"
+
+lab-zulip-start:
+	@echo "🚀 Starting Zulip..."
+	@cd docker/zulip && docker compose up -d
+	@echo "✅ Zulip started. Access at http://localhost:8070"
+
+lab-zulip-stop:
+	@echo "⏹️  Stopping Zulip..."
+	@cd docker/zulip && docker compose down
+	@echo "✅ Zulip stopped"
+
+lab-zulip-restart:
+	@echo "🔄 Restarting Zulip..."
+	@cd docker/zulip && docker compose restart
+	@echo "✅ Zulip restarted"
+
+lab-zulip-logs:
+	@echo "📜 Zulip logs (Ctrl+C to exit):"
+	@cd docker/zulip && docker compose logs -f
+
+lab-zulip-status:
+	@echo "📊 Zulip Service Status:"
+	@cd docker/zulip && docker compose ps
+
 # Mattermost service management (usage: make lab-mattermost-[start|stop|restart|logs|status])
 lab-mattermost:
 	@echo "💬 Mattermost Service Management"
@@ -56,7 +91,7 @@ lab-mattermost:
 lab-mattermost-start:
 	@echo "🚀 Starting Mattermost..."
 	@cd docker/mattermost && docker compose up -d
-	@echo "✅ Mattermost started. Access at http://localhost:8065"
+	@echo "✅ Mattermost started. Access at http://localhost:8066"
 
 lab-mattermost-stop:
 	@echo "⏹️  Stopping Mattermost..."
@@ -75,3 +110,4 @@ lab-mattermost-logs:
 lab-mattermost-status:
 	@echo "📊 Mattermost Service Status:"
 	@cd docker/mattermost && docker compose ps
+

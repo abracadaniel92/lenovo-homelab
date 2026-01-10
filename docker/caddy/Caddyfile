@@ -132,10 +132,23 @@
 	
 	@mattermost host mattermost.gmojsoski.com
 	handle @mattermost {
-		reverse_proxy http://172.17.0.1:8065 {
+		# NO gzip - can cause issues with real-time features and webhooks
+		reverse_proxy http://172.17.0.1:8066 {
 			header_up X-Forwarded-Proto https
 			header_up X-Forwarded-Ssl on
 			header_up X-Real-IP {remote_host}
+			header_up Host {host}
+		}
+	}
+	
+	@zulip host zulip.gmojsoski.com
+	handle @zulip {
+		# NO gzip - can cause issues with real-time features
+		reverse_proxy http://172.17.0.1:8070 {
+			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Ssl on
+			header_up X-Real-IP {remote_host}
+			header_up Host {host}
 		}
 	}
 	
