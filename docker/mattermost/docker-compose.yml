@@ -48,6 +48,9 @@ services:
       # File storage
       MM_FILESETTINGS_MAXFILESIZE: 52428800  # 50MB
       
+      # Plugins
+      MM_PLUGINSETTINGS_ENABLEUPLOADS: "true"
+      
     volumes:
       - mattermost-data:/mattermost/data
       - mattermost-config:/mattermost/config

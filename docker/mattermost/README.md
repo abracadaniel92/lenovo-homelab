@@ -47,6 +47,32 @@ Mattermost has excellent webhook support:
 
 **Webhook URL format**: `https://mattermost.gmojsoski.com/hooks/...`
 
+### Plugins
+
+Mattermost supports plugins for extending functionality. To install plugins:
+
+1. **Via Web UI (Recommended)**:
+   - Go to System Console → Plugins → Plugin Management
+   - Click "Upload Plugin" or "Choose File"
+   - Select the plugin `.tar.gz` file
+   - Click "Upload" and wait for the plugin to be extracted
+   - Find the plugin in the list and toggle it to "Enabled"
+
+2. **RSS Feed Plugin**:
+   - **Download**: Pre-built releases available at https://github.com/wbernest/mattermost-plugin-rssfeed/releases
+   - **Usage**: After installation and enabling, use `/feed` slash commands in channels to subscribe to RSS feeds
+   - **Commands**:
+     - `/feed subscribe [RSS Feed URL]` - Subscribe to an RSS feed in the current channel
+     - `/feed list` - List all RSS feeds the current channel is subscribed to
+     - `/feed unsubscribe [RSS Feed URL]` - Unsubscribe from a specific RSS feed
+   - **Configuration**: In System Console → Plugins → RSSFeed, configure:
+     - Time window between RSS feed checks (minutes)
+     - Show Description in RSS post
+   - **Integration Settings**: In System Console → Integration Management, enable:
+     - Enable integrations to override usernames
+     - Enable integrations to override profile picture icons
+   - **Documentation**: https://github.com/wbernest/mattermost-plugin-rssfeed
+
 ## 🗄️ Database & Dependencies
 
 Mattermost uses:

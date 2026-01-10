@@ -2,6 +2,62 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-01-10] Mattermost 502 Error - Config.json Corruption After Plugin Upload Enable
+
+**Date:** 2026-01-10
+**Action:** Attempted to enable plugin uploads in Mattermost by modifying config.json directly
+**Result:** Mattermost returned 502 Bad Gateway, service unavailable
+
+### 🔴 Symptoms
+- Mattermost returning **502 Bad Gateway** immediately after configuration change
+- Service completely unavailable
+- Container may have been running but not responding
+
+### 🔍 Root Cause Identified
+1. **Direct config.json Modification**: Attempted to modify `config.json` file directly inside the Docker container to enable plugin uploads (`PluginSettings.EnableUploads: true`)
+2. **Config Corruption**: The direct modification likely corrupted the JSON structure or introduced syntax errors
+3. **Mattermost Startup Failure**: Mattermost couldn't parse the corrupted config.json and failed to start properly
+4. **Unnecessary Complexity**: The docker-compose.yml already had `MM_PLUGINSETTINGS_ENABLEUPLOADS: "true"` environment variable set, which should have been sufficient
+
+### ✅ Solution Applied
+1. **Stop Mattermost**: `docker compose stop mattermost`
+2. **Remove Corrupted Config**: Used temporary container to remove corrupted `config.json` from Docker volume:
+   ```bash
+   docker run --rm -v mattermost_mattermost-config:/config busybox sh -c "rm -f /config/config.json"
+   ```
+3. **Restart Mattermost**: `docker compose up -d mattermost`
+4. **Config Regeneration**: Mattermost automatically regenerated `config.json` from environment variables on startup
+
+### 📝 Key Lessons Learned
+1. **Use Environment Variables First**: Mattermost's docker-compose.yml already had `MM_PLUGINSETTINGS_ENABLEUPLOADS: "true"` which should have been sufficient. Environment variables are the preferred method for Mattermost configuration.
+2. **Avoid Direct Config.json Modifications**: Modifying config.json directly can cause corruption and service failures. Mattermost manages config.json internally from environment variables.
+3. **Environment Variables > Direct File Edits**: When both methods exist, prefer environment variables:
+   - Environment variables in docker-compose.yml are more maintainable
+   - Mattermost automatically merges environment variables into config.json
+   - Direct file edits bypass Mattermost's configuration management system
+4. **Recovery Method**: If config.json is corrupted, simply delete it and let Mattermost regenerate from environment variables on restart.
+
+### 🔧 Correct Approach for Future Plugin Upload Enable
+If you need to enable plugin uploads in Mattermost, use **ONLY** the environment variable (already set in docker-compose.yml):
+```yaml
+environment:
+  MM_PLUGINSETTINGS_ENABLEUPLOADS: "true"
+```
+
+**DO NOT** modify config.json directly. Mattermost will read the environment variable and configure itself accordingly on startup.
+
+### ✅ Verification
+- Mattermost accessible at `https://mattermost.gmojsoski.com` ✅
+- Service responding with HTTP 200 ✅
+- Plugin uploads enabled via environment variable ✅
+- Config.json regenerated successfully ✅
+
+### 📍 Files Involved
+- `docker/mattermost/docker-compose.yml` - Contains `MM_PLUGINSETTINGS_ENABLEUPLOADS: "true"` (correct method)
+- Docker volume: `mattermost_mattermost-config:/mattermost/config` - Contains config.json (managed by Mattermost)
+
+**Status**: ✅ Resolved - Mattermost restored and plugin uploads enabled via environment variable
+
 ## [2026-01-10] Mattermost → RocketChat → Zulip Migration
 
 **Date:** 2026-01-10
