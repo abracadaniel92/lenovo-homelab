@@ -32,10 +32,10 @@ The lab consists of two devices:
 | **Purpose** | Pi-hole DNS server & network-wide ad blocking |
 | **Deployment** | Docker (network_mode: host) |
 | **Network** | Gigabit Ethernet (primary), WiFi (secondary) |
-| **Local DNS** | Resolves `*.gmojsoski.com` to ThinkCentre IP |
+| **Local DNS** | Do NOT add Local DNS Records for `*.gmojsoski.com` domains using Cloudflare Tunnel - all devices should use Cloudflare DNS for consistent access |
 | **Blocklists** | Steven Black (default) + OISD Small (recommended) |
 
-## Running Services (15 containers)
+## Running Services (18 services, 24 containers)
 
 | Service | Port | External URL | Status |
 |---------|------|--------------|--------|
@@ -45,6 +45,9 @@ The lab consists of two devices:
 | **KitchenOwl** | 8092 | shopping.gmojsoski.com | 27 recipes |
 | **Vaultwarden** | 8082 | vault.gmojsoski.com | Password manager |
 | **Nextcloud** | 8081 | cloud.gmojsoski.com | PostgreSQL backend |
+| **Paperless** | 8097 | paperless.gmojsoski.com | Document management (PostgreSQL) |
+| **Mattermost** | 8066 | mattermost.gmojsoski.com | Team communication (PostgreSQL) |
+| **Zulip** | 8070 | zulip.gmojsoski.com | Team communication with webhooks (PostgreSQL) |
 | **Uptime Kuma** | 3001 | - | Monitoring |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Analytics |
 | **Homepage** | 8000 | - | Dashboard |
@@ -71,6 +74,9 @@ The lab consists of two devices:
 /home/docker-projects/jellyfin/docker-compose.yml
 /home/docker-projects/kitchenowl/docker-compose.yml
 /home/docker-projects/vaultwarden/docker-compose.yml
+/home/docker-projects/paperless/docker-compose.yml
+/home/docker-projects/mattermost/docker-compose.yml
+/home/docker-projects/zulip/docker-compose.yml
 /home/docker-projects/uptime-kuma/docker-compose.yml
 /home/docker-projects/goatcounter/docker-compose.yml
 /home/docker-projects/watchtower/docker-compose.yml
@@ -227,3 +233,6 @@ docker compose up -d  # Restart
 13. ✅ **Configured Backblaze B2 offsite backup** (Jan 2, 2026) - rclone sync to B2 daily at 3 AM
 14. ✅ **Added Cloudflare Tunnel metrics endpoint** (Jan 2, 2026) - Metrics exposed on port 2000, accessible at http://localhost:2000/metrics
 15. ✅ **Created Uptime Kuma + ntfy.sh notification setup guide** - See `docs/UPTIME_KUMA_NTFY_SETUP.md`
+16. ✅ **Fixed WiFi access issue** (Jan 10, 2026) - Removed Pi-hole Local DNS Records for services using Cloudflare Tunnel
+17. ✅ **Reinstalled Mattermost** (Jan 10, 2026) - Using Zulip's proven configuration pattern, PostgreSQL 15, port 8066
+18. ✅ **Mattermost fully operational** - All devices (WiFi and mobile) access via Cloudflare Tunnel
