@@ -1,16 +1,22 @@
 # Mattermost - Team Communication Platform
 
-Mattermost is an open-source, self-hosted Slack alternative for team communication. This setup is configured for **local use only** (no external access via Caddy/Cloudflare).
+Mattermost is an open-source, self-hosted Slack alternative for team communication. This setup is configured for both **local and external access**.
 
 ## Overview
 
-- **Port**: 8065
+- **Port**: 8065 (direct), 8080 (via Caddy)
 - **Access**: 
-  - **External**: `https://mattermost.gmojsoski.com` (via Caddy/Cloudflare)
-  - **Internal**: `http://localhost:8065`
+  - **External HTTPS**: `https://mattermost.gmojsoski.com` (via Cloudflare Tunnel)
+  - **Local Network HTTP**: `http://mattermost.gmojsoski.com:8080` (via Caddy - **NOTE: Port 8080 required for local domain access**)
+  - **Direct Local**: `http://localhost:8065` or `http://192.168.1.97:8065`
 - **Database**: PostgreSQL 15
 - **Image**: `mattermost/mattermost-team-edition:latest`
 - **Status**: ⚠️ May experience occasional instability - monitor logs if issues occur
+
+**Important for Local Access:**
+- When accessing via domain name on local network, you **must** specify port 8080: `http://mattermost.gmojsoski.com:8080`
+- Port 80 is not available - Caddy listens on port 8080 on the host
+- For HTTPS, use `https://mattermost.gmojsoski.com` (goes through Cloudflare)
 
 ## Quick Start
 
@@ -30,8 +36,9 @@ Mattermost is an open-source, self-hosted Slack alternative for team communicati
    ```
 
 4. **Access Mattermost:**
-   - Open your browser and go to: `http://localhost:8065`
-   - Create your first admin account
+   - **External**: `https://mattermost.gmojsoski.com` (recommended)
+   - **Local Network**: `http://mattermost.gmojsoski.com:8080` (note: port 8080 required)
+   - **Direct Local**: `http://localhost:8065`
 
 ## First-Time Setup
 
@@ -42,7 +49,10 @@ Mattermost is an open-source, self-hosted Slack alternative for team communicati
 - Initial Team: "Main Team" (already created)
 
 **To Access:**
-1. Go to `https://mattermost.gmojsoski.com` (or `http://localhost:8065` locally)
+1. Go to one of these URLs:
+   - **External (HTTPS)**: `https://mattermost.gmojsoski.com` (recommended)
+   - **Local Network (HTTP)**: `http://mattermost.gmojsoski.com:8080` (note: port 8080 is required)
+   - **Direct Local**: `http://localhost:8065`
 2. Log in with the admin credentials above
 3. Select "Main Team" when prompted
 4. **IMPORTANT**: Change the admin password immediately:
@@ -58,9 +68,11 @@ Mattermost is an open-source, self-hosted Slack alternative for team communicati
 
 Key configuration options in `docker-compose.yml`:
 
-- `MM_SERVICESETTINGS_SITEURL`: Set to `http://localhost:8065` for local use
-- `MM_SERVICESETTINGS_ENABLELOCALMODE`: Enabled for local operation
-- `MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL`: Disabled (local only)
+- `MM_SERVICESETTINGS_SITEURL`: Set to `https://mattermost.gmojsoski.com` for external access
+- `MM_SERVICESETTINGS_ENABLELOCALMODE`: Disabled (external access enabled)
+- `MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL`: Enabled (external access)
+- `MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL`: Enabled
+- `MM_SERVICESETTINGS_ENABLEOPENSERVER`: Enabled (allows user sign-up)
 
 ### Data Persistence
 
@@ -122,10 +134,21 @@ docker exec -i mattermost-postgres psql -U mmuser mattermost < mattermost-backup
 - Check PostgreSQL logs: `docker compose logs mattermost-postgres`
 - Verify credentials match in both services
 
-### Can't access web interface
+### Can't access web interface locally
+- **Port 80 not working**: Caddy listens on port 8080, not 80. Use:
+  - `http://mattermost.gmojsoski.com:8080` (local network with domain)
+  - `http://localhost:8065` (direct access)
+  - `https://mattermost.gmojsoski.com` (external HTTPS via Cloudflare)
 - Verify container is running: `docker compose ps`
 - Check port binding: `docker compose port mattermost 8065`
 - Test locally: `curl http://localhost:8065`
+- Test via Caddy: `curl -H "Host: mattermost.gmojsoski.com" http://localhost:8080`
+
+### Local domain access issues
+- **Pi-hole DNS**: Ensure `mattermost.gmojsoski.com` points to server IP (192.168.1.97) in Pi-hole Local DNS Records
+- **Port required**: When accessing via domain locally, you **must** use port 8080: `http://mattermost.gmojsoski.com:8080`
+- **Why port 8080?**: Caddy is mapped to host port 8080 (container port 80 → host port 8080)
+- **HTTPS access**: Use `https://mattermost.gmojsoski.com` which goes through Cloudflare Tunnel (works both locally and externally)
 
 ## Security Notes
 
@@ -134,9 +157,32 @@ docker exec -i mattermost-postgres psql -U mmuser mattermost < mattermost-backup
 - **No SSL**: For local use only - add SSL if exposing externally
 - **First User**: The first user account created becomes the admin
 
-## Adding External Access Later
+## Local Network Access Notes
 
-If you want to expose Mattermost externally later:
+**Important**: Mattermost is already exposed externally. For local network access:
+
+1. **Via Domain Name (Pi-hole DNS)**:
+   - Use `http://mattermost.gmojsoski.com:8080` (port 8080 is required)
+   - Pi-hole should resolve `mattermost.gmojsoski.com` to your server IP (192.168.1.97)
+   - Port 80 is not available - Caddy listens on port 8080
+
+2. **Via HTTPS**:
+   - Use `https://mattermost.gmojsoski.com` (goes through Cloudflare Tunnel)
+   - Works both locally and externally
+
+3. **Direct Access**:
+   - Use `http://localhost:8065` (from server itself)
+   - Use `http://192.168.1.97:8065` (from other devices on network)
+
+**Why Port 8080?**
+- Caddy container listens on port 80 internally
+- Docker maps container port 80 → host port 8080
+- Port 80 is not bound on the host (to avoid conflicts)
+- This is standard for all services in this setup
+
+## Adding External Access Later (Already Done)
+
+Mattermost is already exposed externally. If you need to reconfigure:
 
 1. **Update Caddyfile** (`docker/caddy/Caddyfile`):
    ```caddyfile
@@ -161,6 +207,30 @@ If you want to expose Mattermost externally later:
    - Caddy first: `docker compose -f docker/caddy/docker-compose.yml restart`
    - Cloudflared second: `docker compose -f docker/cloudflared/docker-compose.yml restart`
    - Mattermost: `docker compose restart mattermost`
+
+## Local Network Access Explained
+
+### Why Port 8080 for Local Domain Access?
+
+When accessing Mattermost via domain name on your local network:
+- **Port 80 is not available**: Caddy listens on port 8080 on the host (mapped from container port 80)
+- **Pi-hole DNS resolves correctly**: `mattermost.gmojsoski.com` → `192.168.1.97`
+- **Solution**: Use `http://mattermost.gmojsoski.com:8080` for local HTTP access
+- **Alternative**: Use `https://mattermost.gmojsoski.com` which goes through Cloudflare Tunnel (works fine)
+
+### Is Nginx Needed?
+
+**No, nginx is NOT required.** Mattermost works perfectly with Caddy as a reverse proxy. Some older guides mention nginx, but:
+- Caddy handles reverse proxying directly
+- Caddy provides automatic HTTPS (via Cloudflare)
+- Adding nginx would be redundant and add unnecessary complexity
+
+The setup uses:
+1. **Mattermost** → listens on port 8065
+2. **Caddy** → reverse proxies to Mattermost on port 8065
+3. **Cloudflare Tunnel** → provides external HTTPS access
+
+No nginx needed!
 
 ## Resources
 

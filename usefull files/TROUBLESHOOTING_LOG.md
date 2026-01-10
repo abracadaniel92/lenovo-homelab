@@ -60,6 +60,17 @@ This log documents specific issues encountered on the server and their fixes.
    - **Issue:** External DNS not resolving immediately after CNAME creation
    - **Solution:** Waited for DNS propagation (5-15 minutes). External DNS resolvers (8.8.8.8, 1.1.1.1) resolved correctly, local Pi-hole DNS took longer to update
 
+6. **Local Network Access Issue:**
+   - **Issue:** Mattermost not accessible locally via domain name (`http://mattermost.gmojsoski.com`)
+   - **Root Cause:** Browsers default to port 80 for HTTP, but Caddy listens on port 8080 on the host (mapped from container port 80). Pi-hole DNS correctly resolves to local IP (192.168.1.97), but port 80 has no listener.
+   - **Solution:** For local HTTP access via domain, users must specify port 8080: `http://mattermost.gmojsoski.com:8080`
+   - **Alternative Access Methods:**
+     - HTTPS: `https://mattermost.gmojsoski.com` (goes through Cloudflare Tunnel - works fine)
+     - Direct IP:port: `http://192.168.1.97:8065` (bypasses Caddy)
+     - Localhost: `http://localhost:8065` (from server itself)
+   - **Note:** This is expected behavior - Caddy is intentionally on port 8080 to avoid conflicts. All services follow this pattern.
+   - **About nginx:** Nginx is NOT required. Mattermost works fine with Caddy directly. Some older guides mention nginx, but it would be redundant.
+
 ### Known Issues / Stability Concerns
 **Reported:** Service appears "a bit unstable" and drops from time to time
 
