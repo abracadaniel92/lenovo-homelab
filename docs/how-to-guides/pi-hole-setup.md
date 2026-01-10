@@ -70,28 +70,22 @@ nano docker-compose.yml
 
 This is the key configuration that makes local access to your services work without going through Cloudflare. This resolves `*.gmojsoski.com` domains to your ThinkCentre IP for local network access (fixes NAT hairpinning).
 
-**Recommended Method: Use Pi-hole Admin UI**
+**⚠️ IMPORTANT: DO NOT Add Local DNS Records for Services Using Cloudflare Tunnel**
 
-1. Start Pi-hole first (see Step 5)
-2. Go to `http://[REDACTED_INTERNAL_IP_2]/admin`
-3. Navigate to: **Local DNS → DNS Records**
-4. Add each subdomain individually:
-   - Domain: `gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `www.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `cloud.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `files.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `jellyfin.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `vault.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `shopping.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `analytics.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `poker.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `bookmarks.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `tickets.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `paperless.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - Domain: `mattermost.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
-   - (Add any other subdomains you have)
+**Most services in this lab use Cloudflare Tunnel** - do NOT add Local DNS Records for them. All devices (WiFi and mobile) should use Cloudflare DNS for consistent access.
 
-**Note:** Pi-hole Admin UI doesn't support wildcard syntax (`*.domain.com`), so each subdomain must be added individually. However, this ensures precise control and is the recommended approach.
+**Why?** Adding Local DNS Records causes WiFi access issues:
+- WiFi devices resolve to local IP (192.168.1.97)
+- Caddy is only accessible on `localhost:8080` (not on LAN interface)
+- No local HTTPS (Caddy has `auto_https off`)
+- Result: WiFi devices can't access services, but mobile devices can (via Cloudflare)
+
+**Services using Cloudflare Tunnel** (DO NOT add to Pi-hole):
+- All `*.gmojsoski.com` subdomains (cloud, jellyfin, paperless, mattermost, zulip, vault, bookmarks, tickets, poker, files, analytics, shopping, etc.)
+
+**Access**: All devices use `https://service.gmojsoski.com` (goes through Cloudflare Tunnel)
+
+**Note:** If you have a local-only service that is NOT using Cloudflare Tunnel, you can add it to Pi-hole Local DNS Records. However, most services in this lab use Cloudflare Tunnel, so Local DNS Records are NOT needed.
 
 ---
 
@@ -240,7 +234,36 @@ To add:
 
 ## Adding New Services
 
-When you add a new service to lemongrab, add a DNS entry via Pi-hole Admin UI:
+### ⚠️ IMPORTANT: Services Using Cloudflare Tunnel
+
+**DO NOT add Local DNS Records** for services that use Cloudflare Tunnel. All devices (WiFi and mobile) should use Cloudflare DNS for consistent access.
+
+**Why?** Adding Local DNS Records causes WiFi access issues:
+- WiFi devices resolve to local IP (192.168.1.97)
+- Caddy is only accessible on `localhost:8080` (not on LAN interface)
+- No local HTTPS (Caddy has `auto_https off`)
+- Result: WiFi devices can't access services, but mobile devices can (via Cloudflare)
+
+**Services using Cloudflare Tunnel** (DO NOT add to Pi-hole):
+- `cloud.gmojsoski.com` (Nextcloud)
+- `jellyfin.gmojsoski.com`
+- `paperless.gmojsoski.com`
+- `mattermost.gmojsoski.com`
+- `zulip.gmojsoski.com`
+- `vault.gmojsoski.com`
+- `bookmarks.gmojsoski.com`
+- `tickets.gmojsoski.com`
+- `poker.gmojsoski.com`
+- `files.gmojsoski.com`
+- `analytics.gmojsoski.com`
+- `shopping.gmojsoski.com`
+- All other `*.gmojsoski.com` subdomains routed through Cloudflare Tunnel
+
+**Access**: All devices use `https://service.gmojsoski.com` (goes through Cloudflare Tunnel)
+
+### For Local-Only Services (NOT using Cloudflare Tunnel)
+
+If you have a service that is NOT using Cloudflare Tunnel and you want local network access:
 
 1. Go to `http://[REDACTED_INTERNAL_IP_2]/admin`
 2. Navigate to: **Local DNS → DNS Records**
@@ -249,9 +272,11 @@ When you add a new service to lemongrab, add a DNS entry via Pi-hole Admin UI:
 5. Click **Add**
 6. **Access the service**:
    - HTTP (local): `http://newservice.gmojsoski.com:8080` (port 8080 required)
-   - HTTPS (via Cloudflare): `https://newservice.gmojsoski.com` (no port needed)
+   - HTTPS (via Cloudflare): `https://newservice.gmojsoski.com` (if configured)
 
 Pi-hole will automatically reload DNS - no restart needed.
+
+**Note:** Most services in this lab use Cloudflare Tunnel, so Local DNS Records are NOT needed.
 
 ---
 
@@ -302,7 +327,7 @@ dig @[REDACTED_INTERNAL_IP_2] google.com
 
 **Verify fix** (from any device on network):
 ```bash
-nslookup mattermost.gmojsoski.com
+nslookup rocketchat.gmojsoski.com
 ```
 
 **Expected output (fixed)** - should show ONLY IPv4:
@@ -310,14 +335,14 @@ nslookup mattermost.gmojsoski.com
 Server:         192.168.1.98
 Address:        192.168.1.98#53
 
-Name:   mattermost.gmojsoski.com
+Name:   rocketchat.gmojsoski.com
 Address: 192.168.1.97
 ```
 
 **If you still see IPv6 addresses**:
 - Clear DNS cache on your device: `sudo systemd-resolve --flush-caches` (Linux) or `ipconfig /flushdns` (Windows)
 - Wait a few minutes for DNS cache to expire (TTL)
-- Try again: `nslookup mattermost.gmojsoski.com`
+- Try again: `nslookup rocketchat.gmojsoski.com`
 
 **Alternative Solution 1**: Use custom dnsmasq configuration file (ON PI-HOLE DEVICE):
 
@@ -334,7 +359,7 @@ If disabling IPv6 in the admin UI doesn't work, create a custom dnsmasq config f
    # This prevents forwarding IPv6 queries upstream for domains that have Local DNS Records
    
    # Block AAAA queries for specific domains (uncomment as needed):
-   server=/mattermost.gmojsoski.com/#
+   server=/rocketchat.gmojsoski.com/#
    server=/jellyfin.gmojsoski.com/#
    server=/cloud.gmojsoski.com/#
    server=/files.gmojsoski.com/#
@@ -363,7 +388,7 @@ Pi-hole's "Disable IPv6" setting might not prevent it from forwarding AAAA queri
 **Quick Workaround (Client-Side)**: If you can't modify Pi-hole right now, add entries to `/etc/hosts` on your devices:
 ```bash
 # On lemongrab (main server) - add to /etc/hosts
-192.168.1.97    mattermost.gmojsoski.com
+192.168.1.97    rocketchat.gmojsoski.com
 192.168.1.97    jellyfin.gmojsoski.com
 192.168.1.97    cloud.gmojsoski.com
 # Add other services as needed
