@@ -88,6 +88,7 @@ This is the key configuration that makes local access to your services work with
    - Domain: `bookmarks.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
    - Domain: `tickets.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
    - Domain: `paperless.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+   - Domain: `mattermost.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
    - (Add any other subdomains you have)
 
 **Note:** Pi-hole Admin UI doesn't support wildcard syntax (`*.domain.com`), so each subdomain must be added individually. However, this ensures precise control and is the recommended approach.
@@ -175,8 +176,10 @@ nslookup jellyfin.gmojsoski.com
 ```
 
 ### In browser
-- Open `http://jellyfin.gmojsoski.com`
-- Should load locally (fast) instead of going through Cloudflare
+- **HTTP (local, fast)**: Open `http://jellyfin.gmojsoski.com:8080` (port 8080 required)
+- **HTTPS (via Cloudflare)**: Open `https://jellyfin.gmojsoski.com` (works both locally and externally)
+
+**Note**: Port 8080 is required for local HTTP access because Caddy listens on port 8080 (not port 80) on the host. This applies to all services. For HTTPS, Cloudflare Tunnel handles routing automatically.
 
 ---
 
@@ -242,8 +245,11 @@ When you add a new service to lemongrab, add a DNS entry via Pi-hole Admin UI:
 1. Go to `http://[REDACTED_INTERNAL_IP_2]/admin`
 2. Navigate to: **Local DNS → DNS Records**
 3. Click **Add**
-4. Enter: Domain: `newservice.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]`
+4. Enter: Domain: `newservice.gmojsoski.com` → IP: `[REDACTED_INTERNAL_IP_1]` (server IP)
 5. Click **Add**
+6. **Access the service**:
+   - HTTP (local): `http://newservice.gmojsoski.com:8080` (port 8080 required)
+   - HTTPS (via Cloudflare): `https://newservice.gmojsoski.com` (no port needed)
 
 Pi-hole will automatically reload DNS - no restart needed.
 
