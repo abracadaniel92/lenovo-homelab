@@ -285,29 +285,45 @@ dig @[REDACTED_INTERNAL_IP_2] google.com
 
 ### Local services still going through Cloudflare / Multiple IPs returned
 
-**Problem**: `nslookup` shows both local IP (192.168.1.97) AND Cloudflare IPv6 addresses. This causes browsers to try Cloudflare first.
+**Problem**: `nslookup` shows both local IP (192.168.1.97) AND Cloudflare IPv6 addresses. This causes browsers to try IPv6 (Cloudflare) first instead of IPv4 (local).
 
-**Solution**: Configure Pi-hole to return ONLY the local IP for Local DNS Records:
+**Root Cause**: Pi-hole forwards DNS queries upstream even when a Local DNS Record exists, causing both local IPv4 and upstream IPv6 to be returned.
 
-1. **Access Pi-hole Admin**: `http://[PI-HOLE-IP]/admin`
-2. **Go to**: Settings → DNS
-3. **Enable**: "Never forward non-FQDNs" (prevents forwarding incomplete queries)
-4. **Ensure**: "Never forward reverse lookups for private IP ranges" is enabled
-5. **Optionally disable IPv6** (Settings → DNS → Disable IPv6) if you don't need it for local services
-6. **Restart Pi-hole**: `docker restart pihole` (on Pi-hole device)
+**Solution (Recommended)**: Disable IPv6 in Pi-hole Admin UI:
 
-**Alternative**: If you need IPv6, create a conditional forwarder or ensure Local DNS Records take precedence. However, the simplest solution is to disable IPv6 for local-only services.
+1. **Access Pi-hole Admin**: `http://192.168.1.98/admin` (or your Pi-hole IP)
+2. **Login** with your Pi-hole admin password
+3. **Navigate to**: Settings → DNS (left sidebar)
+4. **Scroll down** to "Advanced DNS settings"
+5. **Uncheck**: "Enable IPv6 support" (or "Enable IPv6" depending on Pi-hole version)
+6. **Click**: "Save" button
+7. **Wait**: 30-60 seconds for Pi-hole to reload DNS settings
+8. **On the Pi-hole device**, restart if needed: `docker restart pihole`
 
-**Verify fix**:
+**Verify fix** (from any device on network):
 ```bash
-# Should only show 192.168.1.97 (no Cloudflare IPs)
 nslookup mattermost.gmojsoski.com
 ```
-Expected output (fixed):
+
+**Expected output (fixed)** - should show ONLY IPv4:
 ```
-Name: mattermost.gmojsoski.com
+Server:         192.168.1.98
+Address:        192.168.1.98#53
+
+Name:   mattermost.gmojsoski.com
 Address: 192.168.1.97
 ```
+
+**If you still see IPv6 addresses**:
+- Clear DNS cache on your device: `sudo systemd-resolve --flush-caches` (Linux) or `ipconfig /flushdns` (Windows)
+- Wait a few minutes for DNS cache to expire (TTL)
+- Try again: `nslookup mattermost.gmojsoski.com`
+
+**Alternative Solution** (if you need IPv6 for other services):
+Use Pi-hole's Group Management to block AAAA (IPv6) queries for specific domains:
+1. Pi-hole Admin → Group Management → Domains
+2. Add domain: `*.gmojsoski.com` with query type: `AAAA` (IPv6)
+3. Add to "Blocked" group
 
 **Original troubleshooting steps**:
 ```bash
