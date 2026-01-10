@@ -2,7 +2,7 @@
 
 ## Current Infrastructure Overview
 
-- **Server**: lemongrab (192.168.1.97)
+- **Server**: lemongrab ([REDACTED_INTERNAL_IP])
 - **Storage**: 512GB NVMe SSD (~374GB Docker data)
 - **Services**: 15 Docker containers + 3 systemd services
 - **Critical Data**: ~100MB (databases, configs)
