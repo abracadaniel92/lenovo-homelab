@@ -1,6 +1,6 @@
 #!/bin/bash
 # Pi Health Monitoring Script
-# Sends system health report to Slack webhook
+# Sends system health report to Mattermost webhook (Slack-compatible format)
 # Runs every 5 days via systemd timer
 
 set -e
@@ -10,13 +10,12 @@ if [ -f "$SCRIPT_DIR/.env" ]; then
     source "$SCRIPT_DIR/.env"
 fi
 
-# Prioritize monitoring-specific webhook
-[ -n "$MONITORING_SLACK_WEBHOOK_URL" ] && SLACK_WEBHOOK_URL="$MONITORING_SLACK_WEBHOOK_URL"
+# Prioritize monitoring-specific webhook (Mattermost or legacy Slack)
+[ -n "$MONITORING_MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$MONITORING_MATTERMOST_WEBHOOK_URL"
+[ -n "$MONITORING_SLACK_WEBHOOK_URL" ] && [ -z "$MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$MONITORING_SLACK_WEBHOOK_URL"
 
-if [ -z "$SLACK_WEBHOOK_URL" ]; then
-    echo "ERROR: SLACK_WEBHOOK_URL or MONITORING_SLACK_WEBHOOK_URL is not set. Please check scripts/.env"
-    exit 1
-fi
+# Default Mattermost webhook for uptime/health monitoring
+MATTERMOST_WEBHOOK_URL="${MATTERMOST_WEBHOOK_URL:-https://mattermost.gmojsoski.com/hooks/bettcnqps7ngpfp74i6zux5s8w}"
 
 # Get hostname
 HOSTNAME=$(hostname)
@@ -91,92 +90,51 @@ else
     STATUS_TEXT="All systems operational"
 fi
 
-# Build Slack message with blocks
-read -r -d '' PAYLOAD << EOF || true
-{
-    "blocks": [
-        {
-            "type": "header",
-            "text": {
-                "type": "plain_text",
-                "text": "🖥️ Server Health Report: ${HOSTNAME}",
-                "emoji": true
-            }
-        },
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "plain_text",
-                    "text": "${STATUS_EMOJI} ${STATUS_TEXT}"
-                }
-            ]
-        },
-        {
-            "type": "divider"
-        },
-        {
-            "type": "section",
-            "fields": [
-                {
-                    "type": "mrkdwn",
-                    "text": "*Uptime*\n${UPTIME}"
-                },
-                {
-                    "type": "mrkdwn",
-                    "text": "*CPU Temp*\n${TEMP}"
-                },
-                {
-                    "type": "mrkdwn",
-                    "text": "*Load Avg*\n${LOAD}"
-                },
-                {
-                    "type": "mrkdwn",
-                    "text": "*Memory*\n${MEM_USED}/${MEM_TOTAL} (${MEM_PERCENT}%)"
-                }
-            ]
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "*Storage*\n${DISK_ROOT}\n${DISK_SSD}"
-            }
-        },
-        {
-            "type": "section",
-            "fields": [
-                {
-                    "type": "mrkdwn",
-                    "text": "*Docker*\n${DOCKER_RUNNING}/${DOCKER_TOTAL} running"
-                },
-                {
-                    "type": "mrkdwn",
-                    "text": "*Unhealthy*\n${DOCKER_UNHEALTHY}"
-                }
-            ]
-        }$([ -n "$SMART_INFO" ] && echo ",
-        {
-            \"type\": \"section\",
-            \"text\": {
-                \"type\": \"mrkdwn\",
-                \"text\": \"*Drive Health*\n$(echo -e "$SMART_INFO" | sed 's/$/\\n/' | tr -d '\n' | sed 's/\\n$//')\"
-            }
-        }")
-    ]
-}
-EOF
+# Build Mattermost message (text format with markdown)
+# Use temp file to avoid heredoc/Python stdin issues
+TMP_MSG=$(mktemp)
+trap "rm -f $TMP_MSG" EXIT
 
-# Send to Slack
+{
+    echo "🖥️ **Server Health Report: ${HOSTNAME}**"
+    echo ""
+    echo "${STATUS_EMOJI} ${STATUS_TEXT}"
+    echo ""
+    echo "---"
+    echo ""
+    echo "**System Information:**"
+    echo "• *Uptime:* ${UPTIME}"
+    echo "• *CPU Temp:* ${TEMP}"
+    echo "• *Load Avg:* ${LOAD}"
+    echo "• *Memory:* ${MEM_USED}/${MEM_TOTAL} (${MEM_PERCENT}%)"
+    echo ""
+    echo "**Storage:**"
+    [ -n "$DISK_ROOT" ] && echo "$DISK_ROOT"
+    [ -n "$DISK_SSD" ] && echo "$DISK_SSD"
+    echo ""
+    echo "**Docker:**"
+    echo "• Running: ${DOCKER_RUNNING}/${DOCKER_TOTAL}"
+    echo "• Unhealthy: ${DOCKER_UNHEALTHY}"
+    if [ -n "$SMART_INFO" ]; then
+        echo ""
+        echo "**Drive Health:**"
+        echo -e "$SMART_INFO" | sed 's/^  • /• /'
+    fi
+} > "$TMP_MSG"
+
+# Create JSON payload using Python (read from temp file)
+PAYLOAD=$(python3 -c "import json; f=open('$TMP_MSG', 'r'); msg=f.read(); f.close(); print(json.dumps({'text': msg}, ensure_ascii=False))")
+
+# Send to Mattermost (Slack-compatible format)
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -H 'Content-type: application/json' \
     --data "$PAYLOAD" \
-    "$SLACK_WEBHOOK_URL")
+    "$MATTERMOST_WEBHOOK_URL")
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 BODY=$(echo "$RESPONSE" | head -n -1)
 
 if [ "$HTTP_CODE" = "200" ] && [ "$BODY" = "ok" ]; then
-    echo "✓ Health report sent to Slack"
+    echo "✓ Health report sent to Mattermost"
 else
     echo "✗ Failed to send health report (HTTP $HTTP_CODE: $BODY)"
     exit 1

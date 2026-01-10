@@ -81,7 +81,7 @@ This is the key configuration that makes local access to your services work with
 - Result: WiFi devices can't access services, but mobile devices can (via Cloudflare)
 
 **Services using Cloudflare Tunnel** (DO NOT add to Pi-hole):
-- All `*.gmojsoski.com` subdomains (cloud, jellyfin, paperless, mattermost, zulip, vault, bookmarks, tickets, poker, files, analytics, shopping, etc.)
+- All `*.gmojsoski.com` subdomains (cloud, jellyfin, paperless, mattermost, vault, bookmarks, tickets, poker, files, analytics, shopping, etc.)
 
 **Access**: All devices use `https://service.gmojsoski.com` (goes through Cloudflare Tunnel)
 
@@ -249,7 +249,6 @@ To add:
 - `jellyfin.gmojsoski.com`
 - `paperless.gmojsoski.com`
 - `mattermost.gmojsoski.com`
-- `zulip.gmojsoski.com`
 - `vault.gmojsoski.com`
 - `bookmarks.gmojsoski.com`
 - `tickets.gmojsoski.com`

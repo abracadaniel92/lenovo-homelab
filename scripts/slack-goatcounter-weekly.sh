@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 # GoatCounter Weekly Analytics Report Script
-# Sends weekly analytics summary to Slack webhook
+# Sends weekly analytics summary to Mattermost webhook (Slack-compatible format)
 # Runs every Sunday at 10 AM via systemd timer
 ###############################################################################
 
@@ -13,13 +13,12 @@ if [ -f "$SCRIPT_DIR/.env" ]; then
     source "$SCRIPT_DIR/.env"
 fi
 
-# Prioritize analytics-specific webhook
-[ -n "$ANALYTICS_SLACK_WEBHOOK_URL" ] && SLACK_WEBHOOK_URL="$ANALYTICS_SLACK_WEBHOOK_URL"
+# Prioritize analytics-specific webhook (Mattermost or legacy Slack)
+[ -n "$ANALYTICS_MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$ANALYTICS_MATTERMOST_WEBHOOK_URL"
+[ -n "$ANALYTICS_SLACK_WEBHOOK_URL" ] && [ -z "$MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$ANALYTICS_SLACK_WEBHOOK_URL"
 
-if [ -z "$SLACK_WEBHOOK_URL" ]; then
-    echo "ERROR: SLACK_WEBHOOK_URL or ANALYTICS_SLACK_WEBHOOK_URL is not set. Please check scripts/.env"
-    exit 1
-fi
+# Default Mattermost webhook for analytics
+MATTERMOST_WEBHOOK_URL="${MATTERMOST_WEBHOOK_URL:-https://mattermost.gmojsoski.com/hooks/jdyxig47nt8hig5se9cokndbey}"
 
 GOATCOUNTER_DB="/mnt/ssd/docker-projects/goatcounter/goatcounter-data/goatcounter.sqlite3"
 
@@ -82,77 +81,41 @@ done)
 [ -z "$TOP_PAGES" ] && TOP_PAGES="  • No page data available"
 [ -z "$TOP_REFERRERS" ] && TOP_REFERRERS="  • Direct traffic only"
 
-# Build Slack message with blocks for better formatting
-# Note: Unique Visitors removed as it requires non-aggregated data (hits table)
-read -r -d '' PAYLOAD << EOF || true
-{
-    "blocks": [
-        {
-            "type": "header",
-            "text": {
-                "type": "plain_text",
-                "text": "📊 Weekly Analytics Report (Portfolio)",
-                "emoji": true
-            }
-        },
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "plain_text",
-                    "text": "${START_DATE} → ${END_DATE}"
-                }
-            ]
-        },
-        {
-            "type": "divider"
-        },
-        {
-            "type": "section",
-            "fields": [
-                {
-                    "type": "mrkdwn",
-                    "text": "*Total Pageviews*\n${TOTAL_PAGEVIEWS}"
-                }
-            ]
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "*Top Pages*\n${TOP_PAGES}"
-            }
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "*Top Referrers*\n${TOP_REFERRERS}"
-            }
-        },
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": "See full analytics at <https://analytics.gmojsoski.com|analytics.gmojsoski.com>"
-                }
-            ]
-        }
-    ]
-}
-EOF
+# Build Mattermost message (text format with markdown)
+# Use temp file to avoid heredoc/Python stdin issues
+TMP_MSG=$(mktemp)
+trap "rm -f $TMP_MSG" EXIT
 
-# Send to Slack
+{
+    echo "📊 **Weekly Analytics Report (Portfolio)**"
+    echo ""
+    echo "*Period:* ${START_DATE} → ${END_DATE}"
+    echo ""
+    echo "---"
+    echo ""
+    echo "**Total Pageviews:** ${TOTAL_PAGEVIEWS}"
+    echo ""
+    echo "**Top Pages:**"
+    echo "$TOP_PAGES"
+    echo "**Top Referrers:**"
+    echo "$TOP_REFERRERS"
+    echo ""
+    echo "See full analytics at: https://analytics.gmojsoski.com"
+} > "$TMP_MSG"
+
+# Create JSON payload using Python (read from temp file)
+PAYLOAD=$(python3 -c "import json; f=open('$TMP_MSG', 'r'); msg=f.read(); f.close(); print(json.dumps({'text': msg}, ensure_ascii=False))")
+
+# Send to Mattermost (Slack-compatible format)
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -H 'Content-type: application/json' \
     --data "$PAYLOAD" \
-    "$SLACK_WEBHOOK_URL")
+    "$MATTERMOST_WEBHOOK_URL")
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 BODY=$(echo "$RESPONSE" | head -n -1)
 
 if [ "$HTTP_CODE" = "200" ] && [ "$BODY" = "ok" ]; then
-    echo "✓ Weekly analytics report sent to Slack"
+    echo "✓ Weekly analytics report sent to Mattermost"
 else
     echo "✗ Failed to send analytics report (HTTP $HTTP_CODE: $BODY)"
     exit 1

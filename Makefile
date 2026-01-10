@@ -1,23 +1,37 @@
 .POSIX:
 .PHONY: *
 
+# Get the directory where this Makefile is located (handles spaces in path)
+# CURDIR is set by Make to the current working directory (works with -C flag)
+MAKEFILE_DIR := $(CURDIR)
+
 # Default action: run health check
 default: health
 
 # Run the comprehensive health check
 health:
 	@echo "🏥 Running Enhanced Health Check..."
-	@sudo bash "scripts/enhanced-health-check.sh"
+	@sudo bash "$(MAKEFILE_DIR)/scripts/enhanced-health-check.sh"
+
+# Verify health check configuration (check timer interval, status, etc.)
+health-verify:
+	@echo "🔍 Verifying Health Check Configuration..."
+	@bash "$(MAKEFILE_DIR)/scripts/verify-health-check.sh"
+
+# Fix/update health check timer to 3-minute interval
+health-fix:
+	@echo "🔧 Fixing Health Check Timer..."
+	@sudo bash "$(MAKEFILE_DIR)/scripts/fix-health-check-timer.sh"
 
 # Run the fix script (recovery mode)
 fix:
 	@echo "🔧 Running External Access Fix..."
-	@bash "restart services/fix-external-access.sh"
+	@bash "$(MAKEFILE_DIR)/restart services/fix-external-access.sh"
 
 # Run all critical backups
 backup:
 	@echo "💾 Running Critical Backups..."
-	@bash "scripts/backup-all-critical.sh"
+	@bash "$(MAKEFILE_DIR)/scripts/backup-all-critical.sh"
 
 # View logs for a specific service (usage: make logs service=caddy)
 logs:
@@ -41,40 +55,21 @@ update:
 		containrrr/watchtower \
 		--run-once
 
-# Zulip service management (usage: make lab-zulip-[start|stop|restart|logs|status])
-lab-zulip:
-	@echo "💬 Zulip Service Management"
-	@echo "Usage: make lab-zulip-[start|stop|restart|logs|status]"
-	@echo ""
-	@echo "Commands:"
-	@echo "  make lab-zulip-start    - Start Zulip service"
-	@echo "  make lab-zulip-stop     - Stop Zulip service"
-	@echo "  make lab-zulip-restart  - Restart Zulip service"
-	@echo "  make lab-zulip-logs     - View Zulip logs"
-	@echo "  make lab-zulip-status   - Check Zulip status"
-
-lab-zulip-start:
-	@echo "🚀 Starting Zulip..."
-	@cd docker/zulip && docker compose up -d
-	@echo "✅ Zulip started. Access at http://localhost:8070"
-
-lab-zulip-stop:
-	@echo "⏹️  Stopping Zulip..."
-	@cd docker/zulip && docker compose down
-	@echo "✅ Zulip stopped"
-
-lab-zulip-restart:
-	@echo "🔄 Restarting Zulip..."
-	@cd docker/zulip && docker compose restart
-	@echo "✅ Zulip restarted"
-
-lab-zulip-logs:
-	@echo "📜 Zulip logs (Ctrl+C to exit):"
-	@cd docker/zulip && docker compose logs -f
-
-lab-zulip-status:
-	@echo "📊 Zulip Service Status:"
-	@cd docker/zulip && docker compose ps
+# Update portfolio website (pull from GitHub and sync to Caddy)
+portfolio-update:
+	@echo "🔄 Updating portfolio from GitHub..."
+	@HERE="$(MAKEFILE_DIR)"; \
+	if [ -f "$$HERE/scripts/update-portfolio.sh" ]; then \
+		bash "$$HERE/scripts/update-portfolio.sh"; \
+	elif [ -f "/usr/local/bin/update-portfolio.sh" ]; then \
+		bash /usr/local/bin/update-portfolio.sh; \
+	else \
+		echo "❌ Error: update-portfolio.sh not found"; \
+		echo "   Tried: $$HERE/scripts/update-portfolio.sh"; \
+		echo "   Tried: /usr/local/bin/update-portfolio.sh"; \
+		exit 1; \
+	fi
+	@echo "✅ Portfolio update complete. Check /var/log/portfolio-update.log for details."
 
 # Mattermost service management (usage: make lab-mattermost-[start|stop|restart|logs|status])
 lab-mattermost:
@@ -90,24 +85,24 @@ lab-mattermost:
 
 lab-mattermost-start:
 	@echo "🚀 Starting Mattermost..."
-	@cd docker/mattermost && docker compose up -d
+	@cd "$(MAKEFILE_DIR)/docker/mattermost" && docker compose up -d
 	@echo "✅ Mattermost started. Access at http://localhost:8066"
 
 lab-mattermost-stop:
 	@echo "⏹️  Stopping Mattermost..."
-	@cd docker/mattermost && docker compose down
+	@cd "$(MAKEFILE_DIR)/docker/mattermost" && docker compose down
 	@echo "✅ Mattermost stopped"
 
 lab-mattermost-restart:
 	@echo "🔄 Restarting Mattermost..."
-	@cd docker/mattermost && docker compose restart
+	@cd "$(MAKEFILE_DIR)/docker/mattermost" && docker compose restart
 	@echo "✅ Mattermost restarted"
 
 lab-mattermost-logs:
 	@echo "📜 Mattermost logs (Ctrl+C to exit):"
-	@cd docker/mattermost && docker compose logs -f
+	@cd "$(MAKEFILE_DIR)/docker/mattermost" && docker compose logs -f
 
 lab-mattermost-status:
 	@echo "📊 Mattermost Service Status:"
-	@cd docker/mattermost && docker compose ps
+	@cd "$(MAKEFILE_DIR)/docker/mattermost" && docker compose ps
 

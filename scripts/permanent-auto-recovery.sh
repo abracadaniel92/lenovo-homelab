@@ -131,18 +131,18 @@ User=root
 WantedBy=multi-user.target
 EOF
 
-# 3. Create timer for enhanced health check (every 30 seconds)
-echo "3. Creating enhanced health check timer (every 30 seconds)..."
+# 3. Create timer for enhanced health check (every 3 minutes)
+echo "3. Creating enhanced health check timer (every 3 minutes)..."
 
 sudo tee /etc/systemd/system/enhanced-health-check.timer > /dev/null << EOF
 [Unit]
-Description=Run Enhanced Health Check Every 30 Seconds
+Description=Run Enhanced Health Check Every 3 Minutes
 Requires=enhanced-health-check.service
 
 [Timer]
 OnBootSec=1min
-OnUnitActiveSec=30s
-AccuracySec=5s
+OnUnitActiveSec=3min
+AccuracySec=30s
 
 [Install]
 WantedBy=timers.target
@@ -251,14 +251,14 @@ echo "Permanent Auto-Recovery System Installed!"
 echo "=========================================="
 echo ""
 echo "What was configured:"
-echo "  ✓ Enhanced health check (runs every 30 seconds)"
+echo "  ✓ Enhanced health check (runs every 3 minutes)"
 echo "  ✓ Service watchdog (continuous, checks every 20 seconds)"
 echo "  ✓ Cloudflare tunnel auto-restart"
 echo "  ✓ All services auto-start on boot"
 echo "  ✓ Auto-recovery from failures"
 echo ""
 echo "Monitoring:"
-echo "  - Enhanced health check: Every 30 seconds"
+echo "  - Enhanced health check: Every 3 minutes"
 echo "  - Service watchdog: Continuous (20s intervals)"
 echo "  - Logs: /var/log/enhanced-health-check.log"
 echo ""

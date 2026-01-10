@@ -71,7 +71,7 @@ The home lab consists of two devices working together:
 - **Password Manager**: Vaultwarden (Bitwarden-compatible)
 - **Document Management**: Paperless-ngx (document digitization and organization)
 - **Knowledge Base**: Outline (wiki and documentation)
-- **Team Communication**: Mattermost (Slack alternative), Zulip (Slack alternative with excellent webhook support)
+- **Team Communication**: Mattermost (Slack alternative)
 - **Recipe Manager**: KitchenOwl (shopping lists & recipes)
 - **File Sharing**: Gokapi
 - **Monitoring**: Uptime Kuma
@@ -129,7 +129,6 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Paperless** | 8097 | paperless.gmojsoski.com | Document management (PostgreSQL) |
 | **Outline** | 8098 | - | Wiki & knowledge base (local only, PostgreSQL + Redis) |
 | **Mattermost** | 8066 | mattermost.gmojsoski.com | Team communication platform (Slack alternative, PostgreSQL) |
-| **Zulip** | 8070 | zulip.gmojsoski.com | Team communication platform with webhooks (PostgreSQL) |
 | **Uptime Kuma** | 3001 | - | Monitoring & alerts |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Web analytics |
 | **Homepage** | 8000 | - | Service dashboard |
@@ -164,7 +163,6 @@ Pi-version-control/
 │   ├── mattermost/
 │   ├── pihole/
 │   ├── portainer/
-│   ├── zulip/
 │   ├── uptime-kuma/
 │   ├── vaultwarden/
 │   └── watchtower/
@@ -210,7 +208,6 @@ Pi-version-control/
 ├── jellyfin/
 ├── kitchenowl/
 ├── mattermost/
-├── zulip/
 ├── nginx-vaultwarden/
 ├── paperless/
 ├── portainer/
@@ -290,18 +287,17 @@ See individual setup guides in `usefull files/`:
 
 **Mattermost Setup**: See `docker/mattermost/README.md` for installation and configuration details.
 
-**Zulip Setup**: See `docker/zulip/README.md` for installation and configuration details.
-
 ## <a name="monitoring--auto-recovery"></a>🛡️ Monitoring & Auto-Recovery
 
 The server has a multi-layer monitoring system:
 
 | Layer | Tool | Frequency | Purpose |
 |-------|------|-----------|---------|
-| 1 | enhanced-health-check.timer | Every 30 seconds | Check & restart all services |
+| 1 | enhanced-health-check.timer | Every 3 minutes | Check & restart all services |
 | 2 | Docker restart policies | On failure | Auto-restart containers |
 | 3 | Cloudflare Tunnel (2 replicas) | Continuous | Redundant external access |
 | 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
+| 5 | Portfolio Update | Manual (via `make portfolio-update`) | Sync portfolio from GitHub |
 
 ### Check Monitoring Status
 
