@@ -4,7 +4,7 @@
 [![Docker](https://img.shields.io/badge/containers-17-blue?style=flat-square&logo=docker)](https://github.com/abracadaniel92/lenovo-homelab)
 
 
-This repository contains all configuration files, scripts, and setup instructions for a self-hosted home server. The server runs multiple services including Docker containers, reverse proxy (Caddy), Cloudflare Tunnel, and various applications.
+This repository contains all configuration files, scripts, and setup instructions for a self-hosted home lab. The lab consists of two devices: a **Lenovo ThinkCentre** (main server) running all application services, and a **Raspberry Pi 4** (4GB RAM) running Pi-hole for network-wide DNS and ad blocking.
 
 ## 📋 Table of Contents
 
@@ -20,6 +20,17 @@ This repository contains all configuration files, scripts, and setup instruction
 
 ## <a name="overview"></a>🎯 Overview
 
+### Home Lab Architecture
+
+The home lab consists of two devices working together:
+
+| Device | Hostname | Role | Hardware |
+|--------|----------|------|----------|
+| **Main Server** | lemongrab | Application services (ThinkCentre) | See below |
+| **DNS Server** | pihole | Network DNS & ad blocking (Raspberry Pi 4) | See below |
+
+### ThinkCentre (Main Server) - lemongrab
+
 | Detail | Value |
 |--------|-------|
 | **Hostname** | lemongrab |
@@ -28,17 +39,31 @@ This repository contains all configuration files, scripts, and setup instruction
 | **Docker Data** | `/home/docker-projects/` (symlinked from `/mnt/ssd/docker-projects/`) |
 | **Backups** | `/mnt/ssd/backups/` |
 
-### Hardware Specs
+#### Hardware Specs
 
 | Component | Specification |
 |-----------|---------------|
+| **Model** | Lenovo ThinkCentre |
 | **CPU** | Intel Pentium G4560T @ 2.90GHz (2 Cores, 4 Threads) |
 | **RAM** | 32GB DDR4 |
 | **Storage** | 512GB NVMe SSD |
 | **Network** | Gigabit Ethernet |
 
-### What This Server Runs
+### Raspberry Pi 4 (DNS Server) - pihole
 
+| Detail | Value |
+|--------|-------|
+| **Hostname** | pihole |
+| **Model** | Raspberry Pi 4 Model B |
+| **RAM** | 4GB |
+| **OS** | Raspberry Pi OS (Debian-based) |
+| **Network** | Gigabit Ethernet (primary), WiFi (secondary) |
+| **Purpose** | Pi-hole DNS server & network-wide ad blocking |
+| **Configuration** | Docker-based deployment |
+
+### What This Lab Runs
+
+**On ThinkCentre (lemongrab):**
 - **Reverse Proxy**: Caddy (handles routing for all services)
 - **Tunnel**: Cloudflare Tunnel (2 replicas for redundancy)
 - **Media Server**: Jellyfin (movies, TV, music, books)
@@ -57,13 +82,25 @@ This repository contains all configuration files, scripts, and setup instruction
 - **Service Dashboard**: Homepage
 - **Auto-Updates**: Watchtower (with exclusions)
 
+**On Raspberry Pi 4 (pihole):**
+- **DNS Server**: Pi-hole (network-wide DNS & ad blocking)
+- **Local DNS**: Resolves `*.gmojsoski.com` domains to ThinkCentre for local network access
+- **Ad Blocking**: Network-wide ad blocking with custom blocklists
+
 ## <a name="system-requirements"></a>💻 System Requirements
 
+**Main Server (ThinkCentre):**
 - Lenovo ThinkCentre or similar x86_64 system
 - Docker and Docker Compose installed
 - SSD storage (recommended for performance)
 - Cloudflare account with tunnel configured
 - Domain name with DNS configured
+
+**DNS Server (Raspberry Pi):**
+- Raspberry Pi 4 (4GB RAM recommended)
+- Docker and Docker Compose installed
+- Ethernet connection (WiFi optional)
+- Router with configurable DHCP DNS settings
 
 ## 📚 Documentation
 
@@ -74,6 +111,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 - [Backup Strategy](docs/concepts/backup-strategy.md)
 - [Common Commands](docs/reference/common-commands.md)
 - [How-To Guides](docs/how-to-guides/)
+- [Pi-hole Setup Guide](docs/how-to-guides/pi-hole-setup.md) - Raspberry Pi 4 DNS & ad blocking setup
 
 ## <a name="running-services"></a>📦 Running Services
 
@@ -426,6 +464,6 @@ This repository contains configuration files for personal use. Please review and
 ---
 
 **Last Updated**: January 2026  
-**System**: Lenovo ThinkCentre (lemongrab)  
-**OS**: Linux (Debian)  
+**Home Lab**: Lenovo ThinkCentre (lemongrab) + Raspberry Pi 4 (pihole)  
+**OS**: Linux (Debian-based)  
 **Repository**: https://github.com/abracadaniel92/lenovo-homelab
