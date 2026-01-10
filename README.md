@@ -129,7 +129,6 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Paperless** | 8097 | paperless.gmojsoski.com | Document management (PostgreSQL) |
 | **Outline** | 8098 | - | Wiki & knowledge base (local only, PostgreSQL + Redis) |
 | **Mattermost** | 8066 | mattermost.gmojsoski.com | Team communication platform (Slack alternative, PostgreSQL) |
-| **Zulip** | 8070 | zulip.gmojsoski.com | Team communication platform with webhooks (PostgreSQL) |
 | **Uptime Kuma** | 3001 | - | Monitoring & alerts |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Web analytics |
 | **Homepage** | 8000 | - | Service dashboard |
