@@ -1,5 +1,6 @@
 [Unit]
-Description=Run Portfolio Auto-Update Every 5 Minutes
+Description=Portfolio Auto-Update Timer (DISABLED - Use 'make portfolio-update' instead)
+# This timer is disabled to reduce CPU usage. Use 'make portfolio-update' to manually update.
 
 [Timer]
 OnBootSec=1min

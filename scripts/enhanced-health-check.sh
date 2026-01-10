@@ -16,7 +16,7 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-# Slack notification function
+# Mattermost notification function (Slack-compatible format)
 send_slack_notification() {
     local title="$1"
     local message="$2"
@@ -28,15 +28,19 @@ send_slack_notification() {
         source "$SCRIPT_DIR/.env"
     fi
     
-    # Prioritize monitoring-specific webhook
-    [ -n "$MONITORING_SLACK_WEBHOOK_URL" ] && SLACK_WEBHOOK_URL="$MONITORING_SLACK_WEBHOOK_URL"
+    # Prioritize monitoring-specific webhook (Mattermost or legacy Slack)
+    [ -n "$MONITORING_MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$MONITORING_MATTERMOST_WEBHOOK_URL"
+    [ -n "$MONITORING_SLACK_WEBHOOK_URL" ] && [ -z "$MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$MONITORING_SLACK_WEBHOOK_URL"
     
-    if [ -z "$SLACK_WEBHOOK_URL" ]; then
-        log "WARNING: SLACK_WEBHOOK_URL not set. Cannot send Slack notification."
+    # Default Mattermost webhook for uptime/health monitoring (same as slack-pi-monitoring.sh)
+    MATTERMOST_WEBHOOK_URL="${MATTERMOST_WEBHOOK_URL:-https://mattermost.gmojsoski.com/hooks/bettcnqps7ngpfp74i6zux5s8w}"
+    
+    if [ -z "$MATTERMOST_WEBHOOK_URL" ]; then
+        log "WARNING: MATTERMOST_WEBHOOK_URL not set. Cannot send Mattermost notification."
         return 1
     fi
     
-    # Build Slack message payload
+    # Build Mattermost message payload (Slack-compatible blocks format)
     read -r -d '' PAYLOAD << EOF || true
 {
     "blocks": [
@@ -68,19 +72,19 @@ send_slack_notification() {
 }
 EOF
 
-    # Send to Slack
+    # Send to Mattermost (Slack-compatible format)
     RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -H 'Content-type: application/json' \
         --data "$PAYLOAD" \
-        "$SLACK_WEBHOOK_URL" 2>/dev/null)
+        "$MATTERMOST_WEBHOOK_URL" 2>/dev/null)
     
     HTTP_CODE=$(echo "$RESPONSE" | tail -1)
     BODY=$(echo "$RESPONSE" | head -n -1)
     
     if [ "$HTTP_CODE" = "200" ] && [ "$BODY" = "ok" ]; then
-        log "Slack notification sent successfully"
+        log "Mattermost notification sent successfully"
         return 0
     else
-        log "WARNING: Failed to send Slack notification (HTTP $HTTP_CODE: $BODY)"
+        log "WARNING: Failed to send Mattermost notification (HTTP $HTTP_CODE: $BODY)"
         return 1
     fi
 }
