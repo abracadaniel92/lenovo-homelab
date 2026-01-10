@@ -87,6 +87,7 @@ This log documents specific issues encountered on the server and their fixes.
        - This prevents Pi-hole from forwarding AAAA queries upstream for these domains
        - See template: `docker/pihole/99-block-ipv6-local-domains.conf`
    - **Verification:** After fix, `nslookup mattermost.gmojsoski.com` should show ONLY `192.168.1.97` (no IPv6 addresses)
+   - **Testing:** Health check system (`enhanced-health-check.timer`) was disabled to test correlation - **CONFIRMED: NOT RELATED**. The IPv6 DNS issue persists even with health check disabled, confirming it's a Pi-hole configuration issue, not health check related.
    - **Status:** PENDING - To be fixed on Raspberry Pi (Pi-hole device) by user
    - **Note:** This issue affects ALL services with Local DNS Records in Pi-hole (Jellyfin, Nextcloud, etc.), not just Mattermost. The fix will apply to all services.
 
