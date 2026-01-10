@@ -1,0 +1,89 @@
+services:
+  mattermost:
+    image: mattermost/mattermost-team-edition:latest
+    container_name: mattermost
+    restart: unless-stopped
+    ports:
+      - "8065:8065"
+    environment:
+      # Database
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: postgres://mmuser:mmuser-password@mattermost-postgres:5432/mattermost?sslmode=disable&connect_timeout=10
+      
+      # Server Configuration
+      MM_SERVICESETTINGS_SITEURL: https://mattermost.gmojsoski.com
+      MM_SERVICESETTINGS_LISTENADDRESS: 0.0.0.0:8065
+      
+      # Local storage
+      MM_FILESETTINGS_DRIVERNAME: local
+      MM_FILESETTINGS_DIRECTORY: /mattermost/data
+      
+      # Email Authentication (enabled for external access)
+      MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL: true
+      MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL: true
+      MM_EMAILSETTINGS_ENABLENOTIFICATIONS: false
+      MM_EMAILSETTINGS_SMTPSERVER: ""
+      MM_EMAILSETTINGS_SMTPPORT: "587"
+      MM_EMAILSETTINGS_ENABLESMTPAUTH: false
+      MM_EMAILSETTINGS_FEEDBACKNAME: Mattermost
+      MM_EMAILSETTINGS_FEEDBACKEMAIL: noreply@gmojsoski.com
+      MM_EMAILSETTINGS_REPLYTOADDRESS: noreply@gmojsoski.com
+      
+      # Allow user sign-up (required to create first account)
+      MM_SERVICESETTINGS_ENABLEOPENSERVER: true
+      MM_SERVICESETTINGS_ENABLESIGNUPWITHEMAIL: true
+      
+      # Username/Password Authentication (enabled by default with email auth)
+      # Security
+      MM_SERVICESETTINGS_ENABLELOCALMODE: false
+      MM_SERVICESETTINGS_ENABLECUSTOMEMOJI: true
+      
+    volumes:
+      - mattermost-data:/mattermost/data
+      - mattermost-config:/mattermost/config
+      - mattermost-logs:/mattermost/logs
+      - mattermost-plugins:/mattermost/plugins
+      - mattermost-client-plugins:/mattermost/client/plugins
+    depends_on:
+      mattermost-postgres:
+        condition: service_healthy
+    networks:
+      - mattermost-net
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f mattermost || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mattermost-postgres:
+    image: postgres:15-alpine
+    container_name: mattermost-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mmuser
+      POSTGRES_PASSWORD: mmuser-password
+      POSTGRES_DB: mattermost
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+    volumes:
+      - mattermost-postgres-data:/var/lib/postgresql/data
+    networks:
+      - mattermost-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mmuser -d mattermost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mattermost-data:
+  mattermost-config:
+  mattermost-logs:
+  mattermost-plugins:
+  mattermost-client-plugins:
+  mattermost-postgres-data:
+
+networks:
+  mattermost-net:
+    driver: bridge
+
