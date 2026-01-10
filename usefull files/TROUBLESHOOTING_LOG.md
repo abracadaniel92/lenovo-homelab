@@ -2,6 +2,146 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-01-10] Mattermost Installation & Configuration
+
+**Date:** 2026-01-10
+**Service:** Mattermost Team Communication Platform
+
+### Initial Installation
+**Completed:**
+- Created Mattermost docker-compose.yml with PostgreSQL 15 database
+- Configured for local-only access initially on port 8065
+- Set up proper volume persistence for data, config, logs, and plugins
+- Created comprehensive README.md with setup instructions
+
+**Configuration Details:**
+- Port: 8065 (mapped to host)
+- Database: PostgreSQL 15 (separate container)
+- Storage: Local filesystem (Docker volumes)
+- Authentication: Email/password enabled
+
+### External Exposure Setup
+**Completed:**
+- Added Caddyfile entry for `mattermost.gmojsoski.com` → `http://172.17.0.1:8065`
+- Added Cloudflare Tunnel ingress rule: `mattermost.gmojsoski.com` → `http://localhost:8080`
+- Updated Mattermost SITEURL to `https://mattermost.gmojsoski.com`
+- Added domain to verify-services.sh script
+- Created admin user via API: username `admin`, password `TempPass123!`
+- Created initial team "Main Team" via API
+
+**Issues Encountered:**
+
+1. **Caddyfile Configuration Location:**
+   - **Issue:** Mattermost routing not working - requests falling through to default portfolio site
+   - **Root Cause:** Added Mattermost block to repo Caddyfile at `docker/caddy/Caddyfile`, but production Caddyfile is at `/home/docker-projects/caddy/config/Caddyfile`
+   - **Fix:** Added Mattermost block to production Caddyfile at `/home/docker-projects/caddy/config/Caddyfile`
+   - **Lesson:** Always check where Docker volumes mount config files vs repo copies
+
+2. **Health Check Failure:**
+   - **Issue:** Container marked as "unhealthy" due to default healthcheck using `mmctl system status --local`
+   - **Root Cause:** Healthcheck requires local mode enabled, but we disabled it for external access (`MM_SERVICESETTINGS_ENABLELOCALMODE: false`)
+   - **Fix:** Updated healthcheck to use process check: `pgrep -f mattermost || exit 1`
+   - **Status:** Mattermost is functional despite healthcheck showing "starting" - API responds correctly
+
+3. **Sign-In Methods Disabled:**
+   - **Issue:** Users couldn't log in - "This server doesn't have any sign-in methods enabled"
+   - **Root Cause:** Email authentication was disabled in initial config (set for local-only)
+   - **Fix:** Enabled email authentication:
+     - `MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL: true`
+     - `MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL: true`
+     - `MM_SERVICESETTINGS_ENABLEOPENSERVER: true` (for initial account creation)
+
+4. **Team Creation Required:**
+   - **Issue:** After login, Mattermost required team selection but no teams existed
+   - **Fix:** Created "Main Team" via Mattermost API using admin authentication
+   - **Method:** Used login token from response header (`Token:` header) for API authentication
+
+5. **DNS Propagation Delay:**
+   - **Issue:** External DNS not resolving immediately after CNAME creation
+   - **Solution:** Waited for DNS propagation (5-15 minutes). External DNS resolvers (8.8.8.8, 1.1.1.1) resolved correctly, local Pi-hole DNS took longer to update
+
+6. **Local Network Access Issue:**
+   - **Issue:** Mattermost not accessible locally via domain name (`http://mattermost.gmojsoski.com`)
+   - **Root Cause:** Browsers default to port 80 for HTTP, but Caddy listens on port 8080 on the host (mapped from container port 80). Pi-hole DNS correctly resolves to local IP (192.168.1.97), but port 80 has no listener.
+   - **Solution:** For local HTTP access via domain, users must specify port 8080: `http://mattermost.gmojsoski.com:8080`
+   - **Alternative Access Methods:**
+     - HTTPS: `https://mattermost.gmojsoski.com` (goes through Cloudflare Tunnel - works fine)
+     - Direct IP:port: `http://192.168.1.97:8065` (bypasses Caddy, always works, no DNS needed)
+     - Localhost: `http://localhost:8065` (from server itself)
+   - **Note:** This is expected behavior - Caddy is intentionally on port 8080 to avoid conflicts. All services follow this pattern.
+   - **About nginx:** Nginx is NOT required. Mattermost works fine with Caddy directly. Some older guides mention nginx, but it would be redundant.
+
+7. **Pi-hole IPv6 DNS Resolution Issue (PENDING FIX ON PI-HOLE DEVICE):**
+   - **Issue:** `nslookup mattermost.gmojsoski.com` returns both local IPv4 (192.168.1.97) AND Cloudflare IPv6 addresses (2606:4700:...). Browsers prefer IPv6, causing connections to go through Cloudflare instead of directly to local server.
+   - **Root Cause:** Pi-hole forwards DNS queries upstream even when a Local DNS Record exists. The Local DNS Record creates an A record (IPv4), but Pi-hole still forwards AAAA (IPv6) queries upstream to Cloudflare DNS, resulting in both IPv4 and IPv6 addresses being returned.
+   - **Impact:** When accessing `http://mattermost.gmojsoski.com:8080` locally, browsers may try IPv6 first, routing through Cloudflare instead of direct local access, causing slower/indirect connections.
+   - **Workaround (Currently in use):** Access Mattermost directly via IP: `http://192.168.1.97:8065` (bypasses DNS, always works)
+   - **Solution (To be implemented on Pi-hole device):**
+     - **Option 1 (Recommended):** Disable IPv6 in Pi-hole Admin UI:
+       - Access `http://192.168.1.98/admin` (or Pi-hole IP)
+       - Settings → DNS → Uncheck "Enable IPv6 support"
+       - Save and restart Pi-hole: `docker restart pihole`
+     - **Option 2:** Create custom dnsmasq config on Pi-hole device:
+       - Create file: `/etc/dnsmasq.d/99-block-ipv6-local-domains.conf`
+       - Add: `server=/mattermost.gmojsoski.com/#` (and other local domains)
+       - This prevents Pi-hole from forwarding AAAA queries upstream for these domains
+       - See template: `docker/pihole/99-block-ipv6-local-domains.conf`
+   - **Verification:** After fix, `nslookup mattermost.gmojsoski.com` should show ONLY `192.168.1.97` (no IPv6 addresses)
+   - **Status:** PENDING - To be fixed on Raspberry Pi (Pi-hole device) by user
+   - **Note:** This issue affects ALL services with Local DNS Records in Pi-hole (Jellyfin, Nextcloud, etc.), not just Mattermost. The fix will apply to all services.
+
+### Known Issues / Stability Concerns
+**Reported:** Service appears "a bit unstable" and drops from time to time
+
+**Potential Causes to Monitor:**
+- Health check configuration may need refinement
+- Resource constraints (Mattermost + PostgreSQL on same host)
+- Network connectivity issues
+- Database connection pool exhaustion
+
+**Recommendations for Stability:**
+- Monitor logs: `docker compose logs -f mattermost`
+- Check container resource usage: `docker stats mattermost mattermost-postgres`
+- Verify database connection health
+- Consider adjusting healthcheck interval/start_period if startup is slow
+- Monitor Mattermost application logs for errors: `/mattermost/logs/`
+
+### Files Modified/Created:
+- `docker/mattermost/docker-compose.yml` (created)
+- `docker/mattermost/README.md` (created)
+- `docker/mattermost/fix-auth.sh` (created - helper script, not used)
+- `/home/docker-projects/caddy/config/Caddyfile` (added Mattermost block - production file)
+- `docker/caddy/Caddyfile` (added Mattermost block - repo copy)
+- `Makefile` (added `lab-mattermost-*` commands)
+- `restart services/LAB_COMMANDS.md` (added Mattermost commands)
+- `scripts/verify-services.sh` (added `mattermost.gmojsoski.com`)
+- `README.md` (added Mattermost to services list)
+- `~/.cloudflared/config.yml` (added Mattermost ingress - production file, not in repo)
+
+### Commands Added to Makefile:
+- `make lab-mattermost` - Show help
+- `make lab-mattermost-start` - Start Mattermost
+- `make lab-mattermost-stop` - Stop Mattermost
+- `make lab-mattermost-restart` - Restart Mattermost
+- `make lab-mattermost-logs` - View logs
+- `make lab-mattermost-status` - Check status
+
+### Access Information:
+- **External URL:** https://mattermost.gmojsoski.com
+- **Local URL:** http://localhost:8065
+- **Admin Username:** admin
+- **Admin Email:** admin@gmojsoski.com
+- **Initial Password:** TempPass123! (CHANGE THIS!)
+- **Default Team:** Main Team
+
+### Next Steps (Future Improvements):
+1. ✅ Change default admin password after first login
+2. ✅ Monitor stability and investigate drops
+3. Consider enabling SMTP for email notifications
+4. Set up backup strategy for Mattermost database
+5. Configure team permissions and policies
+6. Add Mattermost to backup scripts if needed
+
 ## [2026-01-07] Cloudflare Tunnel Certificate Configuration Error
 
 **Symptoms:**
