@@ -1,289 +1,193 @@
-# Mattermost - Team Communication Platform
+# Mattermost Setup & Configuration
 
-Mattermost is an open-source, self-hosted Slack alternative for team communication. This setup is configured for both **local and external access**.
+Self-hosted team communication platform - open-source Slack alternative. Mattermost provides real-time messaging, file sharing, and webhooks.
 
-## Overview
+## 🚀 Quick Start
 
-- **Port**: 8065 (direct), 8080 (via Caddy)
-- **Access**: 
-  - **External HTTPS**: `https://mattermost.gmojsoski.com` (via Cloudflare Tunnel)
-  - **Local Network HTTP**: `http://mattermost.gmojsoski.com:8080` (via Caddy - **NOTE: Port 8080 required for local domain access**)
-  - **Direct Local**: `http://localhost:8065` or `http://192.168.1.97:8065`
-- **Database**: PostgreSQL 15
-- **Image**: `mattermost/mattermost-team-edition:latest`
-- **Status**: ⚠️ May experience occasional instability - monitor logs if issues occur
+```bash
+cd ~/Desktop/Cursor\ projects/Pi-version-control/docker/mattermost
+docker compose up -d
+```
 
-**Important for Local Access:**
-- When accessing via domain name on local network, you **must** specify port 8080: `http://mattermost.gmojsoski.com:8080`
-- Port 80 is not available - Caddy listens on port 8080 on the host
-- For HTTPS, use `https://mattermost.gmojsoski.com` (goes through Cloudflare)
+**Wait 1-2 minutes** for Mattermost to fully initialize (it needs to set up database, run migrations, etc.)
 
-## Quick Start
+## 📍 Access URLs
 
-1. **Navigate to the Mattermost directory:**
-   ```bash
-   cd "/home/goce/Desktop/Cursor projects/Pi-version-control/docker/mattermost"
-   ```
+- **Local**: `http://localhost:8066`
+- **Network (Direct IP)**: `http://192.168.1.97:8066`
+- **External HTTPS**: `https://mattermost.gmojsoski.com` (via Cloudflare Tunnel)
 
-2. **Start Mattermost:**
-   ```bash
-   docker compose up -d
-   ```
+**Important**: All devices (WiFi and mobile) should access via `https://mattermost.gmojsoski.com`. Do NOT add a Pi-hole Local DNS Record for this domain - it will cause the same WiFi access issues that were fixed for other services.
 
-3. **Check logs:**
-   ```bash
-   docker compose logs -f mattermost
-   ```
+## 🔧 Configuration
 
-4. **Access Mattermost:**
-   - **External**: `https://mattermost.gmojsoski.com` (recommended)
-   - **Local Network**: `http://mattermost.gmojsoski.com:8080` (note: port 8080 required)
-   - **Direct Local**: `http://localhost:8065`
+### Initial Setup
 
-## First-Time Setup
-
-**Admin Account Already Created:**
-- Username: `admin`
-- Email: `admin@gmojsoski.com`
-- Password: `TempPass123!` (**CHANGE THIS IMMEDIATELY!**)
-- Initial Team: "Main Team" (already created)
-
-**To Access:**
-1. Go to one of these URLs:
-   - **External (HTTPS)**: `https://mattermost.gmojsoski.com` (recommended)
-   - **Local Network (HTTP)**: `http://mattermost.gmojsoski.com:8080` (note: port 8080 is required)
-   - **Direct Local**: `http://localhost:8065`
-2. Log in with the admin credentials above
-3. Select "Main Team" when prompted
-4. **IMPORTANT**: Change the admin password immediately:
-   - Click your profile icon → **Settings** → **Security** → **Change Password**
-5. You can then:
-   - Create additional teams and channels
-   - Invite other users
-   - Configure settings via System Console
-
-## Configuration
+On first access, Mattermost will show a setup wizard:
+1. Create your first team (e.g., "Main Team")
+2. Create admin account
+3. Configure email (optional - can use console backend for now)
 
 ### Environment Variables
 
-Key configuration options in `docker-compose.yml`:
+Key configuration in `docker-compose.yml`:
+- `MM_SERVICESETTINGS_SITEURL`: `https://mattermost.gmojsoski.com` - Your domain
+- `MM_SERVICESETTINGS_ENABLEOPENSERVER`: `true` - Allows user sign-up
+- `MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL`: `true` - Enable email signup
+- `MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL`: `true` - Enable email signin
+- Database credentials: `mmuser` / `mmuser_password` (**CHANGE IN PRODUCTION!**)
 
-- `MM_SERVICESETTINGS_SITEURL`: Set to `https://mattermost.gmojsoski.com` for external access
-- `MM_SERVICESETTINGS_ENABLELOCALMODE`: Disabled (external access enabled)
-- `MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL`: Enabled (external access)
-- `MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL`: Enabled
-- `MM_SERVICESETTINGS_ENABLEOPENSERVER`: Enabled (allows user sign-up)
+### Webhooks & Integrations
 
-### Data Persistence
+Mattermost has excellent webhook support:
+1. **Incoming Webhooks**: System Console → Integrations → Incoming Webhooks
+2. **Outgoing Webhooks**: System Console → Integrations → Outgoing Webhooks
+3. **Slash Commands**: System Console → Integrations → Slash Commands
+4. **REST API**: Full REST API available at `/api/v4/`
 
-All data is stored in Docker volumes:
-- `mattermost-data`: User uploads and files
-- `mattermost-config`: Configuration files
-- `mattermost-logs`: Application logs
-- `mattermost-plugins`: Installed plugins
-- `mattermost-postgres-data`: Database data
+**Webhook URL format**: `https://mattermost.gmojsoski.com/hooks/...`
 
-## Management Commands
+## 🗄️ Database & Dependencies
 
-### Stop Mattermost
+Mattermost uses:
+- **PostgreSQL 15** - Main database (no AVX requirement! ✅)
+- **File storage** - Local volumes for uploads and files
+- **Bleve** - Full-text search indexing
+
+All services are containerized and managed via docker-compose.
+
+## 📝 Management Commands
+
 ```bash
-docker compose down
+# Using Makefile (from project root)
+make lab-mattermost-start      # Start Mattermost
+make lab-mattermost-stop       # Stop Mattermost
+make lab-mattermost-restart    # Restart Mattermost
+make lab-mattermost-logs       # View logs
+make lab-mattermost-status     # Check status
+
+# Or directly with docker compose
+cd docker/mattermost
+docker compose up -d      # Start
+docker compose down       # Stop
+docker compose restart    # Restart
+docker compose logs -f    # View logs
+docker compose ps         # Check status
 ```
 
-### Stop and Remove Data (⚠️ Destroys all data)
-```bash
-docker compose down -v
-```
+## 🔍 Troubleshooting
 
-### View Logs
-```bash
-# All services
-docker compose logs -f
-
-# Mattermost only
-docker compose logs -f mattermost
-
-# PostgreSQL only
-docker compose logs -f mattermost-postgres
-```
-
-### Restart Mattermost
-```bash
-docker compose restart mattermost
-```
-
-### Backup Database
-```bash
-docker exec mattermost-postgres pg_dump -U mmuser mattermost > mattermost-backup-$(date +%Y%m%d).sql
-```
-
-### Restore Database
-```bash
-docker exec -i mattermost-postgres psql -U mmuser mattermost < mattermost-backup-YYYYMMDD.sql
-```
-
-## Troubleshooting
-
-### Container won't start
-- Check logs: `docker compose logs mattermost`
-- Verify PostgreSQL is healthy: `docker compose ps`
-- Check port 8065 is not in use: `ss -tulpn | grep 8065`
+### Mattermost not starting / taking too long
+- **First startup takes 1-3 minutes** - Mattermost needs to initialize database, run migrations, etc.
+- Check logs: `docker compose logs mattermost -f`
+- Wait for "Server is listening on :8065" message in logs
+- Check database is healthy: `docker compose ps mattermost-postgres`
 
 ### Database connection errors
-- Wait for PostgreSQL to be ready (healthcheck should pass)
+- Verify PostgreSQL is running: `docker compose ps mattermost-postgres`
 - Check PostgreSQL logs: `docker compose logs mattermost-postgres`
-- Verify credentials match in both services
+- Ensure database container is healthy before starting Mattermost (depends_on should handle this)
+- Check credentials match in both services
 
-### Can't access web interface locally
-- **Port 80 not working**: Caddy listens on port 8080, not 80. Use:
-  - `http://mattermost.gmojsoski.com:8080` (local network with domain)
-  - `http://localhost:8065` (direct access)
-  - `https://mattermost.gmojsoski.com` (external HTTPS via Cloudflare)
-- Verify container is running: `docker compose ps`
-- Check port binding: `docker compose port mattermost 8065`
-- Test locally: `curl http://localhost:8065`
-- Test via Caddy: `curl -H "Host: mattermost.gmojsoski.com" http://localhost:8080`
+### Can't access web interface
+- **External HTTPS**: Use `https://mattermost.gmojsoski.com` (via Cloudflare Tunnel)
+- **Local**: Use `http://localhost:8066` (direct access)
+- Verify Caddy is routing correctly: `curl -H "Host: mattermost.gmojsoski.com" http://localhost:8080`
+- Check Cloudflare Tunnel config has `mattermost.gmojsoski.com` entry
 
-### Local domain access issues
-- **Pi-hole DNS**: Ensure `mattermost.gmojsoski.com` points to server IP (192.168.1.97) in Pi-hole Local DNS Records
-- **Port required**: When accessing via domain locally, you **must** use port 8080: `http://mattermost.gmojsoski.com:8080`
-- **Why port 8080?**: Caddy is mapped to host port 8080 (container port 80 → host port 8080)
-- **HTTPS access**: Use `https://mattermost.gmojsoski.com` which goes through Cloudflare Tunnel (works both locally and externally)
+### WiFi access issues (should NOT happen now)
+- **DO NOT** add Pi-hole Local DNS Record for `mattermost.gmojsoski.com`
+- All devices (WiFi and mobile) should use Cloudflare DNS
+- If WiFi access fails, it's likely the same DNS issue that was fixed for other services
+- Solution: Remove any Pi-hole Local DNS Record for `mattermost.gmojsoski.com`
 
-## Security Notes
+### Webhook not working
+- Ensure `MM_SERVICESETTINGS_SITEURL` matches your actual domain (`https://mattermost.gmojsoski.com`)
+- Check Caddy is routing correctly: `curl -H "Host: mattermost.gmojsoski.com" http://localhost:8080`
+- Verify webhook URL in Mattermost admin panel
+- Check Mattermost logs for webhook errors: `docker compose logs mattermost | grep -i webhook`
 
-- **Local Only**: This setup is configured for local network access only
-- **Default Credentials**: Change the PostgreSQL password in production
-- **No SSL**: For local use only - add SSL if exposing externally
-- **First User**: The first user account created becomes the admin
+### Email not working
+- Default setup allows email signup/signin but doesn't send emails
+- To enable email sending, configure SMTP settings in System Console → Email
+- For development, you can keep the console backend
 
-## Local Network Access Notes
+## 🔐 Security Notes
 
-**Important**: Mattermost is already exposed externally. For local network access:
+1. **Change default passwords**:
+   - Database password (`POSTGRES_PASSWORD` in docker-compose.yml)
+   - Admin password (set during first-time setup)
+   - Generate secure password: `openssl rand -base64 32`
 
-1. **Via Domain Name (Pi-hole DNS)**:
-   - Use `http://mattermost.gmojsoski.com:8080` (port 8080 is required)
-   - Pi-hole should resolve `mattermost.gmojsoski.com` to your server IP (192.168.1.97)
-   - Port 80 is not available - Caddy listens on port 8080
+2. **Initial setup**: First access should be secure (create admin account)
 
-2. **Via HTTPS**:
-   - Use `https://mattermost.gmojsoski.com` (goes through Cloudflare Tunnel)
-   - Works both locally and externally
+3. **Webhooks**: Use secure webhook tokens, don't share URLs publicly
 
-3. **Direct Access**:
-   - Use `http://localhost:8065` (from server itself)
-   - Use `http://192.168.1.97:8065` (from other devices on network)
+4. **File uploads**: Default max file size is 50MB (configurable via `MM_FILESETTINGS_MAXFILESIZE`)
 
-**Why Port 8080?**
-- Caddy container listens on port 80 internally
-- Docker maps container port 80 → host port 8080
-- Port 80 is not bound on the host (to avoid conflicts)
-- This is standard for all services in this setup
+## 📚 Documentation
 
-## Adding External Access Later (Already Done)
+- **Official Docs**: https://docs.mattermost.com/
+- **API Docs**: https://api.mattermost.com/
+- **Webhook Docs**: https://developers.mattermost.com/integrate/webhooks/incoming/
+- **Docker Setup**: https://docs.mattermost.com/install/docker-local-machine.html
 
-Mattermost is already exposed externally. If you need to reconfigure:
+## ✨ Features
 
-1. **Update Caddyfile** (`docker/caddy/Caddyfile`):
-   ```caddyfile
-   @mattermost host mattermost.gmojsoski.com
-   handle @mattermost {
-       reverse_proxy http://172.17.0.1:8065
-   }
-   ```
+- ✅ Real-time messaging (channels and direct messages)
+- ✅ File sharing and attachments
+- ✅ Webhooks (incoming & outgoing)
+- ✅ Slash commands
+- ✅ Full REST API
+- ✅ Mobile apps (iOS, Android)
+- ✅ Video calls (with Jitsi integration)
+- ✅ Integrations (GitHub, GitLab, Jenkins, etc.)
+- ✅ Search and filters
+- ✅ Custom emoji support
+- ✅ Threads and reactions
 
-2. **Update Cloudflare config** (`~/.cloudflared/config.yml`):
-   ```yaml
-   - hostname: mattermost.gmojsoski.com
-     service: http://localhost:8080
-   ```
+## ⚠️ Important Configuration Notes
 
-3. **Update Mattermost SiteURL** in `docker-compose.yml`:
-   ```yaml
-   MM_SERVICESETTINGS_SITEURL: https://mattermost.gmojsoski.com
-   ```
+### DNS Configuration (CRITICAL - Do NOT Add Pi-hole Local DNS Record)
+- **DO NOT** add `mattermost.gmojsoski.com` to Pi-hole Local DNS Records
+- All devices (WiFi and mobile) should use Cloudflare DNS
+- This ensures consistent access through Cloudflare Tunnel
+- Previous WiFi access issues were caused by Pi-hole Local DNS Records resolving to local IP
 
-4. **Restart services** in order:
-   - Caddy first: `docker compose -f docker/caddy/docker-compose.yml restart`
-   - Cloudflared second: `docker compose -f docker/cloudflared/docker-compose.yml restart`
-   - Mattermost: `docker compose restart mattermost`
+### Caddy Configuration
+- Mattermost is configured in Caddyfile with:
+  - **NO gzip encoding** - Can cause issues with real-time features and webhooks
+  - Proper headers: `X-Forwarded-Proto`, `X-Forwarded-Ssl`, `Host`
+  - Reverse proxy to `http://172.17.0.1:8066` (host port mapping)
 
-## Local Network Access Explained
+### Cloudflare Tunnel Configuration
+- Mattermost is configured in `~/.cloudflared/config.yml`
+- Routes `mattermost.gmojsoski.com` → `http://localhost:8080` (Caddy)
+- All SSL termination handled by Cloudflare
 
-### How Other Services Work Locally
+## 🔄 Migration from Previous Setup
 
-All services follow the same pattern:
-- **Caddy listens on port 8080** (not port 80) on the host
-- **Pi-hole DNS resolves** domain names to the server IP (192.168.1.97) for local access
-- **HTTP access requires port 8080**: `http://service.gmojsoski.com:8080` (when Pi-hole resolves to local IP)
-- **HTTPS via Cloudflare**: `https://service.gmojsoski.com` (only works if DNS resolves to Cloudflare IP, not local IP)
+If you had Mattermost installed before:
+1. **Old configuration** used port 8065 directly
+2. **New configuration** uses port 8066 (host) → 8065 (container) to avoid conflict with RocketChat
+3. **No Pi-hole Local DNS Record** - This was the root cause of previous WiFi access issues
+4. **All access via Cloudflare Tunnel** - Consistent behavior across all networks
 
-**Note**: The documentation saying `http://jellyfin.gmojsoski.com` (without port) is outdated. All services require port 8080 for HTTP local access when using Pi-hole DNS that resolves to local IP. For HTTPS to work through Cloudflare, DNS must resolve to Cloudflare's IP (not the local IP).
+## 🐛 Known Issues & Solutions
 
-### Why Port 8080 for Local Domain Access?
+### Issue: Intermittent 530/502 errors
+**Solution**: This was caused by Pi-hole Local DNS Records. Ensure no Local DNS Record exists for `mattermost.gmojsoski.com`. All devices should use Cloudflare DNS.
 
-When accessing Mattermost via domain name on your local network:
-- **Port 80 is not available**: Caddy listens on port 8080 on the host (mapped from container port 80)
-- **Port 80 is not bound** on the host to avoid conflicts with other services
-- **Pi-hole DNS resolves correctly**: `mattermost.gmojsoski.com` → `192.168.1.97`
-- **Solution**: Use `http://mattermost.gmojsoski.com:8080` for local HTTP access
-- **Alternative**: Use `https://mattermost.gmojsoski.com` which goes through Cloudflare Tunnel (works both locally and externally)
+### Issue: Health check failures
+**Solution**: Health checks verify external HTTPS access. If DNS is misconfigured (Pi-hole Local DNS Record), health checks will fail intermittently.
 
-### Pi-hole Configuration (On Different Device)
+### Issue: Webhooks returning 530 errors
+**Possible causes**:
+- Rate limiting on external services (e.g., ntfy.sh)
+- DNS resolution issues from container
+- Network connectivity problems
 
-Since Pi-hole is on a different device (Raspberry Pi), you need to:
-
-1. **Access Pi-hole Admin**:
-   - Go to `http://[PI-HOLE-IP]/admin` on your Pi-hole device
-   - Navigate to: **Local DNS → DNS Records**
-
-2. **Add Mattermost DNS Record**:
-   - Domain: `mattermost.gmojsoski.com`
-   - IP: `192.168.1.97` (your server IP)
-   - Click **Add**
-
-3. **Verify DNS Resolution** (from any device on network):
-   ```bash
-   nslookup mattermost.gmojsoski.com
-   # Should show ONLY: 192.168.1.97
-   # If you see Cloudflare IPv6 addresses, see troubleshooting below
-   ```
-
-   **⚠️ Common Issue**: If `nslookup` shows both local IP (192.168.1.97) AND Cloudflare IPv6 addresses, browsers will try Cloudflare first. To fix:
-   - Go to Pi-hole Admin → Settings → DNS
-   - Disable IPv6 (or ensure Local DNS Records take precedence)
-   - Restart Pi-hole: `docker restart pihole`
-   - Verify: `nslookup mattermost.gmojsoski.com` should show ONLY `192.168.1.97`
-
-4. **Access Mattermost**:
-   - **Direct IP (simplest, always works)**: `http://192.168.1.97:8065` ✅ (bypasses Caddy, no DNS needed)
-   - **HTTP via domain (if Pi-hole DNS configured)**: `http://mattermost.gmojsoski.com:8080` ✅ (requires port 8080 and Pi-hole DNS working)
-   - **HTTPS (via Cloudflare)**: `https://mattermost.gmojsoski.com` ✅ (works externally and locally if DNS resolves to Cloudflare IP)
-   - **Via Caddy with Host header**: `http://192.168.1.97:8080` with `Host: mattermost.gmojsoski.com` (works, but browsers won't do this automatically)
-
-**Important Notes**:
-- **Simplest solution**: Use direct IP `http://192.168.1.97:8065` - no DNS configuration needed, always works
-- **For domain-based access**: If Pi-hole DNS is configured and working, use `http://mattermost.gmojsoski.com:8080` (requires port 8080)
-- **For HTTPS via Cloudflare**: DNS should resolve to Cloudflare IP (not local IP). If Pi-hole resolves to local IP, HTTPS will fail because there's no listener on port 443
-- **Pi-hole IPv6 issue**: If `nslookup` shows both local IPv4 and Cloudflare IPv6, browsers will prefer IPv6. See troubleshooting section below or use direct IP access as a workaround
-
-### Is Nginx Needed?
-
-**No, nginx is NOT required.** Mattermost works perfectly with Caddy as a reverse proxy. Some older guides mention nginx, but:
-- Caddy handles reverse proxying directly
-- Caddy provides automatic HTTPS (via Cloudflare)
-- Adding nginx would be redundant and add unnecessary complexity
-
-The setup uses:
-1. **Mattermost** → listens on port 8065
-2. **Caddy** → reverse proxies to Mattermost on port 8065
-3. **Cloudflare Tunnel** → provides external HTTPS access
-
-No nginx needed!
-
-## Resources
-
-- [Mattermost Documentation](https://docs.mattermost.com/)
-- [Mattermost Configuration Options](https://docs.mattermost.com/configure/configuration-settings.html)
-- [Mattermost Docker Installation](https://docs.mattermost.com/install/docker-local-machine.html)
-
+**Solutions**:
+- Check Mattermost container can reach external services: `docker exec mattermost curl -I https://ntfy.sh`
+- Verify webhook URL is correct
+- Check Mattermost logs for specific errors
