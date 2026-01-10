@@ -71,7 +71,7 @@ The home lab consists of two devices working together:
 - **Password Manager**: Vaultwarden (Bitwarden-compatible)
 - **Document Management**: Paperless-ngx (document digitization and organization)
 - **Knowledge Base**: Outline (wiki and documentation)
-- **Team Communication**: Mattermost (Slack alternative), Zulip (Slack alternative with excellent webhook support)
+- **Team Communication**: Mattermost (Slack alternative)
 - **Recipe Manager**: KitchenOwl (shopping lists & recipes)
 - **File Sharing**: Gokapi
 - **Monitoring**: Uptime Kuma
