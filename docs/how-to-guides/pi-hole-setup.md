@@ -283,7 +283,33 @@ docker logs pihole | tail -50
 dig @[REDACTED_INTERNAL_IP_2] google.com
 ```
 
-### Local services still going through Cloudflare
+### Local services still going through Cloudflare / Multiple IPs returned
+
+**Problem**: `nslookup` shows both local IP (192.168.1.97) AND Cloudflare IPv6 addresses. This causes browsers to try Cloudflare first.
+
+**Solution**: Configure Pi-hole to return ONLY the local IP for Local DNS Records:
+
+1. **Access Pi-hole Admin**: `http://[PI-HOLE-IP]/admin`
+2. **Go to**: Settings → DNS
+3. **Enable**: "Never forward non-FQDNs" (prevents forwarding incomplete queries)
+4. **Ensure**: "Never forward reverse lookups for private IP ranges" is enabled
+5. **Optionally disable IPv6** (Settings → DNS → Disable IPv6) if you don't need it for local services
+6. **Restart Pi-hole**: `docker restart pihole` (on Pi-hole device)
+
+**Alternative**: If you need IPv6, create a conditional forwarder or ensure Local DNS Records take precedence. However, the simplest solution is to disable IPv6 for local-only services.
+
+**Verify fix**:
+```bash
+# Should only show 192.168.1.97 (no Cloudflare IPs)
+nslookup mattermost.gmojsoski.com
+```
+Expected output (fixed):
+```
+Name: mattermost.gmojsoski.com
+Address: 192.168.1.97
+```
+
+**Original troubleshooting steps**:
 ```bash
 # Verify local DNS entries are loaded
 docker exec pihole cat /etc/dnsmasq.d/02-local-dns.conf

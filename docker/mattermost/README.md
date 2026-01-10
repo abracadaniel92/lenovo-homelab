@@ -245,8 +245,15 @@ Since Pi-hole is on a different device (Raspberry Pi), you need to:
 3. **Verify DNS Resolution** (from any device on network):
    ```bash
    nslookup mattermost.gmojsoski.com
-   # Should show: 192.168.1.97
+   # Should show ONLY: 192.168.1.97
+   # If you see Cloudflare IPv6 addresses, see troubleshooting below
    ```
+
+   **⚠️ Common Issue**: If `nslookup` shows both local IP (192.168.1.97) AND Cloudflare IPv6 addresses, browsers will try Cloudflare first. To fix:
+   - Go to Pi-hole Admin → Settings → DNS
+   - Disable IPv6 (or ensure Local DNS Records take precedence)
+   - Restart Pi-hole: `docker restart pihole`
+   - Verify: `nslookup mattermost.gmojsoski.com` should show ONLY `192.168.1.97`
 
 4. **Access Mattermost**:
    - **HTTP (local, fast)**: `http://mattermost.gmojsoski.com:8080` ✅ (requires port 8080)
