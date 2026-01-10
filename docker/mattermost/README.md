@@ -256,14 +256,16 @@ Since Pi-hole is on a different device (Raspberry Pi), you need to:
    - Verify: `nslookup mattermost.gmojsoski.com` should show ONLY `192.168.1.97`
 
 4. **Access Mattermost**:
-   - **HTTP (local, fast)**: `http://mattermost.gmojsoski.com:8080` ✅ (requires port 8080)
-   - **HTTPS (via Cloudflare)**: `https://mattermost.gmojsoski.com` (only works if DNS resolves to Cloudflare IP, not local IP)
-   - **Direct IP (bypasses Caddy)**: `http://192.168.1.97:8065` ✅
+   - **Direct IP (simplest, always works)**: `http://192.168.1.97:8065` ✅ (bypasses Caddy, no DNS needed)
+   - **HTTP via domain (if Pi-hole DNS configured)**: `http://mattermost.gmojsoski.com:8080` ✅ (requires port 8080 and Pi-hole DNS working)
+   - **HTTPS (via Cloudflare)**: `https://mattermost.gmojsoski.com` ✅ (works externally and locally if DNS resolves to Cloudflare IP)
+   - **Via Caddy with Host header**: `http://192.168.1.97:8080` with `Host: mattermost.gmojsoski.com` (works, but browsers won't do this automatically)
 
 **Important Notes**:
-- **For local HTTP access**: Pi-hole DNS should resolve to local IP (192.168.1.97), use port 8080
+- **Simplest solution**: Use direct IP `http://192.168.1.97:8065` - no DNS configuration needed, always works
+- **For domain-based access**: If Pi-hole DNS is configured and working, use `http://mattermost.gmojsoski.com:8080` (requires port 8080)
 - **For HTTPS via Cloudflare**: DNS should resolve to Cloudflare IP (not local IP). If Pi-hole resolves to local IP, HTTPS will fail because there's no listener on port 443
-- **Recommendation**: Use `http://mattermost.gmojsoski.com:8080` for fast local access, or `https://mattermost.gmojsoski.com` if you want to go through Cloudflare (requires DNS to resolve to Cloudflare IP)
+- **Pi-hole IPv6 issue**: If `nslookup` shows both local IPv4 and Cloudflare IPv6, browsers will prefer IPv6. See troubleshooting section below or use direct IP access as a workaround
 
 ### Is Nginx Needed?
 

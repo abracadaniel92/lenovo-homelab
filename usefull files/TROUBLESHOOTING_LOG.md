@@ -66,10 +66,29 @@ This log documents specific issues encountered on the server and their fixes.
    - **Solution:** For local HTTP access via domain, users must specify port 8080: `http://mattermost.gmojsoski.com:8080`
    - **Alternative Access Methods:**
      - HTTPS: `https://mattermost.gmojsoski.com` (goes through Cloudflare Tunnel - works fine)
-     - Direct IP:port: `http://192.168.1.97:8065` (bypasses Caddy)
+     - Direct IP:port: `http://192.168.1.97:8065` (bypasses Caddy, always works, no DNS needed)
      - Localhost: `http://localhost:8065` (from server itself)
    - **Note:** This is expected behavior - Caddy is intentionally on port 8080 to avoid conflicts. All services follow this pattern.
    - **About nginx:** Nginx is NOT required. Mattermost works fine with Caddy directly. Some older guides mention nginx, but it would be redundant.
+
+7. **Pi-hole IPv6 DNS Resolution Issue (PENDING FIX ON PI-HOLE DEVICE):**
+   - **Issue:** `nslookup mattermost.gmojsoski.com` returns both local IPv4 (192.168.1.97) AND Cloudflare IPv6 addresses (2606:4700:...). Browsers prefer IPv6, causing connections to go through Cloudflare instead of directly to local server.
+   - **Root Cause:** Pi-hole forwards DNS queries upstream even when a Local DNS Record exists. The Local DNS Record creates an A record (IPv4), but Pi-hole still forwards AAAA (IPv6) queries upstream to Cloudflare DNS, resulting in both IPv4 and IPv6 addresses being returned.
+   - **Impact:** When accessing `http://mattermost.gmojsoski.com:8080` locally, browsers may try IPv6 first, routing through Cloudflare instead of direct local access, causing slower/indirect connections.
+   - **Workaround (Currently in use):** Access Mattermost directly via IP: `http://192.168.1.97:8065` (bypasses DNS, always works)
+   - **Solution (To be implemented on Pi-hole device):**
+     - **Option 1 (Recommended):** Disable IPv6 in Pi-hole Admin UI:
+       - Access `http://192.168.1.98/admin` (or Pi-hole IP)
+       - Settings → DNS → Uncheck "Enable IPv6 support"
+       - Save and restart Pi-hole: `docker restart pihole`
+     - **Option 2:** Create custom dnsmasq config on Pi-hole device:
+       - Create file: `/etc/dnsmasq.d/99-block-ipv6-local-domains.conf`
+       - Add: `server=/mattermost.gmojsoski.com/#` (and other local domains)
+       - This prevents Pi-hole from forwarding AAAA queries upstream for these domains
+       - See template: `docker/pihole/99-block-ipv6-local-domains.conf`
+   - **Verification:** After fix, `nslookup mattermost.gmojsoski.com` should show ONLY `192.168.1.97` (no IPv6 addresses)
+   - **Status:** PENDING - To be fixed on Raspberry Pi (Pi-hole device) by user
+   - **Note:** This issue affects ALL services with Local DNS Records in Pi-hole (Jellyfin, Nextcloud, etc.), not just Mattermost. The fix will apply to all services.
 
 ### Known Issues / Stability Concerns
 **Reported:** Service appears "a bit unstable" and drops from time to time
