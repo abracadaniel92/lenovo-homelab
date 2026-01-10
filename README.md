@@ -163,7 +163,6 @@ Pi-version-control/
 │   ├── mattermost/
 │   ├── pihole/
 │   ├── portainer/
-│   ├── zulip/
 │   ├── uptime-kuma/
 │   ├── vaultwarden/
 │   └── watchtower/
@@ -209,7 +208,6 @@ Pi-version-control/
 ├── jellyfin/
 ├── kitchenowl/
 ├── mattermost/
-├── zulip/
 ├── nginx-vaultwarden/
 ├── paperless/
 ├── portainer/
@@ -289,18 +287,17 @@ See individual setup guides in `usefull files/`:
 
 **Mattermost Setup**: See `docker/mattermost/README.md` for installation and configuration details.
 
-**Zulip Setup**: See `docker/zulip/README.md` for installation and configuration details.
-
 ## <a name="monitoring--auto-recovery"></a>🛡️ Monitoring & Auto-Recovery
 
 The server has a multi-layer monitoring system:
 
 | Layer | Tool | Frequency | Purpose |
 |-------|------|-----------|---------|
-| 1 | enhanced-health-check.timer | Every 30 seconds | Check & restart all services |
+| 1 | enhanced-health-check.timer | Every 3 minutes | Check & restart all services |
 | 2 | Docker restart policies | On failure | Auto-restart containers |
 | 3 | Cloudflare Tunnel (2 replicas) | Continuous | Redundant external access |
 | 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
+| 5 | Portfolio Update | Manual (via `make portfolio-update`) | Sync portfolio from GitHub |
 
 ### Check Monitoring Status
 
