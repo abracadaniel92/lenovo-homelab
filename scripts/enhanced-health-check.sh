@@ -43,6 +43,7 @@ send_slack_notification() {
     # Build Mattermost message payload (Slack-compatible blocks format)
     read -r -d '' PAYLOAD << EOF || true
 {
+    "username": "System Bot",
     "blocks": [
         {
             "type": "header",

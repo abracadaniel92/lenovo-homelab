@@ -2,7 +2,7 @@
 
 ## Summary
 
-Major performance optimizations and cleanup to reduce CPU usage and improve system stability.
+Major performance optimizations and cleanup to reduce CPU usage and improve system stability. Added Mattermost push notifications and webhook bot username configuration.
 
 ## Changes Made
 
@@ -56,11 +56,38 @@ Major performance optimizations and cleanup to reduce CPU usage and improve syst
    - Mattermost webhook URLs remain as defaults but can be overridden via environment variables
    - Documented in scripts that they can be set via `.env` file
 
+### 💬 Mattermost Improvements
+
+1. **Mobile Push Notifications Enabled**
+   - Enabled push notifications via TPNS (Test Push Notification Service)
+   - Configuration added to `docker/mattermost/docker-compose.yml`:
+     - `MM_EMAILSETTINGS_SENDPUSHNOTIFICATIONS: "true"`
+     - `MM_EMAILSETTINGS_PUSHNOTIFICATIONSERVER: "https://push-test.mattermost.com"`
+   - Requires configuration in System Console → Environment → Push Notification Server
+   - TPNS is free for non-commercial self-hosted installations
+
+2. **Webhook Bot Usernames**
+   - Updated all Mattermost webhook scripts to use custom bot usernames:
+     - `enhanced-health-check.sh` → "System Bot"
+     - `slack-pi-monitoring.sh` → "System Bot"
+     - `slack-goatcounter-weekly.sh` → "Analytics Bot"
+   - Created test script: `scripts/test-mattermost-webhook.sh`
+   - Requires System Console → Integrations → Enable "Override usernames" setting
+   - Updated `docker/mattermost/README.md` with configuration instructions
+
+3. **Health Check Removed**
+   - Removed Docker healthcheck from Mattermost (curl not available in container)
+   - Mattermost verified to be working via API ping from host
+
 ### 📁 Files Modified
 
 #### Configuration Files
 - `docker/caddy/Caddyfile` - Removed Zulip reverse proxy block
+- `docker/mattermost/docker-compose.yml` - Added push notification settings, removed healthcheck
 - `scripts/verify-services.sh` - Removed zulip.gmojsoski.com
+- `scripts/enhanced-health-check.sh` - Added "System Bot" username to webhook payload
+- `scripts/slack-pi-monitoring.sh` - Added "System Bot" username to webhook payload
+- `scripts/slack-goatcounter-weekly.sh` - Added "Analytics Bot" username to webhook payload
 - `Makefile` - Added health-verify, health-fix, portfolio-update commands
 - `Makefile` - Updated to use CURDIR for location independence
 - `systemd/portfolio-update.timer` - Marked as disabled
@@ -68,6 +95,7 @@ Major performance optimizations and cleanup to reduce CPU usage and improve syst
 
 #### Documentation
 - `README.md` - Removed Zulip references, updated monitoring frequency
+- `docker/mattermost/README.md` - Added push notification and webhook bot username configuration instructions
 - `restart services/LAB_COMMANDS.md` - Added all new commands
 - `usefull files/MONITORING_AND_RECOVERY.md` - Updated intervals
 - `docs/reference/infrastructure-summary.md` - Removed Zulip
@@ -77,6 +105,7 @@ Major performance optimizations and cleanup to reduce CPU usage and improve syst
 - `scripts/verify-health-check.sh` - Verification script
 - `scripts/fix-health-check-timer.sh` - Timer fix script
 - `scripts/portfolio-update-wrapper.sh` - Portfolio update wrapper
+- `scripts/test-mattermost-webhook.sh` - Test script for Mattermost webhook bot usernames
 - `HEALTH_CHECK_STATUS.md` - Health check documentation
 - `INSTALL_PORTFOLIO_UPDATE.md` - Portfolio update installation guide
 

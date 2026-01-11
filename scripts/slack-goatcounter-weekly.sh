@@ -103,8 +103,8 @@ trap "rm -f $TMP_MSG" EXIT
     echo "See full analytics at: https://analytics.gmojsoski.com"
 } > "$TMP_MSG"
 
-# Create JSON payload using Python (read from temp file)
-PAYLOAD=$(python3 -c "import json; f=open('$TMP_MSG', 'r'); msg=f.read(); f.close(); print(json.dumps({'text': msg}, ensure_ascii=False))")
+# Create JSON payload using Python (read from temp file) with bot username
+PAYLOAD=$(python3 -c "import json; f=open('$TMP_MSG', 'r'); msg=f.read(); f.close(); print(json.dumps({'username': 'Analytics Bot', 'text': msg}, ensure_ascii=False))")
 
 # Send to Mattermost (Slack-compatible format)
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -H 'Content-type: application/json' \
