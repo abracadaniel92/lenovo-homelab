@@ -35,6 +35,8 @@ Key configuration in `docker-compose.yml`:
 - `MM_SERVICESETTINGS_ENABLEOPENSERVER`: `true` - Allows user sign-up
 - `MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL`: `true` - Enable email signup
 - `MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL`: `true` - Enable email signin
+- `MM_EMAILSETTINGS_SENDPUSHNOTIFICATIONS`: `true` - Enable mobile push notifications
+- `MM_EMAILSETTINGS_PUSHNOTIFICATIONSERVER`: `https://push-test.mattermost.com` - TPNS server (free for non-commercial)
 - Database credentials: `mmuser` / `mmuser_password` (**CHANGE IN PRODUCTION!**)
 
 ### Webhooks & Integrations
@@ -46,6 +48,15 @@ Mattermost has excellent webhook support:
 4. **REST API**: Full REST API available at `/api/v4/`
 
 **Webhook URL format**: `https://mattermost.gmojsoski.com/hooks/...`
+
+**Custom Bot Usernames:**
+To allow webhooks to use custom usernames (like "System Bot" instead of your username):
+1. Go to **System Console** → **Integrations**
+2. Enable **"Enable integrations to override usernames"** (`EnablePostUsernameOverride`)
+3. Enable **"Enable integrations to override profile picture icons"** (`EnablePostIconOverride`)
+4. Save the changes
+
+After enabling these settings, webhooks can use the `username` field in their payloads to customize the display name.
 
 ### Plugins
 
@@ -137,6 +148,16 @@ docker compose ps         # Check status
 - Default setup allows email signup/signin but doesn't send emails
 - To enable email sending, configure SMTP settings in System Console → Email
 - For development, you can keep the console backend
+
+### Mobile push notifications not working
+- Push notifications are enabled via TPNS (Test Push Notification Service)
+- TPNS is free for non-commercial self-hosted installations
+- **Note**: TPNS doesn't have production-level SLAs (not recommended for production)
+- For production use, consider upgrading to Enterprise/Professional for HPNS (Hosted Push Notification Service)
+- Ensure `MM_EMAILSETTINGS_SENDPUSHNOTIFICATIONS` is set to `"true"` in docker-compose.yml
+- Ensure `MM_EMAILSETTINGS_PUSHNOTIFICATIONSERVER` points to the correct server
+- After changing push notification settings, restart Mattermost: `docker compose restart mattermost`
+- Users need to enable push notifications in their mobile app settings (Settings → Notifications)
 
 ## 🔐 Security Notes
 

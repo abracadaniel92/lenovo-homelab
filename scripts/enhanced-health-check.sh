@@ -43,6 +43,7 @@ send_slack_notification() {
     # Build Mattermost message payload (Slack-compatible blocks format)
     read -r -d '' PAYLOAD << EOF || true
 {
+    "username": "System Bot",
     "blocks": [
         {
             "type": "header",
@@ -128,7 +129,9 @@ check_caddyfile_integrity() {
                 
                 # Send Slack notification
                 local slack_title="Homelab Alert: Caddyfile Configuration Issue"
-                local slack_message="*Service:* \`$service\`
+                local slack_message="@here
+
+*Service:* \`$service\`
 *Issue:* \`encode gzip\` detected in Caddyfile
 *Impact:* Mobile browsers download .txt files instead of rendering pages
 
@@ -240,7 +243,9 @@ if [ "$EXTERNAL_DOWN" = true ]; then
     
     # Send Slack notification for critical outage
     local slack_title="🚨 CRITICAL: External Access Down"
-    local slack_message="*Domain:* gmojsoski.com
+    local slack_message="@all
+
+*Domain:* gmojsoski.com
 *Status:* Not accessible (502/404/503)
 *Action:* Running fix-external-access.sh automatically
 
@@ -263,11 +268,20 @@ if [ "$EXTERNAL_DOWN" = true ]; then
         else
             log "WARNING: External access still down after fix. May need manual intervention."
             # Send failure Slack notification
-            send_slack_notification "🚨 External Access Still Down" "The fix script was executed but external access is still down. Manual intervention may be required.\n\n*Check logs:* \`sudo tail -50 /var/log/enhanced-health-check.log\`" "🚨"
+            send_slack_notification "🚨 External Access Still Down" "@all
+
+The fix script was executed but external access is still down. Manual intervention may be required.
+
+*Check logs:* \`sudo tail -50 /var/log/enhanced-health-check.log\`" "🚨"
         fi
     else
         log "ERROR: Fix script not found at $FIX_SCRIPT"
-        send_slack_notification "❌ Fix Script Not Found" "The fix-external-access.sh script was not found at:\n\`$FIX_SCRIPT\`\n\n*Manual intervention required.*" "❌"
+        send_slack_notification "❌ Fix Script Not Found" "@here
+
+The fix-external-access.sh script was not found at:
+\`$FIX_SCRIPT\`
+
+*Manual intervention required.*" "❌"
     fi
 fi
 

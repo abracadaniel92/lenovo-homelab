@@ -297,7 +297,24 @@ The server has a multi-layer monitoring system:
 | 2 | Docker restart policies | On failure | Auto-restart containers |
 | 3 | Cloudflare Tunnel (2 replicas) | Continuous | Redundant external access |
 | 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
-| 5 | Portfolio Update | Manual (via `make portfolio-update`) | Sync portfolio from GitHub |
+| 5 | Pi health reports | Every 5 days | System health summary to Mattermost |
+| 6 | Analytics reports | Weekly (Sunday 10 AM) | Portfolio analytics summary to Mattermost |
+| 7 | Portfolio Update | Manual (via `make portfolio-update`) | Sync portfolio from GitHub |
+
+### Mattermost Notifications
+
+All monitoring alerts and reports are sent to Mattermost channels via webhooks:
+
+- **Health Check Alerts**: `@here` for warnings, `@all` for critical issues
+- **System Health Reports**: `@here` - Sent every 5 days with system stats (CPU, memory, disk, Docker status)
+- **Analytics Reports**: `@here` - Weekly portfolio analytics summary
+
+**Bot Usernames**:
+- Health checks: "System Bot"
+- System reports: "System Bot"
+- Analytics: "Analytics Bot"
+
+**Configuration**: Requires System Console → Integrations → Enable "Override usernames" setting.
 
 ### Check Monitoring Status
 
@@ -307,6 +324,12 @@ systemctl status enhanced-health-check.timer
 
 # View health check logs
 tail -50 /var/log/enhanced-health-check.log
+
+# Manually trigger health check
+make -C "/home/goce/Desktop/Cursor projects/Pi-version-control" health
+
+# Verify health check configuration
+make -C "/home/goce/Desktop/Cursor projects/Pi-version-control" health-verify
 
 # Check all containers
 docker ps --format "table {{.Names}}\t{{.Status}}"
@@ -321,7 +344,7 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix
 
 ## <a name="backup-system"></a>💾 Backup System
 
-**Automated daily backups** run at 2:00 AM for critical services.
+**Automated daily backups** run at 2:00 AM for critical services, with offsite sync to Backblaze B2 at 3:00 AM.
 
 ### Backup Scripts
 
@@ -346,7 +369,49 @@ bash scripts/backup-travelsync.sh
 | KitchenOwl | `/mnt/ssd/backups/kitchenowl/` | Medium |
 | Travelsync | `/mnt/ssd/backups/travelsync/` | Medium |
 
-**Retention**: Last 30 backups per service
+### Retention Policy
+
+Backups use a **multi-tier retention system** (not a flat 30-day retention):
+
+| Tier | Retention | Description |
+|------|-----------|-------------|
+| **Hourly** | Last 6 backups | Backups within 6 hours |
+| **Daily** | Last 5 backups | One backup per day (within 5 days) |
+| **Weekly** | Last 4 backups | One backup per week (within 4 weeks) |
+| **Monthly** | Last 2 backups | One backup per month (within 2 months) |
+| **Yearly** | Last 1 backup | One backup per year (within 1 year) |
+
+**Total backups kept**: Typically ~18 backups per service, automatically managed by tier.
+
+### Offsite Backup (Backblaze B2)
+
+All local backups are automatically synced to **Backblaze B2** cloud storage:
+
+- **Provider**: Backblaze B2 Cloud Storage
+- **Bucket**: `Goce-Lenovo`
+- **Sync Schedule**: Daily at 3:00 AM (after local backups complete)
+- **Sync Script**: `/usr/local/bin/sync-backups-to-b2.sh`
+- **Tool**: rclone
+- **Remote**: `b2-backup:Goce-Lenovo/`
+
+**Manual sync**:
+```bash
+# Sync backups to Backblaze B2
+sudo /usr/local/bin/sync-backups-to-b2.sh
+
+# Check B2 sync status
+rclone ls b2-backup:Goce-Lenovo/
+
+# View sync logs
+tail -f /var/log/rclone-sync.log
+```
+
+**Setup Backblaze B2** (if not already configured):
+```bash
+bash scripts/setup-backblaze-b2-backup.sh
+```
+
+See also: [Backup Strategy Documentation](docs/concepts/backup-strategy.md)
 
 ## <a name="maintenance"></a>🔧 Maintenance
 

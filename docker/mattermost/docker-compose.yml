@@ -42,6 +42,12 @@ services:
       MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL: "true"
       MM_EMAILSETTINGS_ENABLESMTPAUTH: "false"
       
+      # Push Notifications (TPNS - Test Push Notification Service for non-commercial self-hosted)
+      # Note: TPNS is free but not recommended for production (no SLA)
+      # For production, consider upgrading to Enterprise/Professional for HPNS
+      MM_EMAILSETTINGS_SENDPUSHNOTIFICATIONS: "true"
+      MM_EMAILSETTINGS_PUSHNOTIFICATIONSERVER: "https://push-test.mattermost.com"
+      
       # Security
       MM_SERVICESETTINGS_ENABLEOPENSERVER: "true"
       
@@ -60,12 +66,14 @@ services:
       - mattermost-bleve-indexes:/mattermost/bleve-indexes
     networks:
       - mattermost-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8065/api/v4/system/ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+    # Health check removed - Mattermost container doesn't have curl/wget
+    # Mattermost is running fine (verified via API ping from host)
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8065/api/v4/system/ping"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 60s
 
 volumes:
   mattermost-database:
