@@ -96,6 +96,8 @@ TMP_MSG=$(mktemp)
 trap "rm -f $TMP_MSG" EXIT
 
 {
+    echo "@here"
+    echo ""
     echo "🖥️ **Server Health Report: ${HOSTNAME}**"
     echo ""
     echo "${STATUS_EMOJI} ${STATUS_TEXT}"
@@ -122,8 +124,8 @@ trap "rm -f $TMP_MSG" EXIT
     fi
 } > "$TMP_MSG"
 
-# Create JSON payload using Python (read from temp file)
-PAYLOAD=$(python3 -c "import json; f=open('$TMP_MSG', 'r'); msg=f.read(); f.close(); print(json.dumps({'text': msg}, ensure_ascii=False))")
+# Create JSON payload using Python (read from temp file) with bot username
+PAYLOAD=$(python3 -c "import json; f=open('$TMP_MSG', 'r'); msg=f.read(); f.close(); print(json.dumps({'username': 'System Bot', 'text': msg}, ensure_ascii=False))")
 
 # Send to Mattermost (Slack-compatible format)
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -H 'Content-type: application/json' \
