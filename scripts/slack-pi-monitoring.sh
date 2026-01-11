@@ -96,6 +96,8 @@ TMP_MSG=$(mktemp)
 trap "rm -f $TMP_MSG" EXIT
 
 {
+    echo "@here"
+    echo ""
     echo "🖥️ **Server Health Report: ${HOSTNAME}**"
     echo ""
     echo "${STATUS_EMOJI} ${STATUS_TEXT}"

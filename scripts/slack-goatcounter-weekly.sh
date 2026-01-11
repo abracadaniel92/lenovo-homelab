@@ -87,6 +87,8 @@ TMP_MSG=$(mktemp)
 trap "rm -f $TMP_MSG" EXIT
 
 {
+    echo "@here"
+    echo ""
     echo "📊 **Weekly Analytics Report (Portfolio)**"
     echo ""
     echo "*Period:* ${START_DATE} → ${END_DATE}"
