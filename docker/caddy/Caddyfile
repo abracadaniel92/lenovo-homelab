@@ -141,6 +141,15 @@
 		}
 	}
 	
+	@linkwarden host linkwarden.gmojsoski.com
+	handle @linkwarden {
+		encode gzip
+		reverse_proxy http://172.17.0.1:8090 {
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	
 	handle {
 		encode gzip
 		root * /srv/site

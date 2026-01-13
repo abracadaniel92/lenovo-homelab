@@ -300,6 +300,14 @@ if ! check_service_http "http://localhost:3000/" 5; then
     sleep 2
 fi
 
+# Check Linkwarden
+if ! check_service_http "http://localhost:8090/" 5; then
+    log "WARNING: Linkwarden not responding. Restarting..."
+    cd /home/docker-projects/linkwarden
+    docker compose restart
+    sleep 3
+fi
+
 # Check Nextcloud
 if ! check_service_http "http://localhost:8081/" 5; then
     log "WARNING: Nextcloud not responding. Restarting..."

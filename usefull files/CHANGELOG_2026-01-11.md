@@ -79,35 +79,65 @@ Major performance optimizations and cleanup to reduce CPU usage and improve syst
    - Removed Docker healthcheck from Mattermost (curl not available in container)
    - Mattermost verified to be working via API ping from host
 
+### 🔖 New Service: Linkwarden
+
+1. **Linkwarden Bookmark Manager Installed**
+   - Self-hosted bookmark manager with web archiving capabilities
+   - **Port**: 8090 (internal: 3000)
+   - **URL**: https://linkwarden.gmojsoski.com
+   - **Components**: Linkwarden app, PostgreSQL 16, Meilisearch v1.12.8
+   - **Registration**: Disabled (private instance, admin-controlled)
+   - **Backup Priority**: Medium
+
+2. **Configuration**
+   - Docker Compose setup at `/home/docker-projects/linkwarden/`
+   - Caddy reverse proxy configured with gzip encoding
+   - Cloudflare tunnel ingress rule added
+   - Health check integration added to `enhanced-health-check.sh`
+   - Backup script created: `scripts/backup-linkwarden.sh`
+   - Added to `backup-all-critical.sh` workflow
+
+3. **Features**
+   - Web archiving (screenshots, PDFs, HTML)
+   - Full-text search via Meilisearch
+   - Collections and tags organization
+   - Reader view with annotations
+   - Private instance (registration disabled)
+
 ### 📁 Files Modified
 
 #### Configuration Files
-- `docker/caddy/Caddyfile` - Removed Zulip reverse proxy block
+- `docker/caddy/Caddyfile` - Removed Zulip reverse proxy block, added Linkwarden block
 - `docker/mattermost/docker-compose.yml` - Added push notification settings, removed healthcheck
-- `scripts/verify-services.sh` - Removed zulip.gmojsoski.com
-- `scripts/enhanced-health-check.sh` - Added "System Bot" username to webhook payload
+- `cloudflare/config.yml` - Added Mattermost and Linkwarden ingress rules
+- `scripts/verify-services.sh` - Removed zulip.gmojsoski.com, added linkwarden.gmojsoski.com
+- `scripts/enhanced-health-check.sh` - Added "System Bot" username to webhook payload, added Linkwarden health check
 - `scripts/slack-pi-monitoring.sh` - Added "System Bot" username to webhook payload
 - `scripts/slack-goatcounter-weekly.sh` - Added "Analytics Bot" username to webhook payload
+- `scripts/backup-all-critical.sh` - Added Linkwarden backup to workflow
 - `Makefile` - Added health-verify, health-fix, portfolio-update commands
 - `Makefile` - Updated to use CURDIR for location independence
 - `systemd/portfolio-update.timer` - Marked as disabled
 - `scripts/permanent-auto-recovery.sh` - Updated timer interval to 3min
 
 #### Documentation
-- `README.md` - Removed Zulip references, updated monitoring frequency
+- `README.md` - Removed Zulip references, updated monitoring frequency, added Linkwarden service details and backup information
 - `docker/mattermost/README.md` - Added push notification and webhook bot username configuration instructions
 - `restart services/LAB_COMMANDS.md` - Added all new commands
 - `usefull files/MONITORING_AND_RECOVERY.md` - Updated intervals
 - `docs/reference/infrastructure-summary.md` - Removed Zulip
 - `docs/how-to-guides/pi-hole-setup.md` - Removed Zulip references
+- `CHANGELOG_2026-01-11.md` - Moved to `usefull files/` directory
+- `HEALTH_CHECK_STATUS.md` - Moved to `usefull files/` directory
 
 #### New Files
 - `scripts/verify-health-check.sh` - Verification script
 - `scripts/fix-health-check-timer.sh` - Timer fix script
 - `scripts/portfolio-update-wrapper.sh` - Portfolio update wrapper
 - `scripts/test-mattermost-webhook.sh` - Test script for Mattermost webhook bot usernames
-- `HEALTH_CHECK_STATUS.md` - Health check documentation
-- `INSTALL_PORTFOLIO_UPDATE.md` - Portfolio update installation guide
+- `scripts/backup-linkwarden.sh` - Linkwarden backup script with multi-tier retention
+- `HEALTH_CHECK_STATUS.md` - Health check documentation (moved to `usefull files/`)
+- `INSTALL_PORTFOLIO_UPDATE.md` - Portfolio update installation guide (removed, functionality integrated)
 
 #### Removed Files
 - `docker/zulip/` - Entire directory removed

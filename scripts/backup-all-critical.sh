@@ -31,6 +31,11 @@ echo "4️⃣  KitchenOwl (Shopping Lists)..."
 bash "$SCRIPT_DIR/backup-kitchenowl.sh"
 echo ""
 
+# Linkwarden (MEDIUM - bookmarks and archived content)
+echo "5️⃣  Linkwarden (Bookmarks & Archives)..."
+bash "$SCRIPT_DIR/backup-linkwarden.sh"
+echo ""
+
 echo "✅ All critical services backed up!"
 echo ""
 echo "📦 Backup locations:"
@@ -38,6 +43,7 @@ echo "   Vaultwarden: /mnt/ssd/backups/vaultwarden/"
 echo "   Nextcloud:  /mnt/ssd/backups/nextcloud/"
 echo "   TravelSync: /mnt/ssd/backups/travelsync/"
 echo "   KitchenOwl: /mnt/ssd/backups/kitchenowl/"
+echo "   Linkwarden: /mnt/ssd/backups/linkwarden/"
 
 
 
