@@ -78,6 +78,7 @@ The home lab consists of two devices working together:
 - **Analytics**: GoatCounter
 - **Travel Documents**: TravelSync app
 - **Bookmarks**: Flask bookmarks service
+- **Bookmark Manager**: Linkwarden (bookmarks with web archiving)
 - **Planning Poker**: Planning poker web application
 - **Docker Management**: Portainer
 - **Service Dashboard**: Homepage
@@ -135,6 +136,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Portainer** | 9000 | - | Docker management UI |
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
+| **Linkwarden** | 8090 | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
 | **Watchtower** | - | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |
 
@@ -357,6 +359,7 @@ bash scripts/backup-vaultwarden.sh
 bash scripts/backup-nextcloud.sh
 bash scripts/backup-kitchenowl.sh
 bash scripts/backup-travelsync.sh
+bash scripts/backup-linkwarden.sh
 ```
 
 ### Backup Locations
@@ -368,6 +371,7 @@ bash scripts/backup-travelsync.sh
 | Paperless | Docker volumes (data, media) | High |
 | KitchenOwl | `/mnt/ssd/backups/kitchenowl/` | Medium |
 | Travelsync | `/mnt/ssd/backups/travelsync/` | Medium |
+| Linkwarden | `/mnt/ssd/backups/linkwarden/` | Medium |
 
 ### Retention Policy
 
