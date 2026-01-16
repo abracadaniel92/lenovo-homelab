@@ -3,6 +3,10 @@ services:
     image: postgres:15-alpine
     container_name: mattermost-postgres
     restart: unless-stopped
+    profiles:
+      - productivity
+      - databases
+      - all
     mem_limit: 2g
     memswap_limit: 2g
     cpus: '1.0'
@@ -25,6 +29,9 @@ services:
     image: mattermost/mattermost-team-edition:latest
     container_name: mattermost
     restart: unless-stopped
+    profiles:
+      - productivity
+      - all
     depends_on:
       database:
         condition: service_healthy

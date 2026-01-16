@@ -289,6 +289,75 @@ See individual setup guides in `usefull files/`:
 
 **Mattermost Setup**: See `docker/mattermost/README.md` for installation and configuration details.
 
+### 5. Docker Profiles & Service Dependencies
+
+Services are organized using Docker Compose profiles for selective startup and proper dependency ordering.
+
+#### Service Profiles
+
+| Profile | Services | Purpose |
+|---------|----------|---------|
+| **Critical** (no profile) | Caddy, Cloudflared, Vaultwarden, Nextcloud | Always start - essential infrastructure |
+| **`media`** | Jellyfin | Media services |
+| **`productivity`** | Paperless, Mattermost, Outline | Productivity and collaboration tools |
+| **`utilities`** | Uptime Kuma, GoatCounter, Portainer | Utility services |
+| **`monitoring`** | Uptime Kuma | Monitoring services |
+| **`databases`** | Nextcloud DB, Mattermost DB, Paperless Redis, Outline DB/Redis | Database services (auto-started with dependent services) |
+| **`all`** | All profiled services | Convenience profile to start all services |
+
+#### Starting Services
+
+```bash
+# Start critical services only (always running)
+cd /home/docker-projects/caddy && docker compose up -d
+cd /home/docker-projects/cloudflared && docker compose up -d
+cd /home/docker-projects/vaultwarden && docker compose up -d
+cd /home/apps/nextcloud && docker compose up -d
+
+# Start services by profile
+cd /home/docker-projects/jellyfin && docker compose --profile media up -d
+cd /home/docker-projects/mattermost && docker compose --profile productivity up -d
+cd /home/docker-projects/paperless && docker compose --profile productivity up -d
+
+# Start all profiled services
+for dir in /home/docker-projects/*/; do
+  cd "$dir" && docker compose --profile all up -d 2>/dev/null
+done
+
+# Start all services (critical + all profiles)
+for dir in /home/docker-projects/*/; do
+  cd "$dir"
+  docker compose up -d 2>/dev/null  # Critical services (no profile)
+  docker compose --profile all up -d 2>/dev/null  # Profiled services
+done
+```
+
+#### Service Dependencies & Health Checks
+
+Services now properly wait for their dependencies to be healthy before starting:
+
+- **Nextcloud**: App waits for database health check (`service_healthy`)
+- **Mattermost**: App waits for database health check (`service_healthy`)
+- **Outline**: App waits for PostgreSQL and Redis health checks (`service_healthy`)
+- **Paperless**: App waits for Redis to start (`service_started`)
+
+#### Example: Selective Startup
+
+```bash
+# Start only critical services during maintenance
+cd /home/docker-projects/caddy && docker compose up -d
+cd /home/docker-projects/cloudflared && docker compose up -d
+
+# Start only media services
+cd /home/docker-projects/jellyfin && docker compose --profile media up -d
+
+# Start productivity tools when needed
+cd /home/docker-projects/mattermost && docker compose --profile productivity up -d
+cd /home/docker-projects/paperless && docker compose --profile productivity up -d
+```
+
+**Note**: Critical services (Caddy, Cloudflared, Vaultwarden, Nextcloud) have no profiles and always start when you run `docker compose up -d` without profiles. Profiled services only start when explicitly started with `--profile <profile>` or `--profile all`.
+
 ## <a name="monitoring--auto-recovery"></a>🛡️ Monitoring & Auto-Recovery
 
 The server has a multi-layer monitoring system:

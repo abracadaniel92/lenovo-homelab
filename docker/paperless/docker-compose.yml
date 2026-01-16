@@ -3,6 +3,10 @@ services:
     image: docker.io/library/redis:8
     container_name: paperless-redis
     restart: unless-stopped
+    profiles:
+      - productivity
+      - databases
+      - all
     mem_limit: 512m
     memswap_limit: 512m
     cpus: '0.5'
@@ -15,8 +19,12 @@ services:
     image: ghcr.io/paperless-ngx/paperless-ngx:latest
     container_name: paperless-webserver
     restart: unless-stopped
+    profiles:
+      - productivity
+      - all
     depends_on:
-      - broker
+      broker:
+        condition: service_started
     ports:
       - "8097:8000"
     volumes:

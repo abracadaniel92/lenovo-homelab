@@ -3,6 +3,9 @@ services:
     image: arp242/goatcounter:2.6.0
     container_name: goatcounter
     restart: always
+    profiles:
+      - utilities
+      - all
     ports:
       - "8088:8080"   # Pi:8088 -> container:8080
     volumes:
