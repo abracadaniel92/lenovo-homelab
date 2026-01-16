@@ -3,6 +3,9 @@ services:
     image: postgres:16
     container_name: nextcloud-postgres
     restart: always
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpus: '1.0'
     environment:
       POSTGRES_DB: nextcloud
       POSTGRES_USER: nextcloud
@@ -30,6 +33,9 @@ services:
       - ./app:/var/www/html
     ports:
       - "8081:80"
+    mem_limit: 4g
+    memswap_limit: 4g
+    cpus: '1.0'
     networks:
       - nextcloud-net
 
