@@ -154,6 +154,13 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 Pi-version-control/
 ├── docker/                    # Docker compose files for all services
 │   ├── caddy/
+│   │   ├── Caddyfile          # Main Caddyfile (imports config.d files)
+│   │   └── config.d/          # Split service-specific configs
+│   │       ├── 10-portfolio.caddyfile
+│   │       ├── 20-media.caddyfile
+│   │       ├── 30-storage.caddyfile
+│   │       ├── 40-communication.caddyfile
+│   │       └── 50-utilities.caddyfile
 │   ├── cloudflared/
 │   ├── travelsync/
 │   ├── goatcounter/
@@ -178,7 +185,10 @@ Pi-version-control/
 │   └── slack-pi-monitoring.*
 ├── scripts/                   # Utility scripts
 │   ├── backup-*.sh           # Backup scripts
-│   ├── enhanced-health-check.sh
+│   ├── verify-backups.sh     # Automated backup verification
+│   ├── enhanced-health-check.sh  # Health check with auto-recovery
+│   ├── deploy-health-check.sh    # Deploy health check to production
+│   ├── test-step5-profiles.sh    # Test Docker profiles
 │   ├── import-recipes-to-kitchenowl.py
 │   ├── slack-*.sh            # Notification scripts
 │   └── archive/              # Old/deprecated scripts
@@ -273,11 +283,34 @@ sudo chown -R $USER:$USER /home/apps
 ### 3. Clone This Repository
 
 ```bash
-cd ~/Desktop/"Cursor projects"
+# Clone to your desired location
 git clone https://github.com/abracadaniel92/lenovo-homelab.git Pi-version-control
+cd Pi-version-control
 ```
 
-### 4. Setup Services
+### 4. Configure Caddy (Reverse Proxy)
+
+**Caddyfile Structure**:
+The Caddyfile has been split into service-specific config files for better maintainability and isolation:
+
+- **Main Caddyfile**: `docker/caddy/Caddyfile` - Imports all service configs
+- **Service Configs**: `docker/caddy/config.d/` - Split by category:
+  - `10-portfolio.caddyfile` - Portfolio site
+  - `20-media.caddyfile` - Media services (Jellyfin, Paperless, Vaultwarden)
+  - `30-storage.caddyfile` - Storage services (Nextcloud, TravelSync, Gokapi)
+  - `40-communication.caddyfile` - Communication (Mattermost, Planning Poker)
+  - `50-utilities.caddyfile` - Utilities (Analytics, Bookmarks, Shopping, Linkwarden)
+
+**Benefits**: Service config errors are isolated, easier to maintain, and prevent cascading failures.
+
+**Cloudflare Tunnel Validation**:
+- Health check automatically validates Cloudflare Tunnel configuration
+- Auto-detects and fixes `127.0.0.1:8080` → `localhost:8080` (prevents intermittent failures)
+- Validates all ingress rules use `localhost:8080`
+- Auto-restarts tunnel after fixes
+- Sends Mattermost notifications for configuration issues
+
+### 5. Setup Services
 
 See individual setup guides in `usefull files/`:
 - `NEXTCLOUD_FRESH_INSTALL.md` - Cloud storage setup
@@ -289,7 +322,7 @@ See individual setup guides in `usefull files/`:
 
 **Mattermost Setup**: See `docker/mattermost/README.md` for installation and configuration details.
 
-### 5. Docker Profiles & Service Dependencies
+### 6. Docker Profiles & Service Dependencies
 
 Services are organized using Docker Compose profiles for selective startup and proper dependency ordering.
 
@@ -364,7 +397,7 @@ The server has a multi-layer monitoring system:
 
 | Layer | Tool | Frequency | Purpose |
 |-------|------|-----------|---------|
-| 1 | enhanced-health-check.timer | Every 3 minutes | Check & restart all services |
+| 1 | enhanced-health-check.timer | Every 3 minutes | Check & restart all services, monitor resources |
 | 2 | Docker restart policies | On failure | Auto-restart containers |
 | 3 | Cloudflare Tunnel (2 replicas) | Continuous | Redundant external access |
 | 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
@@ -372,11 +405,41 @@ The server has a multi-layer monitoring system:
 | 6 | Analytics reports | Weekly (Sunday 10 AM) | Portfolio analytics summary to Mattermost |
 | 7 | Portfolio Update | Manual (via `make portfolio-update`) | Sync portfolio from GitHub |
 
+### Health Check Features
+
+The enhanced health check (`enhanced-health-check.sh`) includes:
+
+**Configuration Integrity**:
+- Cloudflare Tunnel config validation and auto-fix (`127.0.0.1` → `localhost`)
+- Caddyfile validation (checks main file and all split config files)
+- UDP buffer size optimization
+
+**Resource Monitoring**:
+- **Memory Usage**: Monitors system memory (warns at 85%, critical at 90%)
+- **Disk Space**: Monitors `/` and `/mnt/ssd` (warns at 80%, critical at 90%)
+- Mattermost notifications with throttling (once per hour per issue)
+
+**Service Health**:
+- Docker service checks and auto-restart
+- Caddy reverse proxy health
+- Cloudflare Tunnel status
+- External access verification
+
+**Backup Verification**:
+- Automated backup integrity checks (runs once per hour)
+- Verifies backup age, size, and integrity
+- Alerts for missing or corrupted backups
+
 ### Mattermost Notifications
 
 All monitoring alerts and reports are sent to Mattermost channels via webhooks:
 
 - **Health Check Alerts**: `@here` for warnings, `@all` for critical issues
+  - Memory usage alerts (warning ≥85%, critical ≥90%)
+  - Disk space alerts (warning ≥80%, critical ≥90%)
+  - Service failure alerts
+  - Configuration drift alerts (Cloudflare/Caddyfile)
+- **Backup Verification Alerts**: `@all` for missing/corrupted backups, `@here` for old backups
 - **System Health Reports**: `@here` - Sent every 5 days with system stats (CPU, memory, disk, Docker status)
 - **Analytics Reports**: `@here` - Weekly portfolio analytics summary
 
@@ -396,11 +459,15 @@ systemctl status enhanced-health-check.timer
 # View health check logs
 tail -50 /var/log/enhanced-health-check.log
 
-# Manually trigger health check
-make -C "/home/goce/Desktop/Cursor projects/Pi-version-control" health
+# Manually trigger health check (from repo directory)
+make health
+# or
+lab-make health
 
-# Verify health check configuration
-make -C "/home/goce/Desktop/Cursor projects/Pi-version-control" health-verify
+# Verify health check configuration (from repo directory)
+make health-verify
+# or
+lab-make health-verify
 
 # Check all containers
 docker ps --format "table {{.Names}}\t{{.Status}}"
@@ -409,8 +476,8 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 ### Emergency Recovery
 
 ```bash
-# If services go down, run:
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-all-services.sh"
+# If services go down, run (from repo directory):
+bash "restart services/fix-all-services.sh"
 ```
 
 ## <a name="backup-system"></a>💾 Backup System
@@ -430,6 +497,31 @@ bash scripts/backup-kitchenowl.sh
 bash scripts/backup-travelsync.sh
 bash scripts/backup-linkwarden.sh
 ```
+
+### Backup Verification
+
+**Automated verification** runs hourly via health check:
+- Checks backup integrity (tar.gz extraction test)
+- Verifies backup age (alerts if backups are too old)
+- Validates backup file sizes
+- Detects missing backups
+- Sends Mattermost notifications for issues
+
+**Manual verification**:
+```bash
+# Run backup verification manually
+bash scripts/verify-backups.sh
+
+# View verification log
+tail -f ~/backup-verification.log
+```
+
+**Service-specific thresholds**:
+- **Vaultwarden** (CRITICAL): 48 hours max age
+- **Nextcloud** (CRITICAL): 48 hours max age
+- **TravelSync** (IMPORTANT): 72 hours max age
+- **KitchenOwl** (IMPORTANT): 72 hours max age
+- **Linkwarden** (MEDIUM): 96 hours max age
 
 ### Backup Locations
 
@@ -508,6 +600,22 @@ docker compose restart
 Watchtower updates containers daily at 2 AM, except:
 - **Excluded** (manual updates only): Nextcloud, Vaultwarden, Jellyfin, KitchenOwl
 
+### Resource Limits
+
+Docker containers have resource limits configured to prevent resource exhaustion:
+
+| Service | Memory Limit | CPU Limit |
+|---------|--------------|-----------|
+| **Jellyfin** | 8GB | 2.0 CPUs |
+| **Nextcloud** (app) | 4GB | 1.0 CPU |
+| **Nextcloud** (db) | 2GB | 1.0 CPU |
+| **Mattermost** (app) | 4GB | 1.0 CPU |
+| **Mattermost** (db) | 2GB | 1.0 CPU |
+| **Paperless** (webserver) | 2GB | 1.0 CPU |
+| **Paperless** (broker) | 512MB | 0.5 CPU |
+
+Resource limits are configured in each service's `docker-compose.yml` using `mem_limit`, `memswap_limit`, and `cpus` directives.
+
 ### Check Service Status
 
 ```bash
@@ -560,12 +668,49 @@ docker compose up -d
 ### Caddy routing issues
 
 ```bash
-# Validate config
-docker exec caddy caddy validate --config /etc/caddy/Caddyfile
+# Validate config (checks main Caddyfile and all split config files)
+cd /home/docker-projects/caddy
+docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
 
 # Reload config
-docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+
+# View split config files
+ls -la /home/docker-projects/caddy/config.d/
+
+# Check specific service config
+cat /home/docker-projects/caddy/config.d/20-media.caddyfile
 ```
+
+**Caddyfile Structure**:
+- Main config: `docker/caddy/Caddyfile` (imports all split configs)
+- Split configs: `docker/caddy/config.d/*.caddyfile` (service-specific)
+- Benefits: Isolated configs prevent cascading failures
+
+### Cloudflare Tunnel issues
+
+```bash
+# Check tunnel status
+docker ps --filter "name=cloudflared"
+
+# View tunnel logs
+docker logs cloudflared-cloudflared-1
+
+# Restart tunnel
+cd /home/docker-projects/cloudflared && docker compose restart
+
+# Validate config (auto-fixed by health check)
+cat ~/.cloudflared/config.yml | grep -E "service|ingress"
+
+# Manual fix: Ensure all rules use localhost:8080 (not 127.0.0.1:8080)
+sed -i 's/127.0.0.1:8080/localhost:8080/g' ~/.cloudflared/config.yml
+```
+
+**Cloudflare Validation**:
+- Health check automatically detects and fixes `127.0.0.1:8080` → `localhost:8080`
+- Prevents intermittent connection failures
+- Validates all ingress rules use `localhost:8080`
+- Auto-restarts tunnel after fixes
 
 ## 🔐 Security Notes
 
