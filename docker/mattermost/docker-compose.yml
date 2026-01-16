@@ -3,6 +3,9 @@ services:
     image: postgres:15-alpine
     container_name: mattermost-postgres
     restart: unless-stopped
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpus: '1.0'
     environment:
       POSTGRES_DB: mattermost
       POSTGRES_USER: mmuser
@@ -64,6 +67,9 @@ services:
       - mattermost-plugins:/mattermost/plugins
       - mattermost-client-plugins:/mattermost/client/plugins
       - mattermost-bleve-indexes:/mattermost/bleve-indexes
+    mem_limit: 4g
+    memswap_limit: 4g
+    cpus: '1.0'
     networks:
       - mattermost-net
     # Health check removed - Mattermost container doesn't have curl/wget
