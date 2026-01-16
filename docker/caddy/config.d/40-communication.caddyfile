@@ -1,0 +1,24 @@
+# Communication services (real-time features, webhooks)
+
+@mattermost host mattermost.gmojsoski.com
+handle @mattermost {
+	# NO gzip - can cause issues with real-time features and webhooks
+	reverse_proxy http://172.17.0.1:8066 {
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-Ssl on
+		header_up X-Real-IP {remote_host}
+		header_up Host {host}
+	}
+}
+
+@poker host poker.gmojsoski.com
+handle @poker {
+	encode gzip
+	reverse_proxy http://172.17.0.1:3000 {
+		header_up X-Forwarded-Proto https
+		header_up X-Real-IP {remote_host}
+		header_up Host {host}
+		header_up X-Forwarded-Host {host}
+	}
+}
+

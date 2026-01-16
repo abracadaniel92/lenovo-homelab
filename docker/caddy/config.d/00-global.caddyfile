@@ -1,0 +1,3 @@
+# Global settings are in the main Caddyfile
+# This file exists for documentation purposes
+# Actual global settings: email, auto_https in main Caddyfile

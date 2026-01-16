@@ -1,0 +1,43 @@
+# Storage services
+
+@cloud host cloud.gmojsoski.com
+handle @cloud {
+	# NO gzip - causes mobile issues with Cloudflare double-compression
+	header {
+		Strict-Transport-Security "max-age=15552000; includeSubDomains; preload"
+	}
+	reverse_proxy http://172.17.0.1:8081 {
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-Ssl on
+		header_up X-Real-IP {remote_host}
+	}
+}
+
+@tickets host tickets.gmojsoski.com
+handle @tickets {
+	# NO gzip - causes mobile download/blank issues
+	reverse_proxy http://172.17.0.1:8000 {
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-Ssl on
+		header_up X-Real-IP {remote_host}
+	}
+}
+
+@travelsync host travelsync.gmojsoski.com
+handle @travelsync {
+	encode gzip
+	reverse_proxy http://172.17.0.1:8000 {
+		header_up X-Forwarded-Proto https
+		header_up X-Real-IP {remote_host}
+	}
+}
+
+@files host files.gmojsoski.com
+handle @files {
+	encode gzip
+	reverse_proxy http://172.17.0.1:8091 {
+		header_up X-Forwarded-Proto https
+		header_up X-Real-IP {remote_host}
+	}
+}
+
