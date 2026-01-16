@@ -49,7 +49,7 @@ The lab consists of two devices:
 | **Mattermost** | 8066 | mattermost.gmojsoski.com | Team communication (PostgreSQL) |
 | **Uptime Kuma** | 3001 | - | Monitoring |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Analytics |
-| **Homepage** | 8000 | - | Dashboard |
+| **Homepage** | 3002 | - | Dashboard |
 | **Portainer** | 9000 | - | Docker UI |
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel docs |
