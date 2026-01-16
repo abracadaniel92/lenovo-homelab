@@ -252,10 +252,154 @@ check_udp_buffers() {
     fi
 }
 
+# Check Memory Usage
+check_memory_usage() {
+    # Get memory usage percentage (used/total * 100)
+    MEM_INFO=$(free | awk '/^Mem:/')
+    MEM_TOTAL=$(echo "$MEM_INFO" | awk '{print $2}')
+    MEM_USED=$(echo "$MEM_INFO" | awk '{print $3}')
+    MEM_PERCENT=$((MEM_USED * 100 / MEM_TOTAL))
+    MEM_TOTAL_GB=$(free -h | awk '/^Mem:/ {print $2}')
+    MEM_USED_GB=$(free -h | awk '/^Mem:/ {print $3}')
+    
+    # Thresholds
+    MEM_WARNING_THRESHOLD=85
+    MEM_CRITICAL_THRESHOLD=90
+    
+    # Notification throttling (only alert once per hour for same issue)
+    MEM_ALERT_FILE="/tmp/memory-alert-sent"
+    CURRENT_HOUR=$(date +%Y%m%d-%H)
+    
+    if [ "$MEM_PERCENT" -ge "$MEM_CRITICAL_THRESHOLD" ]; then
+        log "CRITICAL: Memory usage at ${MEM_PERCENT}% (${MEM_USED_GB}/${MEM_TOTAL_GB})"
+        
+        # Check if we already sent alert this hour
+        if [ ! -f "$MEM_ALERT_FILE" ] || [ "$(cat "$MEM_ALERT_FILE" 2>/dev/null)" != "$CURRENT_HOUR" ]; then
+            send_slack_notification "🚨 CRITICAL: High Memory Usage" "@all
+
+*Memory Usage:* ${MEM_PERCENT}% (${MEM_USED_GB} / ${MEM_TOTAL_GB})
+*Status:* CRITICAL (≥ ${MEM_CRITICAL_THRESHOLD}%)
+
+*Action:* Consider:
+  • Restarting heavy containers
+  • Checking for memory leaks
+  • Reviewing resource limits
+
+*Check:* \`free -h\`
+*Log:* \`sudo tail -50 $LOG_FILE\`" "🚨"
+            echo "$CURRENT_HOUR" > "$MEM_ALERT_FILE"
+        fi
+        return 1
+    elif [ "$MEM_PERCENT" -ge "$MEM_WARNING_THRESHOLD" ]; then
+        log "WARNING: Memory usage at ${MEM_PERCENT}% (${MEM_USED_GB}/${MEM_TOTAL_GB})"
+        
+        # Check if we already sent alert this hour
+        if [ ! -f "$MEM_ALERT_FILE" ] || [ "$(cat "$MEM_ALERT_FILE" 2>/dev/null)" != "$CURRENT_HOUR" ]; then
+            send_slack_notification "⚠️ WARNING: High Memory Usage" "@here
+
+*Memory Usage:* ${MEM_PERCENT}% (${MEM_USED_GB} / ${MEM_TOTAL_GB})
+*Status:* Warning (≥ ${MEM_WARNING_THRESHOLD}%)
+
+*Monitor:* Check resource usage and consider restarting heavy containers if needed.
+
+*Check:* \`free -h\`
+*Log:* \`sudo tail -50 $LOG_FILE\`" "⚠️"
+            echo "$CURRENT_HOUR" > "$MEM_ALERT_FILE"
+        fi
+        return 0
+    else
+        # Memory is OK - clear alert file if it exists
+        [ -f "$MEM_ALERT_FILE" ] && rm -f "$MEM_ALERT_FILE"
+        log "Memory usage OK: ${MEM_PERCENT}% (${MEM_USED_GB}/${MEM_TOTAL_GB})"
+        return 0
+    fi
+}
+
+# Check Disk Space
+check_disk_space() {
+    local mount=$1
+    local name=$2
+    local warning_threshold=80
+    local critical_threshold=90
+    
+    # Notification throttling per mount point
+    local alert_file="/tmp/disk-alert-${name//\//-}-sent"
+    local current_hour=$(date +%Y%m%d-%H)
+    
+    # Check if mount point exists
+    if ! mountpoint -q "$mount" 2>/dev/null && [ ! -d "$mount" ]; then
+        log "WARNING: Mount point not found: $mount"
+        return 0
+    fi
+    
+    # Get disk usage percentage (remove % sign)
+    local disk_usage=$(df "$mount" 2>/dev/null | awk 'NR==2 {print $5}' | sed 's/%//')
+    local disk_info=$(df -h "$mount" 2>/dev/null | awk 'NR==2 {print $3" / "$2" ("$5")"}')
+    local disk_available=$(df -h "$mount" 2>/dev/null | awk 'NR==2 {print $4}')
+    
+    if [ -z "$disk_usage" ]; then
+        log "WARNING: Could not get disk usage for $mount"
+        return 0
+    fi
+    
+    if [ "$disk_usage" -ge "$critical_threshold" ]; then
+        log "CRITICAL: Disk space on $name ($mount) at ${disk_usage}% - ${disk_info}"
+        
+        # Check if we already sent alert this hour
+        if [ ! -f "$alert_file" ] || [ "$(cat "$alert_file" 2>/dev/null)" != "$current_hour" ]; then
+            send_slack_notification "🚨 CRITICAL: Low Disk Space - ${name}" "@all
+
+*Mount:* ${name} (\`${mount}\`)
+*Usage:* ${disk_usage}% - ${disk_info}
+*Available:* ${disk_available}
+*Status:* CRITICAL (≥ ${critical_threshold}%)
+
+*Action:* Free up space immediately:
+  • Clean old backups
+  • Remove unused Docker images/volumes: \`docker system prune -a\`
+  • Check large files: \`du -sh /* 2>/dev/null | sort -h | tail -10\`
+
+*Check:* \`df -h ${mount}\`
+*Log:* \`sudo tail -50 $LOG_FILE\`" "🚨"
+            echo "$current_hour" > "$alert_file"
+        fi
+        return 1
+    elif [ "$disk_usage" -ge "$warning_threshold" ]; then
+        log "WARNING: Disk space on $name ($mount) at ${disk_usage}% - ${disk_info}"
+        
+        # Check if we already sent alert this hour
+        if [ ! -f "$alert_file" ] || [ "$(cat "$alert_file" 2>/dev/null)" != "$current_hour" ]; then
+            send_slack_notification "⚠️ WARNING: Low Disk Space - ${name}" "@here
+
+*Mount:* ${name} (\`${mount}\`)
+*Usage:* ${disk_usage}% - ${disk_info}
+*Available:* ${disk_available}
+*Status:* Warning (≥ ${warning_threshold}%)
+
+*Monitor:* Consider cleaning up old files, backups, or Docker images.
+
+*Check:* \`df -h ${mount}\`
+*Log:* \`sudo tail -50 $LOG_FILE\`" "⚠️"
+            echo "$current_hour" > "$alert_file"
+        fi
+        return 0
+    else
+        # Disk space is OK - clear alert file if it exists
+        [ -f "$alert_file" ] && rm -f "$alert_file"
+        log "Disk space OK on $name ($mount): ${disk_usage}% - ${disk_info}"
+        return 0
+    fi
+}
+
 # Check System Health
 check_config_integrity
 check_caddyfile_integrity
 check_udp_buffers
+
+# Check Memory and Disk Usage
+check_memory_usage
+check_disk_space "/" "Root"
+check_disk_space "/mnt/ssd" "SSD"
 
 # Check Backups (run once per hour to avoid excessive checks)
 BACKUP_CHECK_FILE="/tmp/last-backup-check"
