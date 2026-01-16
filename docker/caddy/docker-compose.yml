@@ -8,7 +8,8 @@ services:
       - "8443:443"
       - "8443:443/udp"
     volumes:
-      - ./config/Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./config.d:/etc/caddy/config.d
       - ./data:/data
       - ./config:/config
       - ./site:/srv/site

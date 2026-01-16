@@ -10,146 +10,16 @@
 		header Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
 		respond "{err.status_code} {err.status_text}"
 	}
-	@gmojsoski host gmojsoski.com www.gmojsoski.com
-	handle @gmojsoski {
-		encode gzip
-		root * /srv/site
-		file_server
-	}
 	
-	@analytics host analytics.gmojsoski.com
-	handle @analytics {
-		encode gzip
-		reverse_proxy http://172.17.0.1:8088 {
-			header_up X-Forwarded-Proto https
-			header_up X-Real-IP {remote_host}
-		}
-	}
+	# Import service-specific configurations
+	# Services are organized by category for easier management
+	import /etc/caddy/config.d/10-portfolio.caddyfile
+	import /etc/caddy/config.d/20-media.caddyfile
+	import /etc/caddy/config.d/30-storage.caddyfile
+	import /etc/caddy/config.d/40-communication.caddyfile
+	import /etc/caddy/config.d/50-utilities.caddyfile
 	
-	@files host files.gmojsoski.com
-	handle @files {
-		encode gzip
-		reverse_proxy http://172.17.0.1:8091 {
-			header_up X-Forwarded-Proto https
-			header_up X-Real-IP {remote_host}
-		}
-	}
-	
-	@cloud host cloud.gmojsoski.com
-	handle @cloud {
-		# NO gzip - causes mobile issues with Cloudflare double-compression
-		header {
-			Strict-Transport-Security "max-age=15552000; includeSubDomains; preload"
-		}
-		reverse_proxy http://172.17.0.1:8081 {
-			header_up X-Forwarded-Proto https
-			header_up X-Forwarded-Ssl on
-			header_up X-Real-IP {remote_host}
-		}
-	}
-	
-	@bookmarks host bookmarks.gmojsoski.com
-	handle @bookmarks {
-		encode gzip
-		reverse_proxy http://172.17.0.1:5000 {
-			header_up X-Forwarded-Proto https
-			header_up X-Real-IP {remote_host}
-		}
-	}
-	
-	@tickets host tickets.gmojsoski.com
-	handle @tickets {
-		# NO gzip - causes mobile download/blank issues
-		reverse_proxy http://172.17.0.1:8000 {
-			header_up X-Forwarded-Proto https
-			header_up X-Forwarded-Ssl on
-			header_up X-Real-IP {remote_host}
-		}
-	}
-	
-	@poker host poker.gmojsoski.com
-	handle @poker {
-		encode gzip
-		reverse_proxy http://172.17.0.1:3000 {
-			header_up X-Forwarded-Proto https
-			header_up X-Real-IP {remote_host}
-			header_up Host {host}
-			header_up X-Forwarded-Host {host}
-		}
-	}
-	
-	@travelsync host travelsync.gmojsoski.com
-	handle @travelsync {
-		encode gzip
-		reverse_proxy http://172.17.0.1:8000 {
-			header_up X-Forwarded-Proto https
-			header_up X-Real-IP {remote_host}
-		}
-	}
-	
-	@vault host vault.gmojsoski.com
-	handle @vault {
-		# Route through Nginx for DELETE->PUT method rewrite
-		# NO gzip encoding - Rocket/Vaultwarden doesn't handle it well
-		reverse_proxy http://172.17.0.1:8083 {
-			header_up X-Forwarded-Proto https
-			header_up X-Forwarded-Ssl on
-			header_up X-Real-IP {remote_host}
-		}
-	}
-	
-	@shopping host shopping.gmojsoski.com
-	handle @shopping {
-		encode gzip
-		header Cache-Control "no-cache, must-revalidate"
-		reverse_proxy http://172.17.0.1:8092 {
-			header_up X-Forwarded-Proto https
-			header_up X-Real-IP {remote_host}
-			header_up Host {host}
-			header_up X-Forwarded-Host {host}
-		}
-	}
-	
-	@jellyfin host jellyfin.gmojsoski.com
-	handle @jellyfin {
-		# NO gzip - causes mobile download/blank issues
-		reverse_proxy http://172.17.0.1:8096 {
-			header_up X-Forwarded-Proto https
-			header_up X-Forwarded-Ssl on
-			header_up X-Real-IP {remote_host}
-		}
-	}
-	
-	@paperless host paperless.gmojsoski.com
-	handle @paperless {
-		# NO gzip - causes mobile download/blank issues
-		reverse_proxy http://172.17.0.1:8097 {
-			header_up X-Forwarded-Proto https
-			header_up X-Forwarded-Ssl on
-			header_up X-Real-IP {remote_host}
-		}
-	}
-	
-	@mattermost host mattermost.gmojsoski.com
-	handle @mattermost {
-		# NO gzip - can cause issues with real-time features and webhooks
-		reverse_proxy http://172.17.0.1:8066 {
-			header_up X-Forwarded-Proto https
-			header_up X-Forwarded-Ssl on
-			header_up X-Real-IP {remote_host}
-			header_up Host {host}
-		}
-	}
-	
-	@linkwarden host linkwarden.gmojsoski.com
-	handle @linkwarden {
-		encode gzip
-		reverse_proxy http://172.17.0.1:8090 {
-			header_up X-Forwarded-Proto https
-			header_up X-Real-IP {remote_host}
-		}
-	}
-	
+	# Catch-all fallback (default file server)
 	handle {
 		encode gzip
 		root * /srv/site

@@ -1,0 +1,8 @@
+# Portfolio site
+@gmojsoski host gmojsoski.com www.gmojsoski.com
+handle @gmojsoski {
+	encode gzip
+	root * /srv/site
+	file_server
+}
+
