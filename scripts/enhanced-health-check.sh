@@ -104,32 +104,115 @@ check_service_http() {
 # Function to check configuration integrity (prevents regression to 127.0.0.1)
 check_config_integrity() {
     CONFIG_FILE="/home/goce/.cloudflared/config.yml"
-    if [ -f "$CONFIG_FILE" ]; then
+    if [ ! -f "$CONFIG_FILE" ]; then
+        log "ERROR: Cloudflare config file not found at $CONFIG_FILE"
+        return 1
+    fi
+    
+    # Check for 127.0.0.1 (unstable on this host setup)
+    if grep -q "127.0.0.1:8080" "$CONFIG_FILE"; then
+        log "WARNING: Detected 127.0.0.1 in cloudflared config. This causes intermittent failures!"
+        log "Fixing to localhost:8080 for stability..."
+        sed -i 's/127.0.0.1:8080/localhost:8080/g' "$CONFIG_FILE"
+        
+        # Verify fix
         if grep -q "127.0.0.1:8080" "$CONFIG_FILE"; then
-            log "WARNING: Detected 127.0.0.1 in cloudflared config. Fixing to localhost for stability..."
-            sed -i 's/127.0.0.1:8080/localhost:8080/g' "$CONFIG_FILE"
-            # We don't restart here, the main loop will catch service down if this was the cause
+            log "ERROR: Failed to fix Cloudflare config. Manual intervention required."
+            send_slack_notification "🚨 Cloudflare Config Auto-Fix Failed" "@here
+
+*Issue:* Cloudflare config contains \`127.0.0.1:8080\` (unstable)
+*Auto-fix:* Failed
+*Action:* Manual fix required
+
+*File:* \`$CONFIG_FILE\`
+*Command:* \`sed -i 's/127.0.0.1:8080/localhost:8080/g' $CONFIG_FILE\`
+
+*Restart:* \`cd /home/docker-projects/cloudflared && docker compose restart\`" "🚨"
+            return 1
+        else
+            log "SUCCESS: Cloudflare config fixed. Restarting tunnel..."
+            send_slack_notification "✅ Cloudflare Config Auto-Fixed" "@here
+
+*Issue:* Cloudflare config contained \`127.0.0.1:8080\` (unstable)
+*Auto-fix:* ✅ Fixed to \`localhost:8080\`
+*Action:* Tunnel will restart automatically" "✅"
+            
+            # Restart tunnel to apply fix
+            cd /home/docker-projects/cloudflared || cd /mnt/ssd/docker-projects/cloudflared
+            if docker compose restart >> "$LOG_FILE" 2>&1; then
+                log "SUCCESS: Cloudflare tunnel restarted with fixed config"
+            else
+                log "WARNING: Cloudflare tunnel restart failed after config fix"
+            fi
+            return 0
         fi
     fi
+    
+    # Check that all ingress rules use localhost:8080 (required for stability)
+    INGRESS_COUNT=$(grep -c "service:" "$CONFIG_FILE" || echo "0")
+    LOCALHOST_COUNT=$(grep -c "service: http://localhost:8080" "$CONFIG_FILE" || echo "0")
+    
+    if [ "$INGRESS_COUNT" -gt 0 ] && [ "$LOCALHOST_COUNT" -lt "$INGRESS_COUNT" ]; then
+        log "WARNING: Not all Cloudflare ingress rules use localhost:8080"
+        log "Some services may have inconsistent external access"
+        # Don't auto-fix this - might be intentional
+    fi
+    
+    return 0
 }
 
 # Function to check Caddyfile for problematic gzip settings (prevents mobile download issues)
 check_caddyfile_integrity() {
-    CADDYFILE="/home/docker-projects/caddy/config/Caddyfile"
-    if [ -f "$CADDYFILE" ]; then
-        # Check for encode gzip in mobile-sensitive services (causes Cloudflare double-compression)
-        PROBLEMATIC_SERVICES=("@jellyfin" "@paperless" "@vault" "@tickets" "@cloud")
-        for service in "${PROBLEMATIC_SERVICES[@]}"; do
-            # Check if service block has encode gzip
-            if grep -A10 "$service" "$CADDYFILE" | grep -q "encode gzip"; then
-                local warning_msg="WARNING: Detected 'encode gzip' in $service block. This causes mobile download/blank page issues!"
-                local action_msg="ACTION REQUIRED: Remove 'encode gzip' from $service in Caddyfile to fix mobile access"
-                log "$warning_msg"
-                log "$action_msg"
-                
-                # Send Slack notification
-                local slack_title="Homelab Alert: Caddyfile Configuration Issue"
-                local slack_message="@here
+    # Check both main Caddyfile and split config files
+    CADDYFILE_MAIN="/home/docker-projects/caddy/Caddyfile"
+    CADDYFILE_CONFIG="/home/docker-projects/caddy/config/Caddyfile"
+    CADDYFILE_DIR="/home/docker-projects/caddy/config.d"
+    
+    # Determine which Caddyfile location exists (production might use config/ subdirectory)
+    if [ -f "$CADDYFILE_CONFIG" ]; then
+        CADDYFILE="$CADDYFILE_CONFIG"
+    elif [ -f "$CADDYFILE_MAIN" ]; then
+        CADDYFILE="$CADDYFILE_MAIN"
+    else
+        log "WARNING: Caddyfile not found at $CADDYFILE_MAIN or $CADDYFILE_CONFIG"
+        return 1
+    fi
+    
+    # Check for encode gzip in mobile-sensitive services (causes Cloudflare double-compression)
+    PROBLEMATIC_SERVICES=("@jellyfin" "@paperless" "@vault" "@tickets" "@cloud")
+    
+    for service in "${PROBLEMATIC_SERVICES[@]}"; do
+        # Check main Caddyfile
+        if grep -A10 "$service" "$CADDYFILE" 2>/dev/null | grep -q "encode gzip"; then
+            local warning_msg="WARNING: Detected 'encode gzip' in $service block. This causes mobile download/blank page issues!"
+            log "$warning_msg"
+            send_caddyfile_warning "$service" "$CADDYFILE"
+        fi
+        
+        # Check split config files if they exist
+        if [ -d "$CADDYFILE_DIR" ]; then
+            for config_file in "$CADDYFILE_DIR"/*.caddyfile; do
+                if [ -f "$config_file" ] && grep -A10 "$service" "$config_file" 2>/dev/null | grep -q "encode gzip"; then
+                    local config_name=$(basename "$config_file")
+                    log "WARNING: Detected 'encode gzip' in $service block in split config: $config_name"
+                    send_caddyfile_warning "$service" "$config_file" "$config_name"
+                fi
+            done
+        fi
+    done
+}
+
+# Helper function to send Caddyfile warning notifications
+send_caddyfile_warning() {
+    local service=$1
+    local file_path=$2
+    local config_name=${3:-""}
+    
+    local slack_title="Homelab Alert: Caddyfile Configuration Issue"
+    local file_ref="$file_path"
+    [ -n "$config_name" ] && file_ref="$config_name (in config.d/)"
+    
+    local slack_message="@here
 
 *Service:* \`$service\`
 *Issue:* \`encode gzip\` detected in Caddyfile
@@ -137,16 +220,13 @@ check_caddyfile_integrity() {
 
 *Action Required:*
 Remove \`encode gzip\` from the \`$service\` block in:
-\`$CADDYFILE\`
+\`$file_ref\`
 
 *View log:*
 \`sudo tail -50 /var/log/enhanced-health-check.log\`"
-                
-                send_slack_notification "$slack_title" "$slack_message" "⚠️"
-                # Don't auto-fix - requires manual review to ensure proper headers are in place
-            fi
-        done
-    fi
+    
+    send_slack_notification "$slack_title" "$slack_message" "⚠️"
+    # Don't auto-fix - requires manual review to ensure proper headers are in place
 }
 
 check_udp_buffers() {
