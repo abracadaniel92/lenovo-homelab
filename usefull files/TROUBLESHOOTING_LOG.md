@@ -508,3 +508,66 @@ If you want local network access (bypassing Cloudflare Tunnel), you would need t
 - Better security (Cloudflare DDoS protection)
 - SSL termination handled by Cloudflare
 - No local network configuration needed
+
+---
+
+## [2026-01-16] Backup Cron Job Failing - Permission Denied on Log File
+
+**Date:** 2026-01-16
+**Action:** Backup verification script detected backups haven't run in 17 days (last backup: Dec 30, 2025)
+**Result:** Backup cron job configured but not executing due to log file permission error
+
+### 🔴 Symptoms
+- Backup verification script reports backups haven't run in 17 days
+- Last backup created: Dec 30, 2025 at 21:07
+- Cron service is running and active
+- Backup cron job configured in `/etc/crontab`
+- No errors in cron logs about backup execution
+- Manual backup execution works correctly
+
+### 🔍 Root Cause Identified
+1. **Log File Permission Issue**: Cron job configured to write logs to `/var/log/backup-all-critical.log`
+2. **User Permission Denied**: User `goce` cannot create/write to `/var/log/` directory (requires root/sudo)
+3. **Cron Job Failing Silently**: When cron tries to redirect output (`>> /var/log/backup-all-critical.log 2>&1`), it fails due to permission denied, causing the entire cron job to fail
+4. **No Log File Exists**: `/var/log/backup-all-critical.log` doesn't exist, and user `goce` cannot create it
+
+### ✅ Solution Applied
+1. **Created Fix Script**: `scripts/fix-backup-cron-log.sh` to update crontab log path
+2. **Changed Log Location**: Updated crontab to use user-writable log directory:
+   - **Old**: `/var/log/backup-all-critical.log` (requires root)
+   - **New**: `/home/goce/Desktop/Cursor projects/Pi-version-control/logs/backup-all-critical.log` (user-writable)
+3. **Fix Script Actions**:
+   - Backs up original `/etc/crontab` before changes
+   - Creates log directory if it doesn't exist
+   - Updates crontab entry using `sed` to replace log path
+   - Verifies the change was applied correctly
+
+### 🔧 Fix Script Usage
+```bash
+# Run the fix script (requires sudo)
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/fix-backup-cron-log.sh"
+
+# After fix, verify crontab entry
+grep "backup-all-critical" /etc/crontab
+
+# Monitor next backup run (at 2:00 AM)
+tail -f "/home/goce/Desktop/Cursor projects/Pi-version-control/logs/backup-all-critical.log"
+```
+
+### 📝 Key Lessons Learned
+1. **User-Writable Log Directories**: Always use user-writable log directories for user cron jobs, not `/var/log/`
+2. **Cron Permission Failures**: Cron jobs fail silently when output redirection fails (permission denied)
+3. **Log Directory Best Practice**: Use project-specific log directories (e.g., `$PROJECT_DIR/logs/`) instead of system log directories
+4. **Verification Script Value**: Backup verification script successfully detected the issue (missing/old backups)
+
+### ✅ Verification
+After fix is applied:
+- Backup cron job will execute at 2:00 AM daily ✅
+- Logs will be written to user-writable location ✅
+- Backup verification script will detect new backups ✅
+
+### 📝 Related Files
+- **Cron Job**: `/etc/crontab` (line with `backup-all-critical.sh`)
+- **Fix Script**: `scripts/fix-backup-cron-log.sh`
+- **Log Location**: `logs/backup-all-critical.log` (after fix)
+- **Backup Script**: `scripts/backup-all-critical.sh`
