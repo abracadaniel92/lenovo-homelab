@@ -14,12 +14,19 @@ services:
       - ./db:/var/lib/postgresql/data
     networks:
       - nextcloud-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nextcloud -d nextcloud"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   app:
     image: nextcloud:30-apache
     container_name: nextcloud-app
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: always
     environment:
       POSTGRES_HOST: db

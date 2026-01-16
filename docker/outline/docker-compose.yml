@@ -5,6 +5,9 @@ services:
     image: outlinewiki/outline:latest
     container_name: outline
     restart: unless-stopped
+    profiles:
+      - productivity
+      - all
     ports:
       - "8098:3000"
     environment:
@@ -41,8 +44,10 @@ services:
     volumes:
       - outline-data:/var/lib/outline/data
     depends_on:
-      - outline-postgres
-      - outline-redis
+      outline-postgres:
+        condition: service_healthy
+      outline-redis:
+        condition: service_healthy
     networks:
       - outline-net
 
@@ -50,6 +55,10 @@ services:
     image: postgres:15-alpine
     container_name: outline-postgres
     restart: unless-stopped
+    profiles:
+      - productivity
+      - databases
+      - all
     environment:
       POSTGRES_USER: outline
       POSTGRES_PASSWORD: outline
@@ -68,6 +77,10 @@ services:
     image: redis:7-alpine
     container_name: outline-redis
     restart: unless-stopped
+    profiles:
+      - productivity
+      - databases
+      - all
     volumes:
       - outline-redis-data:/data
     networks:
