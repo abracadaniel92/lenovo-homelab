@@ -257,6 +257,22 @@ check_config_integrity
 check_caddyfile_integrity
 check_udp_buffers
 
+# Check Backups (run once per hour to avoid excessive checks)
+BACKUP_CHECK_FILE="/tmp/last-backup-check"
+CURRENT_HOUR=$(date +%Y%m%d-%H)
+if [ ! -f "$BACKUP_CHECK_FILE" ] || [ "$(cat "$BACKUP_CHECK_FILE" 2>/dev/null)" != "$CURRENT_HOUR" ]; then
+    log "Running backup verification..."
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "$SCRIPT_DIR/verify-backups.sh" ]; then
+        bash "$SCRIPT_DIR/verify-backups.sh" >> "$LOG_FILE" 2>&1 || {
+            log "WARNING: Backup verification detected issues (check logs)"
+        }
+        echo "$CURRENT_HOUR" > "$BACKUP_CHECK_FILE"
+    else
+        log "WARNING: Backup verification script not found: $SCRIPT_DIR/verify-backups.sh"
+    fi
+fi
+
 # Check Docker
 if ! systemctl is-active --quiet docker; then
     log "ERROR: Docker not running. Starting..."
