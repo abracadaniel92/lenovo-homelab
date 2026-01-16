@@ -132,7 +132,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Mattermost** | 8066 | mattermost.gmojsoski.com | Team communication platform (Slack alternative, PostgreSQL) |
 | **Uptime Kuma** | 3001 | - | Monitoring & alerts |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Web analytics |
-| **Homepage** | 8000 | - | Service dashboard |
+| **Homepage** | 3002 | - | Service dashboard |
 | **Portainer** | 9000 | - | Docker management UI |
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
