@@ -166,7 +166,7 @@ Copy this content:
 - **Cloudflare Tunnel**: 2 replicas for redundancy
 - **Uptime Kuma** (Port 3001): Monitoring & alerts
 - **Portainer** (Port 9000): Docker management UI
-- **Homepage** (Port 8000): Service dashboard
+- **Homepage** (Port 3002): Service dashboard
 
 ### Media & Content
 - **Jellyfin** (Port 8096): Media server (movies, TV, music, books)
@@ -341,6 +341,7 @@ After creating these documents, you can:
 4. **Organize by tags** for better searchability
 
 Happy documenting! 📚
+
 
 
 
