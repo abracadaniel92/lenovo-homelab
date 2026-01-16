@@ -3,6 +3,9 @@ services:
     image: docker.io/library/redis:8
     container_name: paperless-redis
     restart: unless-stopped
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: '0.5'
     volumes:
       - redisdata:/data
     networks:
@@ -30,6 +33,9 @@ services:
       PAPERLESS_DBUSER: nextcloud
       PAPERLESS_DBPASS: change_me_strong
       PAPERLESS_DBPORT: 5432
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpus: '1.0'
     networks:
       - default
       - nextcloud-net
