@@ -32,8 +32,22 @@ log "Checking for updates..."
 # Fetch and check for updates
 git fetch origin > /dev/null 2>&1
 
+# Determine current branch (default to main)
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
 LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse origin/main 2>/dev/null || git rev-parse origin/master)
+REMOTE=$(git rev-parse "origin/${CURRENT_BRANCH}" 2>/dev/null)
+
+if [ -z "$REMOTE" ]; then
+    # Try main if current branch remote doesn't exist
+    REMOTE=$(git rev-parse origin/main 2>/dev/null)
+    CURRENT_BRANCH="main"
+fi
+
+if [ -z "$REMOTE" ]; then
+    log "ERROR: Could not determine remote branch. Available branches:"
+    git branch -r | tee -a "$LOG_FILE"
+    exit 1
+fi
 
 if [ "$LOCAL" = "$REMOTE" ]; then
     log "Already up to date"
@@ -41,8 +55,8 @@ if [ "$LOCAL" = "$REMOTE" ]; then
 fi
 
 # Pull changes
-log "Updates detected! Pulling latest changes..."
-git pull origin main 2>/dev/null || git pull origin master
+log "Updates detected! Pulling latest changes from origin/${CURRENT_BRANCH}..."
+git pull origin "${CURRENT_BRANCH}" 2>&1 | tee -a "$LOG_FILE"
 
 if [ $? -eq 0 ]; then
     log "Successfully pulled changes"
