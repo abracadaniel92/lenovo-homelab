@@ -87,6 +87,7 @@ The home lab consists of two devices working together:
 **On Raspberry Pi 4 (pihole):**
 - **DNS Server**: Pi-hole (network-wide DNS & ad blocking)
 - **Ad Blocking**: Network-wide ad blocking with custom blocklists
+- **Monitoring**: Uptime Kuma (secondary instance for redundancy)
 - **Note**: Do NOT add Local DNS Records for `*.YOUR DOMAIN` domains using Cloudflare Tunnel - all devices should use Cloudflare DNS for consistent access
 
 ## <a name="system-requirements"></a>💻 System Requirements
