@@ -86,7 +86,10 @@ The home lab consists of two devices working together:
 
 **On Raspberry Pi 4 (pihole):**
 - **DNS Server**: Pi-hole (network-wide DNS & ad blocking)
+- **Recursive DNS Resolver**: Unbound (privacy-focused recursive DNS, queries root servers directly)
+- **Network Monitoring**: Pi Alert (device discovery, network monitoring, Mattermost alerts)
 - **Ad Blocking**: Network-wide ad blocking with custom blocklists
+- **Monitoring**: Uptime Kuma (secondary instance for redundancy)
 - **Note**: Do NOT add Local DNS Records for `*.YOUR DOMAIN` domains using Cloudflare Tunnel - all devices should use Cloudflare DNS for consistent access
 
 ## <a name="system-requirements"></a>💻 System Requirements
@@ -114,6 +117,8 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 - [Common Commands](docs/reference/common-commands.md)
 - [How-To Guides](docs/how-to-guides/)
 - [Pi-hole Setup Guide](docs/how-to-guides/pi-hole-setup.md) - Raspberry Pi 4 DNS & ad blocking setup
+- [Unbound Setup](docker/unbound/README.md) - Recursive DNS resolver configuration
+- [Pi Alert Setup](docker/pi-alert/README.md) - Network monitoring & device discovery
 
 ## <a name="running-services"></a>📦 Running Services
 
@@ -171,7 +176,9 @@ Pi-version-control/
 │   ├── paperless/
 │   ├── mattermost/
 │   ├── pihole/
+│   ├── pi-alert/              # Network monitoring & device discovery
 │   ├── portainer/
+│   ├── unbound/               # Recursive DNS resolver
 │   ├── uptime-kuma/
 │   ├── vaultwarden/
 │   └── watchtower/
