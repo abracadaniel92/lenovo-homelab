@@ -1,0 +1,32 @@
+services:
+  pialert:
+    image: jokobsk/netalertx:latest
+    container_name: pi-alert
+    hostname: pi-alert
+    restart: unless-stopped
+    network_mode: host  # Use host network to scan LAN and access Pi-hole
+    user: "20211:20211"  # NetAlertX requires specific UID/GID
+    volumes:
+      - pialert_data:/home/pi/pialert/db
+      - pialert_config:/home/pi/pialert/config
+      # Mount Pi-hole database so Pi Alert can read it
+      # Using host path since Pi-hole volume is at /mnt/ssd/docker/docker/volumes/pihole_pihole_config/_data
+      - /mnt/ssd/docker/docker/volumes/pihole_pihole_config/_data:/etc/pihole:ro
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_ADMIN
+      - NET_BIND_SERVICE
+      - NET_RAW
+    environment:
+      TZ: 'Europe/Skopje'  # Match system timezone
+      # Note: Webhook and Pi-hole settings are configured via web UI
+      # After first start, access http://your-pi-ip:20211 to configure
+
+volumes:
+  pialert_data:
+  pialert_config:
+
