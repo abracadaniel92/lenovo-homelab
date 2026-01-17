@@ -1,0 +1,14 @@
+services:
+  unbound:
+    image: klutchell/unbound:latest
+    container_name: unbound
+    hostname: unbound
+    platform: linux/arm64  # Explicitly specify ARM64 for Raspberry Pi
+    network_mode: host  # Use host network so Pi-hole can reach it via 127.0.0.1
+    restart: unless-stopped
+    command: ["-d", "-c", "/etc/unbound/unbound.conf"]  # Run in foreground (-d) with our config
+    volumes:
+      - ./unbound.conf:/etc/unbound/unbound.conf:ro  # klutchell/unbound expects config here
+    environment:
+      TZ: 'Europe/Skopje'  # Match system timezone
+
