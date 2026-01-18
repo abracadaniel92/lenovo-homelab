@@ -19,12 +19,14 @@ Step-by-step guides for common tasks:
 
 ### Reference (`/docs/reference/`)
 Quick reference and technical details:
+- [infrastructure-diagram.md](reference/infrastructure-diagram.md) - Comprehensive infrastructure diagram with all services, network topology, and monitoring
 - [infrastructure-summary.md](reference/infrastructure-summary.md) - Current infrastructure overview
 - [common-commands.md](reference/common-commands.md) - Frequently used commands
 - [LEARNINGS_FROM_REPOS.md](reference/LEARNINGS_FROM_REPOS.md) - Learnings from analyzing other repositories
 
 ## 📖 Quick Links
 
+- **Infrastructure Diagram**: [reference/infrastructure-diagram.md](reference/infrastructure-diagram.md)
 - **Infrastructure Overview**: [reference/infrastructure-summary.md](reference/infrastructure-summary.md)
 - **Backup Strategy**: [concepts/backup-strategy.md](concepts/backup-strategy.md)
 - **Uptime Kuma Setup**: [how-to-guides/setup-uptime-kuma-notifications.md](how-to-guides/setup-uptime-kuma-notifications.md)
