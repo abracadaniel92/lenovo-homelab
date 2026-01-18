@@ -21,7 +21,9 @@ This repository contains all configuration files, scripts, and setup instruction
 ## <a name="overview"></a>🎯 Overview
 
 ### Home Lab Architecture
-also visible here - https://github.com/abracadaniel92/lenovo-homelab/blob/main/Homelab%20Architecture.png
+
+For a comprehensive infrastructure diagram with all services, network topology, monitoring, and backup systems, see [Infrastructure Diagram](docs/reference/infrastructure-diagram.md).
+
 The home lab consists of two devices working together:
 
 | Device | Hostname | Role | Hardware |
