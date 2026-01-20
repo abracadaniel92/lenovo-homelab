@@ -132,3 +132,5 @@ If issues occur, you can quickly revert:
 - Cloudflare validation now automatically fixes and restarts (prevents manual intervention)
 - Health check now checks both main Caddyfile and split config files
 
+
+

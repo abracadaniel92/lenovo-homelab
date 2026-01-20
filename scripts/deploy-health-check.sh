@@ -90,3 +90,5 @@ echo "  • Disk space on /mnt/ssd (warns at 80%, critical at 90%)"
 echo ""
 echo "Notifications will be sent to Mattermost when thresholds are exceeded."
 
+
+
