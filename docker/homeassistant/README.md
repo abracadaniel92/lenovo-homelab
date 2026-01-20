@@ -1,6 +1,6 @@
 # Home Assistant Setup
 
-Home Assistant is configured to run **locally only** for testing device integrations. It is not exposed through Caddy or Cloudflare Tunnel.
+Home Assistant is configured to run **locally only**. It is not exposed through Caddy or Cloudflare Tunnel.
 
 ## Quick Start
 
@@ -45,7 +45,6 @@ The container runs with:
 ## Notes
 
 - **Local Only**: Not exposed externally (no Caddy/Cloudflare config)
-- **Testing Phase**: Currently for testing device integrations
 - **Future**: Can be exposed later if needed by adding to Caddyfile
 
 ## Stopping
