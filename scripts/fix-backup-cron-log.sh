@@ -43,3 +43,5 @@ echo "   1. Cron will automatically reload the new crontab"
 echo "   2. Next backup will run at 2:00 AM and log to: $NEW_LOG"
 echo "   3. Check logs after next backup: tail -f $NEW_LOG"
 
+
+

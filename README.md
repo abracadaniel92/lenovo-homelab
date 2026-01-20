@@ -84,6 +84,7 @@ The home lab consists of two devices working together:
 - **Planning Poker**: Planning poker web application
 - **Docker Management**: Portainer
 - **Service Dashboard**: Homepage
+- **Home Automation**: Home Assistant (local only, testing)
 - **Auto-Updates**: Watchtower (with exclusions)
 
 **On Raspberry Pi 4 (pihole):**
@@ -144,6 +145,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
 | **Linkwarden** | 8090 | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
+| **Home Assistant** | 8123 | - | Home automation (local only, testing) |
 | **Watchtower** | - | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |
 
@@ -180,7 +182,11 @@ Pi-version-control/
 │   ├── pihole/
 │   ├── pi-alert/              # Network monitoring & device discovery
 │   ├── portainer/
+<<<<<<< HEAD
+│   ├── homeassistant/
+=======
 │   ├── unbound/               # Recursive DNS resolver
+>>>>>>> 08c784ed148d0d5bfd4c59c13fcde4c6dfa6b1ee
 │   ├── uptime-kuma/
 │   ├── vaultwarden/
 │   └── watchtower/
@@ -232,6 +238,7 @@ Pi-version-control/
 ├── nginx-vaultwarden/
 ├── paperless/
 ├── portainer/
+├── homeassistant/
 ├── uptime-kuma/
 ├── vaultwarden/
 └── watchtower/
@@ -342,7 +349,7 @@ Services are organized using Docker Compose profiles for selective startup and p
 | **Critical** (no profile) | Caddy, Cloudflared, Vaultwarden, Nextcloud | Always start - essential infrastructure |
 | **`media`** | Jellyfin | Media services |
 | **`productivity`** | Paperless, Mattermost, Outline | Productivity and collaboration tools |
-| **`utilities`** | Uptime Kuma, GoatCounter, Portainer | Utility services |
+| **`utilities`** | Uptime Kuma, GoatCounter, Portainer, Home Assistant | Utility services |
 | **`monitoring`** | Uptime Kuma | Monitoring services |
 | **`databases`** | Nextcloud DB, Mattermost DB, Paperless Redis, Outline DB/Redis | Database services (auto-started with dependent services) |
 | **`all`** | All profiled services | Convenience profile to start all services |
@@ -622,6 +629,7 @@ Docker containers have resource limits configured to prevent resource exhaustion
 | **Mattermost** (db) | 2GB | 1.0 CPU |
 | **Paperless** (webserver) | 2GB | 1.0 CPU |
 | **Paperless** (broker) | 512MB | 0.5 CPU |
+| **Home Assistant** | 2GB | 1.0 CPU |
 
 Resource limits are configured in each service's `docker-compose.yml` using `mem_limit`, `memswap_limit`, and `cpus` directives.
 
