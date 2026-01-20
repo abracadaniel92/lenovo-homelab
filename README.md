@@ -182,11 +182,8 @@ Pi-version-control/
 │   ├── pihole/
 │   ├── pi-alert/              # Network monitoring & device discovery
 │   ├── portainer/
-<<<<<<< HEAD
-│   ├── homeassistant/
-=======
+│   ├── homeassistant/         # Home automation (local only, testing)
 │   ├── unbound/               # Recursive DNS resolver
->>>>>>> 08c784ed148d0d5bfd4c59c13fcde4c6dfa6b1ee
 │   ├── uptime-kuma/
 │   ├── vaultwarden/
 │   └── watchtower/
