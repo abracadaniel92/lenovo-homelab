@@ -14,7 +14,7 @@ services:
       TZ: 'Europe/Skopje'  # Updated to match system timezone
       WEBPASSWORD: 'CHANGE_THIS_PASSWORD'  # Set a secure password for the web interface
       FTLCONF_LOCAL_IPV4: '192.168.1.XXX'  # Pi IP address - UPDATE WITH YOUR PI'S IP
-      PIHOLE_DNS_: '1.1.1.1;1.0.0.1'  # Upstream DNS (Cloudflare)
+      PIHOLE_DNS_: '127.0.0.1#5335'  # Upstream DNS (Unbound recursive resolver)
 
 volumes:
   pihole_config:
