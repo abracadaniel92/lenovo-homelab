@@ -84,7 +84,7 @@ The home lab consists of two devices working together:
 - **Planning Poker**: Planning poker web application
 - **Docker Management**: Portainer
 - **Service Dashboard**: Homepage
-- **Home Automation**: Home Assistant (local only, testing)
+- **Home Automation**: Home Assistant (local only)
 - **Auto-Updates**: Watchtower (with exclusions)
 
 **On Raspberry Pi 4 (pihole):**
@@ -145,7 +145,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
 | **Linkwarden** | 8090 | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
-| **Home Assistant** | 8123 | - | Home automation (local only, testing) |
+| **Home Assistant** | 8123 | - | Home automation (local only) |
 | **Watchtower** | - | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |
 
@@ -182,7 +182,7 @@ Pi-version-control/
 │   ├── pihole/
 │   ├── pi-alert/              # Network monitoring & device discovery
 │   ├── portainer/
-│   ├── homeassistant/         # Home automation (local only, testing)
+│   ├── homeassistant/         # Home automation (local only)
 │   ├── unbound/               # Recursive DNS resolver
 │   ├── uptime-kuma/
 │   ├── vaultwarden/
