@@ -1,0 +1,8 @@
+# Minimal Unbound config for testing
+server:
+    interface: 127.0.0.1@5335
+    do-ip4: yes
+    do-ip6: no
+    access-control: 127.0.0.0/8 allow
+    num-threads: 1
+
