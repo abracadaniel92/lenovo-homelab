@@ -1,0 +1,23 @@
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    profiles:
+      - utilities
+      - all
+    network_mode: host
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpus: '1.0'
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Europe/Belgrade
+    privileged: true
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyACM0:/dev/ttyACM0
+      - /dev/ttyAMA0:/dev/ttyAMA0
+
