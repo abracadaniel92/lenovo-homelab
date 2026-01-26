@@ -1,10 +1,17 @@
-# Portfolio site
+# Main portfolio site (gmojsoski.com)
 @gmojsoski host gmojsoski.com www.gmojsoski.com
 handle @gmojsoski {
 	encode gzip
 	root * /srv/site
 	file_server
 }
+
+# Ivana's Portfolio (portfolio.gmojsoski.com)
+@portfolio host portfolio.gmojsoski.com
+handle @portfolio {
+	reverse_proxy http://172.17.0.1:8085
+}
+
 
 
 

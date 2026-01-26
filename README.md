@@ -145,6 +145,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
 | **Linkwarden** | 8090 | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
+| **Portfolio** | 8085 | portfolio.gmojsoski.com | Ivana's portfolio site (Vue.js) |
 | **Home Assistant** | 8123 | - | Home automation (local only) |
 | **Watchtower** | - | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |

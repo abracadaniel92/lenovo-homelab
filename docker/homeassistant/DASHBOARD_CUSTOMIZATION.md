@@ -315,3 +315,4 @@ docker compose exec homeassistant cat /config/.storage/lovelace
 
 **Start with Mushroom Cards + Theme - you'll be amazed at the difference!** 🎨✨
 
+
