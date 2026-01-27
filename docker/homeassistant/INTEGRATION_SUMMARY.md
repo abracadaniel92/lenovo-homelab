@@ -54,3 +54,4 @@ This document summarizes the integrations and customizations added to Home Assis
 - All frontend resources in `/config/www/community/`
 - Themes configured via `configuration.yaml` (already set up)
 
+

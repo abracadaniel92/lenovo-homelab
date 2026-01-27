@@ -11,6 +11,8 @@
 		respond "{err.status_code} {err.status_text}"
 	}
 	
+	# NOTE: Production uses a single Caddyfile at /home/docker-projects/caddy/config/Caddyfile
+	# This split config structure is for reference/organization only
 	# Import service-specific configurations
 	# Services are organized by category for easier management
 	import /etc/caddy/config.d/10-portfolio.caddyfile

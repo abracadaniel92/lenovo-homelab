@@ -138,6 +138,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Paperless** | 8097 | paperless.gmojsoski.com | Document management (PostgreSQL) |
 | **Outline** | 8098 | - | Wiki & knowledge base (local only, PostgreSQL + Redis) |
 | **Mattermost** | 8066 | mattermost.gmojsoski.com | Team communication platform (Slack alternative, PostgreSQL) |
+| **Clawdbot** | 18789 | - | AI assistant bot for Mattermost (local only, Google Gemini API) |
 | **Uptime Kuma** | 3001 | - | Monitoring & alerts |
 | **GoatCounter** | 8088 | analytics.gmojsoski.com | Web analytics |
 | **Homepage** | 3002 | - | Service dashboard |
@@ -145,6 +146,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
 | **Linkwarden** | 8090 | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
+| **Portfolio** | 8085 | portfolio.gmojsoski.com | Ivana's portfolio site (Vue.js) |
 | **Home Assistant** | 8123 | - | Home automation (local only) |
 | **Watchtower** | - | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |
@@ -179,6 +181,7 @@ Pi-version-control/
 │   ├── nginx-vaultwarden/
 │   ├── paperless/
 │   ├── mattermost/
+│   ├── clawdbot/
 │   ├── pihole/
 │   ├── pi-alert/              # Network monitoring & device discovery
 │   ├── portainer/
