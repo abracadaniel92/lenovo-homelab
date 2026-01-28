@@ -60,6 +60,8 @@ services:
       
       # Security
       MM_SERVICESETTINGS_ENABLEOPENSERVER: "true"
+      MM_SERVICESETTINGS_ENABLEMULTIFACTORAUTHENTICATION: "true"
+      MM_SERVICESETTINGS_ENFORCEMULTIFACTORAUTHENTICATION: "false" # Set to true later to enforce
       
       # File storage
       MM_FILESETTINGS_MAXFILESIZE: 52428800  # 50MB
