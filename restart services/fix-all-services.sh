@@ -61,7 +61,6 @@ declare -a containers=(
     "/mnt/ssd/docker-projects/vaultwarden:vaultwarden"
     "/mnt/ssd/docker-projects/homepage:homepage"
     "/mnt/ssd/docker-projects/pihole:pihole"
-    "/mnt/ssd/docker-projects/kavita:kavita"
     "/mnt/ssd/docker-projects/memos:memos"
 )
 
