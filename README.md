@@ -1,7 +1,7 @@
 # Lenovo ThinkCentre Configuration & Setup
 
 [![GitHub last commit](https://img.shields.io/github/last-commit/abracadaniel92/lenovo-homelab?style=flat-square&logo=github)](https://github.com/abracadaniel92/lenovo-homelab/commits/main)
-[![Docker](https://img.shields.io/badge/containers-22-blue?style=flat-square&logo=docker)](https://github.com/abracadaniel92/lenovo-homelab)
+[![Docker](https://img.shields.io/badge/containers-30-blue?style=flat-square&logo=docker)](https://github.com/abracadaniel92/lenovo-homelab)
 
 
 This repository contains all configuration files, scripts, and setup instructions for a self-hosted home lab. The lab consists of two devices: a **Lenovo ThinkCentre** (main server) running all application services, and a **Raspberry Pi 4** (4GB RAM) running Pi-hole for network-wide DNS and ad blocking.
@@ -125,7 +125,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 
 ## <a name="running-services"></a>📦 Running Services
 
-### Docker Containers (24 containers, 17 services)
+### Docker Containers (30 containers, 21 services)
 
 | Service | External URL | Description |
 |---------|--------------|-------------|
