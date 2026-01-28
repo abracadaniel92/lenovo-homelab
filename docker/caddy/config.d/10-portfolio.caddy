@@ -1,7 +1,7 @@
 # Main portfolio site (gmojsoski.com)
 @gmojsoski host gmojsoski.com www.gmojsoski.com
 handle @gmojsoski {
-	encode gzip
+	header Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
 	root * /srv/site
 	file_server
 }

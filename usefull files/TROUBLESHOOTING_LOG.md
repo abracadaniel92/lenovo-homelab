@@ -2,7 +2,129 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
-## [2026-01-10] Mattermost 502 Error - Config.json Corruption After Plugin Upload Enable
+## [2026-01-28] Portfolio Layout Issues - Cache Busting Mismatch
+
+**Date:** 2026-01-28  
+**Symptoms:**
+- Portfolio site (`gmojsoski.com`) showing broken layout on desktop
+- Duplicated social icons visible in Contact section
+- "Show more" buttons not working on Personal Projects section
+- Cache appearing to serve old assets despite latest code being deployed
+
+**Root Cause Identified:**
+1. **Local Uncommitted Changes**: Cache-busting query strings (`?v=20260128`) were added to asset links in `index.html` to force Cloudflare cache refresh
+2. **Sync Mismatch**: These changes were never committed to git, so `make portfolio-update` pulled clean code from GitHub without the cache busters
+3. **Version Mismatch**: Live site served assets without cache busters → Cloudflare served stale cached CSS/JS from December while HTML was from January
+4. **Confusion**: Issue appeared after Caddy configuration split, making it seem related to that change when it was actually a cache/sync problem
+
+**Solution Applied:**
+1. **Restored Clean State**: Ran `git restore index.html` in portfolio repository to match GitHub `main` branch exactly
+2. **Re-synced**: Ran `make portfolio-update` to ensure complete sync from repository to live site
+3. **Removed Temporary Fix**: Removed the `no-cache` headers that were added to Caddy as a workaround
+4. **Verified Paths**: Confirmed `/home/docker-projects/caddy` and `/mnt/ssd/docker-projects/caddy` are the same directory (symlinked, inode: 9942018)
+
+**Verification:**
+- Portfolio repository shows clean working tree ✅
+- `make portfolio-update` reports "Already up to date" ✅
+- Live site matches GitHub `main` branch exactly ✅
+
+**Key Lessons Learned:**
+1. **Don't Mix Fixes**: Cache-busting changes should be committed to git OR not used at all; uncommitted changes create sync mismatches
+2. **Cloudflare Caching**: Cloudflare edge caching can persist old assets even when server is updated
+3. **Hard Refresh Required**: Users need to hard refresh (Ctrl+Shift+R) or use incognito mode after cache issues
+4. **Sync Verification**: Always verify that local changes match what's deployed when troubleshooting "broken" sites
+
+**Files Involved:**
+- `/home/goce/Desktop/Cursor projects/portfolio/portfolio/index.html` - Repository file
+- `/home/docker-projects/caddy/site/index.html` - Live site (symlinked to `/mnt/ssd/docker-projects/caddy/site/index.html`)
+- `scripts/update-portfolio.sh` - Sync script
+
+**Status**: ✅ Resolved - Site restored to clean state from `main` branch
+
+---
+
+## [2026-01-28] Portfolio Subdomain Inaccessible (404 Error)
+
+**Date:** 2026-01-28
+**Action:** Identified missing ingress rule in Cloudflare Tunnel for `portfolio.gmojsoski.com`.
+**Result:** External access restored to the portfolio subdomain.
+
+### 🔍 Root Cause Identified
+- While Caddy was correctly configured to handle `portfolio.gmojsoski.com`, the Cloudflare Tunnel configuration (`config.yml`) was missing the corresponding ingress rule. This caused Cloudflare to return a 404 error before the request even reached the server.
+
+### ✅ Solution Applied
+1. **Added Ingress Rule**: Updated `/home/goce/.cloudflared/config.yml` and `cloudflare/config.yml` (repo) to include:
+   ```yaml
+   - hostname: portfolio.gmojsoski.com
+     service: http://localhost:8080
+   ```
+2. **Restored Caddy Logic**: Reverted Caddy configuration to use the known working logic (restored gzip and simplified proxy).
+3. **Tunnel Restart**: Restarted the `cloudflared` container to apply the new configuration.
+
+### 🧪 Verification
+- Ran `scripts/verify-services.sh` which confirmed `portfolio.gmojsoski.com: 200` and all other services are healthy.
+
+---
+
+## [2026-01-28] Configured Clawdbot Web Search (Brave Search)
+
+**Date:** 2026-01-28
+**Action:** Used `clawdbot configure --section web` to enable Brave Search and web fetch.
+**Result:** Clawdbot can now perform live web searches using the Brave Search API.
+
+### ✅ Changes Made
+1. **Enabled Web Search**: Switched `tools.web.search.enabled` to `true` in `clawdbot.json`.
+2. **Set API Key**: Provided the Brave Search API key to the configuration tool.
+3. **Enabled Web Fetch**: Switched `tools.web.fetch.enabled` to `true` to allow reading web content.
+4. **Service Restarted**: Restarted the `clawdbot-gateway` container to apply changes.
+
+### 🧪 Verification
+- Config file `clawdbot.json` verified to contain the `tools` section with correct settings.
+- Service restarted successfully.
+
+---
+
+## [2026-01-28] Caddy Configuration Outage after Splitting
+
+**Date:** 2026-01-28
+**Action:** Splitting monolithic Caddyfile into service-specific configurations in `config.d/`
+**Result:** Service went down during initial attempt; successfully restored with modular structure.
+
+### 🔴 Symptoms
+- Caddy service failed to start after splitting the Caddyfile.
+- Port 8080 (reverse proxy) became unresponsive.
+- All services behind the proxy returned connection errors.
+
+### 🔍 Root Cause Identified
+1. **Missing Config Mount**: The `config.d` directory was not properly mounted or referenced in the production Caddy instance.
+2. **Explicit Import Errors**: Using explicit individual imports made the configuration fragile (a missing file would crash the entire proxy).
+
+### ✅ Solution Applied
+1. **Wildcard Import**: Updated `Caddyfile` to use `import /etc/caddy/config.d/*.caddy`.
+2. **Consistent Extensions**: Renamed all split configs to `.caddy`.
+3. **Volume Mount**: Ensured `config.d` is correctly mounted to `/etc/caddy/config.d` in `docker-compose.yml`.
+4. **Validation**: Used `caddy validate` via Docker to verify syntax before deployment.
+
+---
+
+## [2026-01-28] Modular Health Check System Migration
+
+**Date:** 2026-01-28
+**Action:** Migrated monolithic `enhanced-health-check.sh` to a modular engine with service-specific plugins.
+**Result:** Reduced CPU churn and improved maintainability.
+
+### 🔍 Improvements
+1. **Modular Engine**: `health-check-engine.sh` now sources small check scripts from `health.d/`.
+2. **Interval Optimization**: Increased health check interval from **3 minutes** to **15 minutes** as requested by the user.
+3. **Robustness**: A failure in one check module no longer risks the entire script's execution.
+
+### ✅ Verification
+- Manual execution confirmed the engine picks up and runs all modules in `health.d/`.
+- Systemd timer successfully updated to 15-minute intervals.
+
+---
+
+## [2026-01-16] Backup Cron Job Failing - Permission Denied on Log File
 
 **Date:** 2026-01-10
 **Action:** Attempted to enable plugin uploads in Mattermost by modifying config.json directly

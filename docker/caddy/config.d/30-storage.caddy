@@ -26,19 +26,13 @@ handle @tickets {
 @travelsync host travelsync.gmojsoski.com
 handle @travelsync {
 	encode gzip
-	reverse_proxy http://172.17.0.1:8000 {
-		header_up X-Forwarded-Proto https
-		header_up X-Real-IP {remote_host}
-	}
+	reverse_proxy http://172.17.0.1:8000
 }
 
 @files host files.gmojsoski.com
 handle @files {
 	encode gzip
-	reverse_proxy http://172.17.0.1:8091 {
-		header_up X-Forwarded-Proto https
-		header_up X-Real-IP {remote_host}
-	}
+	reverse_proxy http://172.17.0.1:8091
 }
 
 

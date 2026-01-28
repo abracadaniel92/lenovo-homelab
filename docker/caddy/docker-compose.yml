@@ -12,6 +12,6 @@ services:
       - ./config.d:/etc/caddy/config.d
       - ./data:/data
       - ./config:/config
-      - ./site:/srv/site
+      - /home/docker-projects/caddy/site:/srv/site
     extra_hosts:
       - "host.docker.internal:host-gateway"
