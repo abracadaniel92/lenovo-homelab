@@ -215,8 +215,7 @@ docker compose up -d  # Restart
 
 ## Recent Changes (January 2026)
 
-1. ✅ Removed Kavita (replaced by Jellyfin for books)
-2. ✅ Removed Umami & Plausible analytics (using GoatCounter)
+1. ✅ Removed Umami & Plausible analytics (using GoatCounter)
 3. ✅ Enabled Watchtower with exclusions for critical services
 4. ✅ Moved docker data from root to /home (339GB free)
 5. ✅ Fixed KitchenOwl and created recipe import script
