@@ -1,7 +1,7 @@
 # Lenovo ThinkCentre Configuration & Setup
 
 [![GitHub last commit](https://img.shields.io/github/last-commit/abracadaniel92/lenovo-homelab?style=flat-square&logo=github)](https://github.com/abracadaniel92/lenovo-homelab/commits/main)
-[![Docker](https://img.shields.io/badge/containers-22-blue?style=flat-square&logo=docker)](https://github.com/abracadaniel92/lenovo-homelab)
+[![Docker](https://img.shields.io/badge/containers-30-blue?style=flat-square&logo=docker)](https://github.com/abracadaniel92/lenovo-homelab)
 
 
 This repository contains all configuration files, scripts, and setup instructions for a self-hosted home lab. The lab consists of two devices: a **Lenovo ThinkCentre** (main server) running all application services, and a **Raspberry Pi 4** (4GB RAM) running Pi-hole for network-wide DNS and ad blocking.
@@ -125,39 +125,39 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 
 ## <a name="running-services"></a>📦 Running Services
 
-### Docker Containers (24 containers, 17 services)
+### Docker Containers (30 containers, 21 services)
 
-| Service | Port | External URL | Description |
-|---------|------|--------------|-------------|
-| **Caddy** | 8080 | - | Reverse proxy for all services |
-| **Cloudflare Tunnel** | - | - | 2 replicas for redundancy |
-| **Jellyfin** | 8096 | jellyfin.gmojsoski.com | Media server |
-| **KitchenOwl** | 8092 | shopping.gmojsoski.com | Recipe manager & shopping lists |
-| **Vaultwarden** | 8082 | vault.gmojsoski.com | Password manager |
-| **Nextcloud** | 8081 | cloud.gmojsoski.com | Cloud storage (PostgreSQL) |
-| **Paperless** | 8097 | paperless.gmojsoski.com | Document management (PostgreSQL) |
-| **Outline** | 8098 | - | Wiki & knowledge base (local only, PostgreSQL + Redis) |
-| **Mattermost** | 8066 | mattermost.gmojsoski.com | Team communication platform (Slack alternative, PostgreSQL) |
-| **Clawdbot** | 18789 | - | AI assistant bot for Mattermost (local only, Google Gemini API) |
-| **Uptime Kuma** | 3001 | - | Monitoring & alerts |
-| **GoatCounter** | 8088 | analytics.gmojsoski.com | Web analytics |
-| **Homepage** | 3002 | - | Service dashboard |
-| **Portainer** | 9000 | - | Docker management UI |
-| **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
-| **TravelSync** | 8000 | tickets.gmojsoski.com | Travel document processing |
-| **Linkwarden** | 8090 | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
-| **Portfolio** | 8085 | portfolio.gmojsoski.com | Ivana's portfolio site (Vue.js) |
-| **Home Assistant** | 8123 | - | Home automation (local only) |
-| **Watchtower** | - | - | Auto-updates (daily 2 AM) |
-| **Nginx (Vaultwarden)** | 8083 | - | DELETE→PUT rewrite for iOS |
+| Service | External URL | Description |
+|---------|--------------|-------------|
+| **Caddy** | - | Reverse proxy for all services |
+| **Cloudflare Tunnel** | - | 2 replicas for redundancy |
+| **Jellyfin** | jellyfin.gmojsoski.com | Media server |
+| **KitchenOwl** | shopping.gmojsoski.com | Recipe manager & shopping lists |
+| **Vaultwarden** | vault.gmojsoski.com | Password manager |
+| **Nextcloud** | cloud.gmojsoski.com | Cloud storage (PostgreSQL) |
+| **Paperless** | paperless.gmojsoski.com | Document management (PostgreSQL) |
+| **Outline** | - | Wiki & knowledge base (local only, PostgreSQL + Redis) |
+| **Mattermost** | mattermost.gmojsoski.com | Team communication platform (Slack alternative, PostgreSQL) |
+| **Clawdbot** | - | AI assistant bot for Mattermost (local only, Google Gemini API) |
+| **Uptime Kuma** | - | Monitoring & alerts |
+| **GoatCounter** | analytics.gmojsoski.com | Web analytics |
+| **Homepage** | - | Service dashboard |
+| **Portainer** | - | Docker management UI |
+| **Gokapi** | files.gmojsoski.com | File sharing |
+| **TravelSync** | tickets.gmojsoski.com | Travel document processing |
+| **Linkwarden** | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
+| **Portfolio** | portfolio.gmojsoski.com | Ivana's portfolio site (Vue.js) |
+| **Home Assistant** | - | Home automation (local only) |
+| **Watchtower** | - | Auto-updates (daily 2 AM) |
+| **Nginx (Vaultwarden)** | - | DELETE→PUT rewrite for iOS |
 
 ### Systemd Services
 
-| Service | Port | Description |
-|---------|------|-------------|
-| **Planning Poker** | 3000 | poker.gmojsoski.com |
-| **Bookmarks** | 5000 | bookmarks.gmojsoski.com |
-| **Gokapi** | 8091 | files.gmojsoski.com |
+| Service | External URL | Description |
+|---------|--------------|-------------|
+| **Planning Poker** | poker.gmojsoski.com | Planning poker web application |
+| **Bookmarks** | bookmarks.gmojsoski.com | Flask bookmarks service |
+| **Gokapi** | files.gmojsoski.com | File sharing |
 
 ## <a name="directory-structure"></a>📁 Directory Structure
 
