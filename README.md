@@ -176,7 +176,6 @@ Pi-version-control/
 │   ├── travelsync/
 │   ├── goatcounter/
 │   ├── jellyfin/              # (reference only - actual in /home/docker-projects/)
-│   ├── kavita/                # (deprecated - using Jellyfin for books)
 │   ├── nextcloud/
 │   ├── nginx-vaultwarden/
 │   ├── paperless/
