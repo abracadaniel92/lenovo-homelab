@@ -62,5 +62,9 @@ ingress:
   - hostname: linkwarden.gmojsoski.com
     service: http://localhost:8080
 
+  # Ivana's Portfolio (routed through Caddy)
+  - hostname: portfolio.gmojsoski.com
+    service: http://localhost:8080
+
   # Catch-all (must be last)
   - service: http_status:404
