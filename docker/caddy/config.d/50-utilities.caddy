@@ -3,40 +3,26 @@
 @analytics host analytics.gmojsoski.com
 handle @analytics {
 	encode gzip
-	reverse_proxy http://172.17.0.1:8088 {
-		header_up X-Forwarded-Proto https
-		header_up X-Real-IP {remote_host}
-	}
+	reverse_proxy http://172.17.0.1:8088
 }
 
 @bookmarks host bookmarks.gmojsoski.com
 handle @bookmarks {
 	encode gzip
-	reverse_proxy http://172.17.0.1:5000 {
-		header_up X-Forwarded-Proto https
-		header_up X-Real-IP {remote_host}
-	}
+	reverse_proxy http://172.17.0.1:5000
 }
 
 @shopping host shopping.gmojsoski.com
 handle @shopping {
 	encode gzip
 	header Cache-Control "no-cache, must-revalidate"
-	reverse_proxy http://172.17.0.1:8092 {
-		header_up X-Forwarded-Proto https
-		header_up X-Real-IP {remote_host}
-		header_up Host {host}
-		header_up X-Forwarded-Host {host}
-	}
+	reverse_proxy http://172.17.0.1:8092
 }
 
 @linkwarden host linkwarden.gmojsoski.com
 handle @linkwarden {
 	encode gzip
-	reverse_proxy http://172.17.0.1:8090 {
-		header_up X-Forwarded-Proto https
-		header_up X-Real-IP {remote_host}
-	}
+	reverse_proxy http://172.17.0.1:8090
 }
 
 @auth host auth.gmojsoski.com
