@@ -164,3 +164,4 @@ This integration works best with:
 
 Check the integration's GitHub page for your specific TV model compatibility.
 
+
