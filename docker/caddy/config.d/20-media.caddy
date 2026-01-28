@@ -3,32 +3,20 @@
 @jellyfin host jellyfin.gmojsoski.com
 handle @jellyfin {
 	# NO gzip - causes mobile download/blank issues
-	reverse_proxy http://172.17.0.1:8096 {
-		header_up X-Forwarded-Proto https
-		header_up X-Forwarded-Ssl on
-		header_up X-Real-IP {remote_host}
-	}
+	reverse_proxy http://172.17.0.1:8096
 }
 
 @paperless host paperless.gmojsoski.com
 handle @paperless {
 	# NO gzip - causes mobile download/blank issues
-	reverse_proxy http://172.17.0.1:8097 {
-		header_up X-Forwarded-Proto https
-		header_up X-Forwarded-Ssl on
-		header_up X-Real-IP {remote_host}
-	}
+	reverse_proxy http://172.17.0.1:8097
 }
 
 @vault host vault.gmojsoski.com
 handle @vault {
 	# Route through Nginx for DELETE->PUT method rewrite
 	# NO gzip encoding - Rocket/Vaultwarden doesn't handle it well
-	reverse_proxy http://172.17.0.1:8083 {
-		header_up X-Forwarded-Proto https
-		header_up X-Forwarded-Ssl on
-		header_up X-Real-IP {remote_host}
-	}
+	reverse_proxy http://172.17.0.1:8083
 }
 
 

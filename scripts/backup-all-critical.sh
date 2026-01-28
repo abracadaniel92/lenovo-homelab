@@ -11,30 +11,14 @@ SCRIPT_DIR="/home/goce/Desktop/Cursor projects/Pi-version-control/scripts"
 echo "🔄 Backing up all critical services..."
 echo ""
 
-# Vaultwarden (CRITICAL - passwords)
-echo "1️⃣  Vaultwarden (Password Vault)..."
-bash "$SCRIPT_DIR/backup-vaultwarden.sh"
-echo ""
+# Services to backup (in order)
+SERVICES=("vaultwarden" "nextcloud" "travelsync" "kitchenowl" "linkwarden")
 
-# Nextcloud (CRITICAL - user files and database)
-echo "2️⃣  Nextcloud (User Files & Database)..."
-bash "$SCRIPT_DIR/backup-nextcloud.sh"
-echo ""
-
-# TravelSync (IMPORTANT - travel data)
-echo "3️⃣  TravelSync (Travel Data)..."
-bash "$SCRIPT_DIR/backup-travelsync.sh"
-echo ""
-
-# KitchenOwl (IMPORTANT - shopping lists)
-echo "4️⃣  KitchenOwl (Shopping Lists)..."
-bash "$SCRIPT_DIR/backup-kitchenowl.sh"
-echo ""
-
-# Linkwarden (MEDIUM - bookmarks and archived content)
-echo "5️⃣  Linkwarden (Bookmarks & Archives)..."
-bash "$SCRIPT_DIR/backup-linkwarden.sh"
-echo ""
+for service in "${SERVICES[@]}"; do
+    echo "🔄 Processing $service..."
+    bash "$SCRIPT_DIR/backup-engine.sh" "$service"
+    echo ""
+done
 
 echo "✅ All critical services backed up!"
 echo ""

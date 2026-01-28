@@ -84,7 +84,9 @@ The lab consists of two devices:
 ### Config Files
 ```
 /home/docker-projects/caddy/config/Caddyfile
-/usr/local/bin/enhanced-health-check.sh
+/home/docker-projects/caddy/config.d/*.caddy
+/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/health-check-engine.sh
+/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/health.d/*.sh
 /var/log/enhanced-health-check.log
 ```
 
@@ -233,3 +235,6 @@ docker compose up -d  # Restart
 16. ✅ **Fixed WiFi access issue** (Jan 10, 2026) - Removed Pi-hole Local DNS Records for services using Cloudflare Tunnel
 17. ✅ **Reinstalled Mattermost** (Jan 10, 2026) - PostgreSQL 15, port 8066
 18. ✅ **Mattermost fully operational** - All devices (WiFi and mobile) access via Cloudflare Tunnel
+19. ✅ **Split Caddy Configuration** (Jan 28, 2026) - Monolithic Caddyfile split into `config.d/*.caddy` with wildcard imports.
+20. ✅ **Modular Health Check System** (Jan 28, 2026) - Migrated to pluggable engine with service-specific modules.
+21. ✅ **Health Check Interval Optimization** (Jan 28, 2026) - Increased interval to 15 minutes to reduce CPU churn.
