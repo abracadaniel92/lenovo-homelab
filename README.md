@@ -45,8 +45,8 @@ The home lab consists of two devices working together:
 
 | Component | Specification |
 |-----------|---------------|
-| **Model** | Lenovo ThinkCentre |
-| **CPU** | Intel Pentium G4560T @ 2.90GHz (2 Cores, 4 Threads) |
+| **Model** | Lenovo ThinkCentre M710q |
+| **CPU** | Intel Core i5-7500T @ 2.70GHz (4 Cores, 4 Threads) |
 | **RAM** | 32GB DDR4 |
 | **Storage** | 512GB NVMe SSD |
 | **Network** | Gigabit Ethernet |

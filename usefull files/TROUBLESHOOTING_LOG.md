@@ -2,6 +2,36 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-01-29] CPU Upgrade - Intel Pentium G4560T → Intel Core i5-7500T
+
+**Date:** 2026-01-29  
+**Action:** Replaced CPU from Intel Pentium G4560T (2 cores, 4 threads) to Intel Core i5-7500T (4 cores, 4 threads)  
+**Result:** Successful upgrade with no software changes required
+
+### ✅ Hardware Change
+- **Previous CPU**: Intel Pentium G4560T @ 2.90GHz (2 Cores, 4 Threads)
+- **New CPU**: Intel Core i5-7500T @ 2.70GHz (4 Cores, 4 Threads)
+- **Machine**: Lenovo ThinkCentre M710q
+- **BIOS**: M1AKT18A (05/03/2017)
+
+### 🔍 Verification
+- CPU detected correctly: `Intel(R) Core(TM) i5-7500T CPU @ 2.70GHz` ✅
+- All 4 cores recognized by system ✅
+- Docker services running (30 containers active) ✅
+- No software configuration changes required ✅
+
+### 📝 Notes
+- Both CPUs are 7th generation (Kaby Lake) - same architecture (x86_64)
+- No driver or kernel changes needed
+- All services continue to function normally
+- Performance improvement: 2 cores → 4 cores (better parallel processing)
+- Lower base clock (2.70GHz vs 2.90GHz) but more cores for better multi-threaded performance
+
+### ✅ Status
+CPU upgrade completed successfully. System operational with improved multi-core performance.
+
+---
+
 ## [2026-01-28] Portfolio Layout Issues - Cache Busting Mismatch
 
 **Date:** 2026-01-28  
