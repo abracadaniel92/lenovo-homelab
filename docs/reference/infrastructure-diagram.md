@@ -25,7 +25,7 @@ graph TB
             end
         end
         
-        subgraph ThinkCentre["💻 Lenovo ThinkCentre (lemongrab)<br/>Intel Pentium G4560T @ 2.90GHz | 2C/4T | 32GB DDR4 | 512GB NVMe SSD"]
+        subgraph ThinkCentre["💻 Lenovo ThinkCentre (lemongrab)<br/>Intel Core i5-7500T @ 2.70GHz | 4C/4T | 32GB DDR4 | 512GB NVMe SSD"]
             subgraph Storage["💾 Storage Layout"]
                 ROOT["/root - 102GB"]
                 HOME["/home - 374GB<br/>Docker Data Location"]
@@ -220,7 +220,7 @@ graph TB
 
 | Device | CPU | RAM | Storage | Network | Role |
 |--------|-----|-----|---------|---------|------|
-| **ThinkCentre (lemongrab)** | Intel Pentium G4560T @ 2.90GHz (2C/4T) | 32GB DDR4 | 512GB NVMe SSD | Gigabit Ethernet | Main application server |
+| **ThinkCentre (lemongrab)** | Intel Core i5-7500T @ 2.70GHz (4C/4T) | 32GB DDR4 | 512GB NVMe SSD | Gigabit Ethernet | Main application server |
 | **Raspberry Pi 4 (pihole)** | ARM64 | 4GB | SD Card | Gigabit Ethernet + WiFi | DNS & ad blocking |
 
 ### Network Architecture
