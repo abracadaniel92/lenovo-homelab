@@ -2,6 +2,29 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-02-17] Clawdbot: Switched from Google Gemini to local Ollama
+
+**Date:** 2026-02-17  
+**Action:** Removed Gemini API key and configured Clawdbot to use local Ollama (DeepSeek R1 1.5B).  
+**Result:** Clawdbot now uses `ollama/deepseek-r1:1.5b` on the host; no cloud API key required.
+
+### Changes
+- **docker/clawdbot/docker-compose.yml**: Removed `GEMINI_API_KEY` and `GOOGLE_API_KEY`. Added `OLLAMA_API_KEY` and `extra_hosts: host.docker.internal:host-gateway` so the gateway container can reach Ollama on the host.
+- **docker-data/clawdbot/config/clawdbot.json**: Replaced `google` provider with `ollama` provider (`baseUrl: http://host.docker.internal:11434/v1`), primary model `ollama/deepseek-r1:1.5b`. Backup saved as `clawdbot.json.bak`.
+
+### Prerequisites
+- Ollama must be running on the host (e.g. `ollama serve`) and model `deepseek-r1:1.5b` pulled.
+
+### Rollback
+- To revert: restore `clawdbot.json` from `clawdbot.json.bak`, re-add Gemini env vars to docker-compose, and restart the gateway.
+
+### [2026-02-17] Reverted to Google Gemini (local Ollama too slow / stuck)
+- Local Ollama (1.5B/3B) was too slow on CPU; Clawd stayed on "molt is typing..." and did not respond in time.
+- **Action:** Switched Clawdbot back to Google Gemini: restored `google` provider and `google/gemini-2.5-flash` in `clawdbot.json`, re-added `GEMINI_API_KEY` / `GOOGLE_API_KEY` in docker-compose.
+- **User:** Set `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) in `docker/clawdbot/.env` and restart the gateway.
+
+---
+
 ## [2026-01-29] CPU Upgrade - Intel Pentium G4560T → Intel Core i5-7500T
 
 **Date:** 2026-01-29  
@@ -723,3 +746,26 @@ After fix is applied:
 - **Fix Script**: `scripts/fix-backup-cron-log.sh`
 - **Log Location**: `logs/backup-all-critical.log` (after fix)
 - **Backup Script**: `scripts/backup-all-critical.sh`
+
+## [2026-02-22] Hardware Upgrade & Docker Data Migration
+
+**Date:** 2026-02-22  
+**Action:** Attached a new 1TB HDD, formatted it to ext4, mounted it to `/mnt/storage`, and migrated the Docker root directory from root (`/var/lib/docker`) to `/home/docker-data`.  
+**Result:** Reclaimed space on the root partition and enabled large local storage for extensive data like Kiwix archives.
+
+### ✅ Changes Made
+1. **1TB HDD Setup:** Formatted `/dev/sda1` to `ext4` and mounted it at `/mnt/storage` using its UUID in `/etc/fstab` to ensure survival across reboots or moving between dock and SATA.
+2. **Docker Migration:**
+   - Stopped Docker service and socket.
+   - Synchronized all data using `rsync -aP /var/lib/docker/ /home/docker-data/`.
+   - Reconfigured Docker daemon via `/etc/docker/daemon.json` setting `"data-root": "/home/docker-data"`.
+   - Renamed old directory (`/var/lib/docker.old`) to preserve as a temporary backup.
+3. **Kiwix Setup:**
+   - Created `/mnt/storage/kiwix-data/` to hold `.zim` archives natively on the new drive.
+   - Initialized a resilient background `wget -c` download for the 55GB Wikipedia offline English archive (no-pics).
+   - Spun up the Kiwix Docker container serving the directory on port **8089** (since 8088 was already occupied by Portainer).
+
+### 🧪 Verification
+- `df -h` confirms `/mnt/storage` has ~916GB available space.
+- `docker info` lists `Docker Root Dir: /home/docker-data`.
+- Kiwix interface accessible via `http://<device-ip>:8089`.
