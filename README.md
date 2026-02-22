@@ -37,8 +37,9 @@ The home lab consists of two devices working together:
 |--------|-------|
 | **Hostname** | lemongrab |
 | **OS** | Linux (Debian-based) |
-| **Storage** | 512GB NVMe SSD |
-| **Docker Data** | `/home/docker-projects/` (symlinked from `/mnt/ssd/docker-projects/`) |
+| **Storage** | 512GB NVMe SSD + 1TB HDD |
+| **Docker Data** | `/home/docker-data/` |
+| **Local Archives**| `/mnt/storage/kiwix-data/` |
 | **Backups** | `/mnt/ssd/backups/` |
 
 #### Hardware Specs
@@ -48,7 +49,7 @@ The home lab consists of two devices working together:
 | **Model** | Lenovo ThinkCentre M710q |
 | **CPU** | Intel Core i5-7500T @ 2.70GHz (4 Cores, 4 Threads) |
 | **RAM** | 32GB DDR4 |
-| **Storage** | 512GB NVMe SSD |
+| **Storage** | 512GB NVMe SSD + 1TB HDD |
 | **Network** | Gigabit Ethernet |
 
 ### Raspberry Pi 4 (DNS Server) - pihole
@@ -72,17 +73,18 @@ The home lab consists of two devices working together:
 - **Cloud Storage**: Nextcloud
 - **Password Manager**: Vaultwarden (Bitwarden-compatible)
 - **Document Management**: Paperless-ngx (document digitization and organization)
-- **Knowledge Base**: Outline (wiki and documentation)
-- **Team Communication**: Mattermost (Slack alternative)
-- **Recipe Manager**: KitchenOwl (shopping lists & recipes)
-- **File Sharing**: Gokapi
-- **Monitoring**: Uptime Kuma
-- **Analytics**: GoatCounter
-- **Travel Documents**: TravelSync app
+- **Outline**: Wiki and documentation
+- **Mattermost**: Team communication platform (Slack alternative)
+- **Kiwix**: Offline Wikipedia archive and ZIM reader
+- **KitchenOwl**: Shopping lists & recipes
+- **Gokapi**: File sharing
+- **Uptime Kuma**: Monitoring
+- **GoatCounter**: Web analytics
+- **TravelSync**: Travel document processing
 - **Bookmarks**: Flask bookmarks service
-- **Bookmark Manager**: Linkwarden (bookmarks with web archiving)
+- **Linkwarden**: Bookmarks with web archiving
 - **Planning Poker**: Planning poker web application
-- **Docker Management**: Portainer
+- **Portainer**: Docker management ui
 - **Service Dashboard**: Homepage
 - **Home Automation**: Home Assistant (local only)
 - **Auto-Updates**: Watchtower (with exclusions)
@@ -138,7 +140,8 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Paperless** | paperless.gmojsoski.com | Document management (PostgreSQL) |
 | **Outline** | - | Wiki & knowledge base (local only, PostgreSQL + Redis) |
 | **Mattermost** | mattermost.gmojsoski.com | Team communication platform (Slack alternative, PostgreSQL) |
-| **Clawdbot** | - | AI assistant bot for Mattermost (local only, Google Gemini API) |
+| **Clawdbot** | - | AI assistant bot for Mattermost (local Ollama, DeepSeek R1 1.5B) |
+| **Kiwix** | <device-ip>:8089 | Offline Wikipedia encyclopedia and library archive |
 | **Uptime Kuma** | - | Monitoring & alerts |
 | **GoatCounter** | analytics.gmojsoski.com | Web analytics |
 | **Homepage** | - | Service dashboard |
@@ -180,6 +183,7 @@ Pi-version-control/
 │   ├── nginx-vaultwarden/
 │   ├── paperless/
 │   ├── mattermost/
+│   ├── kiwix/                 # Offline archive reader (wikipedia)
 │   ├── clawdbot/
 │   ├── pihole/
 │   ├── pi-alert/              # Network monitoring & device discovery
