@@ -37,10 +37,12 @@ The home lab consists of two devices working together:
 |--------|-------|
 | **Hostname** | lemongrab |
 | **OS** | Linux (Debian-based) |
-| **Storage** | 512GB NVMe SSD + 1TB HDD |
+| **Storage** | 512GB NVMe SSD + 1TB HDD + 2TB HDD + 500GB HDD |
 | **Docker Data** | `/home/docker-data/` |
 | **Local Archives**| `/mnt/storage/kiwix-data/` |
 | **Backups** | `/mnt/ssd/backups/` |
+| **Storage Pool** | `/mnt/storage` (mergerfs: 1TB + 2TB = ~3TB) |
+| **Legacy Drive** | `/mnt/disk_old` (500GB, 2013 — non-critical) |
 
 #### Hardware Specs
 
@@ -49,7 +51,10 @@ The home lab consists of two devices working together:
 | **Model** | Lenovo ThinkCentre M710q |
 | **CPU** | Intel Core i5-7500T @ 2.70GHz (4 Cores, 4 Threads) |
 | **RAM** | 32GB DDR4 |
-| **Storage** | 512GB NVMe SSD + 1TB HDD |
+| **Storage** | 512GB NVMe SSD + 1TB HDD + 2TB HDD + 500GB HDD |
+| **Storage (Internal)** | `/` (102GB ext4) + `/home` (374GB ext4) on NVMe |
+| **Storage (External)** | `/mnt/storage` - 3TB mergerfs pool (1TB + 2TB USB) |
+| **Storage (Legacy)** | `/mnt/disk_old` - 500GB USB (2013, non-critical only) |
 | **Network** | Gigabit Ethernet |
 
 ### Raspberry Pi 4 (DNS Server) - pihole
@@ -773,7 +778,7 @@ This repository contains configuration files for personal use. Please review and
 
 ---
 
-**Last Updated**: January 2026  
+**Last Updated**: February 2026  
 **Home Lab**: Lenovo ThinkCentre (lemongrab) + Raspberry Pi 4 (pihole)  
 **OS**: Linux (Debian-based)  
 **Repository**: https://github.com/abracadaniel92/lenovo-homelab

@@ -769,3 +769,55 @@ After fix is applied:
 - `df -h` confirms `/mnt/storage` has ~916GB available space.
 - `docker info` lists `Docker Root Dir: /home/docker-data`.
 - Kiwix interface accessible via `http://<device-ip>:8089`.
+
+---
+
+## [2026-02-26] Storage Expansion - 3 New USB HDDs Added (mergerfs Pool)
+
+**Date:** 2026-02-26
+**Action:** Connected three external HDDs (2TB, 1TB, 500GB) via USB docking stations, wiped all three, formatted them to `ext4`, and configured a `mergerfs` pool combining the 2TB and 1TB drives.
+**Result:** 3TB `mergerfs` storage pool available at `/mnt/storage`. Old 500GB drive mounted separately at `/mnt/disk_old`.
+
+### ✅ Drives Configured
+
+| Drive | Physical Size | Label | Mount Point | Notes |
+|-------|--------------|-------|-------------|-------|
+| `/dev/sdb` | 1TB | `disk1` | `/mnt/disk1` | Part of mergerfs pool |
+| `/dev/sdd` | 2TB | `disk_pool1` | `/mnt/disk2` | Part of mergerfs pool |
+| `/dev/sdc` | 500GB (2013) | `disk2` | `/mnt/disk_old` | Isolated - old/possibly unreliable |
+| `mergerfs` | ~3TB combined | — | `/mnt/storage` | **Main external storage** |
+
+### 🔧 Steps Performed
+
+1. **Unmounted** auto-mounted NTFS partitions from `/media/goce/`
+2. **Wiped** all three drives with `wipefs -a`
+3. **Partitioned** all three with GPT + single ext4 partition via `parted`
+4. **Formatted** to `ext4` (used `-F` flag to force past NTFS signature detection)
+5. **Removed stale old fstab entry** for `UUID=1c5174bc` (previous 1TB `/mnt/storage` drive, no longer present)
+6. **Created mount points**: `/mnt/disk1`, `/mnt/disk2`, `/mnt/disk_old`, `/mnt/storage`
+7. **Mounted** all three drives individually
+8. **Created mergerfs pool**: `/mnt/disk1:/mnt/disk2` → `/mnt/storage` (policy: `mfs` - most free space)
+9. **Updated `/etc/fstab`** with UUID-based entries for all 3 drives and the mergerfs pool
+
+### 📍 Fstab Entries Added
+```
+UUID=fdb8956e-eb47-46c6-a8ff-d9a0e223782f  /mnt/disk1     ext4         defaults,nofail  0  2
+UUID=139b09c3-efda-4d88-b9aa-8b20aadd1873  /mnt/disk2     ext4         defaults,nofail  0  2
+UUID=a93c91ca-b06b-4a1e-ad4d-353ddf221319  /mnt/disk_old  ext4         defaults,nofail  0  2
+/mnt/disk1:/mnt/disk2  /mnt/storage  fuse.mergerfs  defaults,allow_other,use_ino,category.create=mfs,minfreespace=100M,x-systemd.requires=/mnt/disk1,x-systemd.requires=/mnt/disk2  0  0
+```
+
+### 🧪 Verification
+```
+/dev/sdb1  916G  used: 2.1M  avail: 870G  → /mnt/disk1  ✅
+/dev/sdd1  1.8T  used: 2.1M  avail: 1.7T  → /mnt/disk2  ✅
+/dev/sdc1  458G  used: 2.1M  avail: 435G  → /mnt/disk_old  ✅
+mergerfs   2.7T  used: 4.1M  avail: 2.6T  → /mnt/storage  ✅
+```
+- Write/read test to `/mnt/storage` and `/mnt/disk_old` passed ✅
+- `systemctl daemon-reload` run after fstab update ✅
+
+### ⚠️ Notes
+- The 500GB drive is from 2013; treat as non-critical storage only.
+- Consider running `sudo badblocks -sv /dev/sdc` on the old drive to check health before trusting it.
+- **Point Docker volumes, Kiwix data, and media at `/mnt/storage`** for primary use.
