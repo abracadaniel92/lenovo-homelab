@@ -78,6 +78,7 @@ The home lab consists of two devices working together:
 - **Cloud Storage**: Nextcloud
 - **Password Manager**: Vaultwarden (Bitwarden-compatible)
 - **Document Management**: Paperless-ngx (document digitization and organization)
+- **Photos**: Immich (photo & video backup, Google Photos alternative)
 - **Outline**: Wiki and documentation
 - **Mattermost**: Team communication platform (Slack alternative)
 - **Kiwix**: Offline Wikipedia archive and ZIM reader
@@ -155,6 +156,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **TravelSync** | tickets.gmojsoski.com | Travel document processing |
 | **Linkwarden** | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
 | **Portfolio** | portfolio.gmojsoski.com | Ivana's portfolio site (Vue.js) |
+| **Immich** | immich.gmojsoski.com | Photo & video backup (Google Photos alternative) |
 | **Home Assistant** | - | Home automation (local only) |
 | **Watchtower** | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | - | DELETE→PUT rewrite for iOS |
@@ -184,6 +186,7 @@ Pi-version-control/
 │   ├── travelsync/
 │   ├── goatcounter/
 │   ├── jellyfin/              # (reference only - actual in /home/docker-projects/)
+│   ├── immich/                # Photo & video backup (3TB storage, OAuth)
 │   ├── nextcloud/
 │   ├── nginx-vaultwarden/
 │   ├── paperless/

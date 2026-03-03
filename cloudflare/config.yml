@@ -66,5 +66,9 @@ ingress:
   - hostname: portfolio.gmojsoski.com
     service: http://localhost:8080
 
+  # Immich (routed through Caddy)
+  - hostname: immich.gmojsoski.com
+    service: http://localhost:8080
+
   # Catch-all (must be last)
   - service: http_status:404
