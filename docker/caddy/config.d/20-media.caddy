@@ -19,6 +19,12 @@ handle @vault {
 	reverse_proxy http://172.17.0.1:8083
 }
 
+@immich host immich.gmojsoski.com
+handle @immich {
+	# NO gzip - media streaming (photos/videos)
+	reverse_proxy http://172.17.0.1:2283
+}
+
 
 
 
