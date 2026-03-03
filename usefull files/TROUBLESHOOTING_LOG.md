@@ -2,6 +2,23 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-03-03] Immich: Photo backup service added
+
+**Date:** 2026-03-03  
+**Action:** Added Immich for self-hosted photo/video backup (Google Photos alternative).  
+**Result:** Service at https://immich.gmojsoski.com, local http://localhost:2283 (port 2283).
+
+### Configuration
+- **docker/immich/**: docker-compose (server, ML, Redis, PostgreSQL), .env with `UPLOAD_LOCATION=/mnt/storage/immich-library` (3TB mergerfs). `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` used so server starts on empty library; optional: run `sudo docker/immich/create-library-dirs.sh` to create .immich markers, then remove the flag.
+- **Caddy:** docker/caddy/config.d/20-media.caddy — `immich.gmojsoski.com` → `http://172.17.0.1:2283` (no gzip).
+- **Tunnel:** immich.gmojsoski.com in cloudflare/config.yml and ~/.cloudflared/config.yml → `http://localhost:8080`.
+- **2FA:** No native TOTP; use Google OAuth (Administration → Settings) and 2FA on Google account, or Authentik.
+
+### If Immich crashes on start (encoded-video/.immich ENOENT)
+- Empty UPLOAD_LOCATION lacks subdirs; either set `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` in .env or run `sudo docker/immich/create-library-dirs.sh /mnt/storage/immich-library`.
+
+---
+
 ## [2026-02-17] Clawdbot: Switched from Google Gemini to local Ollama
 
 **Date:** 2026-02-17  
