@@ -13,6 +13,7 @@ This log documents specific issues encountered on the server and their fixes.
 - **Caddy:** docker/caddy/config.d/20-media.caddy — `immich.gmojsoski.com` → `http://172.17.0.1:2283` (no gzip).
 - **Tunnel:** immich.gmojsoski.com in cloudflare/config.yml and ~/.cloudflared/config.yml → `http://localhost:8080`.
 - **2FA:** No native TOTP; use Google OAuth (Administration → Settings) and 2FA on Google account, or Authentik.
+- **Access control:** OAuth Auto Register disabled (only pre-created users can sign in); password login disabled in Settings so login is OAuth-only and not guessable.
 
 ### If Immich crashes on start (encoded-video/.immich ENOENT)
 - Empty UPLOAD_LOCATION lacks subdirs; either set `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` in .env or run `sudo docker/immich/create-library-dirs.sh /mnt/storage/immich-library`.
