@@ -29,3 +29,9 @@ Docs: https://immich.app/docs/install/docker-compose
 ## Port
 
 - **2283** – Immich server (used by Caddy reverse proxy).
+
+## Security (this instance)
+
+- **OAuth (Google):** Auto Register **disabled** — only admin-created users can log in with Google.
+- **Password login:** **Disabled** in Administration → Settings — prevents guessing; access is OAuth-only.
+- Add users via Administration → Users; they link Google in User settings → OAuth after first sign-in.
