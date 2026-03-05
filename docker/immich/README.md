@@ -3,9 +3,9 @@
 Self-hosted photo and video backup, similar to Google Photos.  
 Docs: https://immich.app/docs/install/docker-compose
 
-## Storage
+## Storage (this instance)
 
-- **Photos/videos:** Currently `./library` (so the server starts reliably). To use the 3TB pool: `sudo mkdir -p /mnt/storage/immich-library`, set `UPLOAD_LOCATION=/mnt/storage/immich-library` in `.env`, then `docker compose up -d --force-recreate immich-server` (Immich will create required subdirs on first run).
+- **Photos/videos:** `/mnt/storage/immich-library` (3TB mergerfs pool). `.env` has `UPLOAD_LOCATION=/mnt/storage/immich-library` and `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` so the server starts on an empty library. Optional: run `sudo docker/immich/create-library-dirs.sh /mnt/storage/immich-library` to create `.immich` markers, then you can remove the ignore flag.
 - **Database:** `./postgres` (local to this compose; keep on SSD for performance).
 
 ## First-time setup
@@ -35,3 +35,7 @@ Docs: https://immich.app/docs/install/docker-compose
 - **OAuth (Google):** Auto Register **disabled** — only admin-created users can log in with Google.
 - **Password login:** **Disabled** in Administration → Settings — prevents guessing; access is OAuth-only.
 - Add users via Administration → Users; they link Google in User settings → OAuth after first sign-in.
+
+## Troubleshooting
+
+- **Crash on start (encoded-video/.immich ENOENT):** Empty library lacks subdirs. Use `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` in `.env`, or run `sudo docker/immich/create-library-dirs.sh /mnt/storage/immich-library`. See `usefull files/TROUBLESHOOTING_LOG.md`.
