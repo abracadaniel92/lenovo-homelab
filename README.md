@@ -89,6 +89,7 @@ The home lab consists of two devices working together:
 - **TravelSync**: Travel document processing
 - **Bookmarks**: Flask bookmarks service
 - **Linkwarden**: Bookmarks with web archiving
+- **FreshRSS**: RSS feed aggregator (rss.gmojsoski.com)
 - **Planning Poker**: Planning poker web application
 - **Portainer**: Docker management ui
 - **Service Dashboard**: Homepage
@@ -157,6 +158,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Linkwarden** | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
 | **Portfolio** | portfolio.gmojsoski.com | Ivana's portfolio site (Vue.js) |
 | **Immich** | immich.gmojsoski.com | Photo & video backup (Google Photos alternative) |
+| **FreshRSS** | rss.gmojsoski.com | RSS feed aggregator |
 | **Home Assistant** | - | Home automation (local only) |
 | **Watchtower** | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | - | DELETE→PUT rewrite for iOS |
@@ -168,6 +170,8 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Planning Poker** | poker.gmojsoski.com | Planning poker web application |
 | **Bookmarks** | bookmarks.gmojsoski.com | Flask bookmarks service |
 | **Gokapi** | files.gmojsoski.com | File sharing |
+
+**Adding a new service:** Follow [SERVICE_ADDITION_CHECKLIST.md](SERVICE_ADDITION_CHECKLIST.md). After editing Caddy or Cloudflare config, copy `cloudflare/config.yml` to `~/.cloudflared/config.yml`, then restart Caddy and cloudflared, and run `./scripts/verify-services.sh`.
 
 ## <a name="directory-structure"></a>📁 Directory Structure
 
@@ -187,6 +191,7 @@ Pi-version-control/
 │   ├── goatcounter/
 │   ├── jellyfin/              # (reference only - actual in /home/docker-projects/)
 │   ├── immich/                # Photo & video backup (3TB storage, OAuth)
+│   ├── freshrss/               # RSS feed aggregator (rss.gmojsoski.com)
 │   ├── nextcloud/
 │   ├── nginx-vaultwarden/
 │   ├── paperless/

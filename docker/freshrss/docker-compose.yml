@@ -1,0 +1,28 @@
+# FreshRSS - self-hosted RSS feed aggregator
+# https://freshrss.org/ | https://hub.docker.com/r/freshrss/freshrss
+
+name: freshrss
+
+services:
+  freshrss:
+    image: freshrss/freshrss:latest
+    container_name: freshrss
+    restart: unless-stopped
+    ports:
+      - "8099:80"
+    environment:
+      TZ: ${TZ:-Europe/Skopje}
+      CRON_MIN: ${CRON_MIN:-1,31}
+    volumes:
+      - freshrss_data:/var/www/FreshRSS/data
+      - freshrss_extensions:/var/www/FreshRSS/extensions
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  freshrss_data:
+  freshrss_extensions:
