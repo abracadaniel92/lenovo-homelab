@@ -2,6 +2,33 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-03-03] FreshRSS: Unavailable on :8099 and URL – container not started + restarts required
+
+**Date:** 2026-03-03  
+**Symptoms:** http://localhost:8099 and https://rss.gmojsoski.com were unavailable.  
+**Causes:** (1) FreshRSS container had never been started. (2) After adding a new service, Caddy and cloudflared must be restarted or the public URL stays 404.  
+**Fix:**  
+1. Start container: `cd docker/freshrss && docker compose up -d`.  
+2. **Apply config and restart (required for any new service):**  
+   - `cp cloudflare/config.yml ~/.cloudflared/config.yml`  
+   - `cd docker/caddy && docker compose restart caddy`  
+   - `cd docker/cloudflared && docker compose restart`  
+3. Run `./scripts/verify-services.sh`.  
+**Result:** Local :8099 and https://rss.gmojsoski.com both work (302 installer).  
+**Remember:** New Caddy/tunnel routes only take effect after copying the tunnel config and restarting Caddy then cloudflared. See SERVICE_ADDITION_CHECKLIST.md “Restart Sequence”.
+
+---
+
+## [2026-03-03] Bookmarks: "URL is required" – rebuilt to accept form + JSON
+
+**Date:** 2026-03-03  
+**Symptoms:** POST to bookmarks.gmojsoski.com returned "URL is required" even when sending a URL.  
+**Cause:** Old app only read `request.json` and expected key `url`; form submissions or different keys (e.g. `link`) were ignored.  
+**Fix:** Rebuilt app in `Pi-version-control/apps/bookmarks/`: accepts both JSON and form data, accepts `url` / `link` / `bookmark_url`, validates URL (http/https), uses env for webhook and token (`.env` + systemd `EnvironmentFile`), added simple HTML form at `/`.  
+**Deploy:** Copy `apps/bookmarks/*` to `/mnt/ssd/apps/bookmarks/`, ensure `.env` has `MATTERMOST_WEBHOOK_URL` and `BOOKMARKS_SECRET_TOKEN`, then `sudo systemctl restart bookmarks.service`.
+
+---
+
 ## [2026-03-03] Immich: Photo backup service added
 
 **Date:** 2026-03-03  

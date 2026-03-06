@@ -25,6 +25,12 @@ handle @linkwarden {
 	reverse_proxy http://172.17.0.1:8090
 }
 
+@rss host rss.gmojsoski.com
+handle @rss {
+	encode gzip
+	reverse_proxy http://172.17.0.1:8099
+}
+
 @auth host auth.gmojsoski.com
 handle @auth {
 	# NO gzip - can cause issues with authentication flows

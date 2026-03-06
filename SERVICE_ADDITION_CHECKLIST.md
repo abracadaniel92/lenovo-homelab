@@ -45,11 +45,12 @@ Follow this checklist whenever adding a new service to the homelab. This ensures
 
 ## ❓ Operational Procedures & FAQ
 
-### 1. Restart Sequence
-**Order Matters:**
-1.  **Restart Caddy First**: `docker compose restart caddy` (loads new internal routing).
-2.  **Restart Tunnel Second**: `docker compose restart` in the cloudflared folder (registers new ingress rule).
-*Why?* The tunnel needs to see the internal route is ready.
+### 1. Restart Sequence (required for new routes to work)
+**After editing Caddy or Cloudflare config, you must apply and restart:**
+1.  **Copy tunnel config** (if you added a hostname): `cp cloudflare/config.yml ~/.cloudflared/config.yml`
+2.  **Restart Caddy**: `cd docker/caddy && docker compose restart caddy` (loads new internal routing).
+3.  **Restart Tunnel**: `cd docker/cloudflared && docker compose restart` (registers new ingress rule).
+*Why?* Caddy and cloudflared only read config at startup. Without restart, the new service URL stays 404.
 
 ### 2. Verification
 **Mandatory**: YES. Always run `./scripts/verify-services.sh` after any change. This is your safety net.
