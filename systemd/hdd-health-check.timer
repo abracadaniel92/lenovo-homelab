@@ -1,0 +1,12 @@
+[Unit]
+Description=Run HDD SMART health check daily at 11:00
+Requires=hdd-health-check.service
+
+[Timer]
+# Every day at 11:00; report (Mattermost summary) is sent only on Sunday by the script
+OnCalendar=*-*-* 11:00:00
+Persistent=true
+AccuracySec=5min
+
+[Install]
+WantedBy=timers.target

@@ -77,7 +77,7 @@ graph TB
             end
             
             subgraph MonitoringAutomation["🛡️ Monitoring & Automation"]
-                HEALTH_CHECK["Enhanced Health Check<br/>Timer: Every 3 minutes<br/>Script: /usr/local/bin/<br/>enhanced-health-check.sh"]
+                HEALTH_CHECK["Enhanced Health Check<br/>Timer: Every hour<br/>Script: /usr/local/bin/<br/>enhanced-health-check.sh"]
                 BACKUP_VERIFY["Backup Verification<br/>Hourly via Health Check<br/>verify-backups.sh"]
                 ANALYTICS_REPORT["Analytics Bot<br/>Weekly Report<br/>Sunday @ 10 AM<br/>→ Mattermost"]
                 PI_MONITORING["System Bot<br/>Health Reports<br/>Every 5 days<br/>→ Mattermost"]
@@ -155,7 +155,7 @@ graph TB
     B2_SYNC -->|443 files synced| BACKBLAZE
     
     %% Monitoring Flows
-    HEALTH_CHECK -->|Every 3 min<br/>Check Services| CoreInfra
+    HEALTH_CHECK -->|Every hour<br/>Check Services| CoreInfra
     HEALTH_CHECK -->|Check Services| MediaServices
     HEALTH_CHECK -->|Check Services| StorageServices
     HEALTH_CHECK -->|Check Services| ProductivityServices
@@ -255,7 +255,7 @@ graph TB
 ### Monitoring & Recovery
 
 **Multi-layer System**:
-1. **Enhanced Health Check** (every 3 min): Service checks, auto-restart, config validation
+1. **Enhanced Health Check** (every hour): Service checks, auto-restart, config validation
 2. **Docker Restart Policies**: Auto-restart on failure
 3. **Cloudflare Tunnel**: 2 replicas for redundancy
 4. **Uptime Kuma**: External monitoring (60s intervals) + secondary Pi instance
@@ -310,7 +310,7 @@ graph TB
 ### Automation
 
 **Systemd Timers**:
-- `enhanced-health-check.timer`: Every 3 minutes
+- `enhanced-health-check.timer`: Every hour
 - `slack-goatcounter-weekly.timer`: Sunday @ 10 AM
 - `slack-pi-monitoring.timer`: Every 5 days
 - `portfolio-update.timer`: Manual trigger via `make portfolio-update`

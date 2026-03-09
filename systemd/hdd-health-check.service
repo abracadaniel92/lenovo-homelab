@@ -1,0 +1,13 @@
+[Unit]
+Description=HDD SMART health check (USB disks)
+After=network-online.target local-fs.target
+
+[Service]
+Type=oneshot
+# Run as root so smartctl can access USB disks
+ExecStart=/usr/local/bin/hdd-health-check.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

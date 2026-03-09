@@ -2,14 +2,14 @@
 
 ## ✅ Configuration Summary
 
-The health check system has been updated to run **every 3 minutes** (changed from 30 seconds) to reduce CPU usage.
+The health check system runs **every hour** (changed from 3 minutes).
 
 ### Files Updated:
 
 1. **`scripts/permanent-auto-recovery.sh`** ✅
-   - Timer interval: `OnUnitActiveSec=3min` (line 144)
-   - Description updated: "Every 3 Minutes" (line 139)
-   - AccuracySec: `30s` (appropriate for 3min interval)
+   - Timer interval: `OnUnitActiveSec=1h` (line 144)
+   - Description: "Every Hour" (line 139)
+   - AccuracySec: `30s`
 
 2. **`Makefile`** ✅
    - Health command: `make health` or `lab-make health`
@@ -64,12 +64,12 @@ sudo bash scripts/permanent-auto-recovery.sh
 # Update the timer file
 sudo tee /etc/systemd/system/enhanced-health-check.timer > /dev/null << 'EOF'
 [Unit]
-Description=Run Enhanced Health Check Every 3 Minutes
+Description=Run Enhanced Health Check Every Hour
 Requires=enhanced-health-check.service
 
 [Timer]
 OnBootSec=1min
-OnUnitActiveSec=3min
+OnUnitActiveSec=1h
 AccuracySec=30s
 
 [Install]
@@ -86,7 +86,7 @@ systemctl show enhanced-health-check.timer -p OnUnitActiveSec --value
 
 ## 📊 Expected Configuration
 
-- **Timer Interval**: `3min` (or `180s` or `180000000` microseconds)
+- **Timer Interval**: `1h` (or `3600s` or `3600000000` microseconds)
 - **Boot Delay**: `1min` (waits 1 minute after boot)
 - **Accuracy**: `30s` (timer can be delayed by up to 30 seconds for efficiency)
 - **Service**: `/etc/systemd/system/enhanced-health-check.service`
@@ -118,7 +118,7 @@ sudo systemctl daemon-reload && sudo systemctl restart enhanced-health-check.tim
 
 - [ ] Timer file exists: `/etc/systemd/system/enhanced-health-check.timer`
 - [ ] Service file exists: `/etc/systemd/system/enhanced-health-check.service`
-- [ ] Timer interval is `3min` (not `30s`)
+- [ ] Timer interval is `1h`
 - [ ] Timer is enabled: `systemctl is-enabled enhanced-health-check.timer`
 - [ ] Timer is active: `systemctl is-active enhanced-health-check.timer`
 - [ ] Script exists and is executable: `/usr/local/bin/enhanced-health-check.sh`
@@ -126,7 +126,7 @@ sudo systemctl daemon-reload && sudo systemctl restart enhanced-health-check.tim
 
 ## 📝 Notes
 
-- The health check runs **every 3 minutes** now (reduced from 30 seconds)
+- The health check runs **every hour**
 - This should significantly reduce CPU usage
 - The script checks multiple services and can restart them if they fail
 - All actions are logged to `/var/log/enhanced-health-check.log`

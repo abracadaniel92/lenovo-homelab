@@ -36,10 +36,10 @@ if [ -z "$INTERVAL" ]; then
         if [ -n "$INTERVAL_FROM_FILE" ]; then
             INTERVAL="$INTERVAL_FROM_FILE"
             echo "✅ Timer interval (from file): $INTERVAL"
-            if [ "$INTERVAL" = "3min" ] || [ "$INTERVAL" = "180s" ]; then
-                echo "   ✓ Interval is correct (3 minutes)"
+            if [ "$INTERVAL" = "1h" ] || [ "$INTERVAL" = "3600s" ]; then
+                echo "   ✓ Interval is correct (1 hour)"
             else
-                echo "   ⚠️  Interval is $INTERVAL (expected 3min or 180s)"
+                echo "   ⚠️  Interval is $INTERVAL (expected 1h or 3600s)"
                 echo "   To fix: sudo systemctl daemon-reload && sudo systemctl restart enhanced-health-check.timer"
             fi
         else
@@ -48,20 +48,20 @@ if [ -z "$INTERVAL" ]; then
     else
         echo "⚠️  Warning: Timer file not found"
     fi
-elif [ "$INTERVAL" = "3min" ] || [ "$INTERVAL" = "180s" ] || [ "$INTERVAL" = "180000000" ] || [ "$INTERVAL" = "3 min" ]; then
-    echo "✅ Timer interval is correct: $INTERVAL (3 minutes)"
+elif [ "$INTERVAL" = "1h" ] || [ "$INTERVAL" = "3600s" ] || [ "$INTERVAL" = "3600000000" ] || [ "$INTERVAL" = "1 h" ]; then
+    echo "✅ Timer interval is correct: $INTERVAL (1 hour)"
 else
     # Convert microseconds to seconds for comparison
     if echo "$INTERVAL" | grep -qE "^[0-9]+$"; then
         INTERVAL_SEC=$((INTERVAL / 1000000))
-        if [ "$INTERVAL_SEC" = "180" ]; then
-            echo "✅ Timer interval is correct: $INTERVAL_SEC seconds (3 minutes)"
+        if [ "$INTERVAL_SEC" = "3600" ]; then
+            echo "✅ Timer interval is correct: $INTERVAL_SEC seconds (1 hour)"
         else
-            echo "⚠️  Warning: Timer interval is ${INTERVAL_SEC}s (expected 180s/3min)"
+            echo "⚠️  Warning: Timer interval is ${INTERVAL_SEC}s (expected 3600s/1h)"
             echo "   To fix, update the timer file and reload: sudo systemctl daemon-reload && sudo systemctl restart enhanced-health-check.timer"
         fi
     else
-        echo "⚠️  Warning: Timer interval is $INTERVAL (expected 3min or 180s)"
+        echo "⚠️  Warning: Timer interval is $INTERVAL (expected 1h or 3600s)"
         echo "   To fix, update the timer file and reload: sudo systemctl daemon-reload && sudo systemctl restart enhanced-health-check.timer"
     fi
 fi
