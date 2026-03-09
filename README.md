@@ -429,13 +429,22 @@ The server has a multi-layer monitoring system:
 
 | Layer | Tool | Frequency | Purpose |
 |-------|------|-----------|---------|
-| 1 | enhanced-health-check.timer | Every 3 minutes | Check & restart all services, monitor resources |
+| 1 | enhanced-health-check.timer | Every hour | Check & restart all services, monitor resources |
 | 2 | Docker restart policies | On failure | Auto-restart containers |
 | 3 | Cloudflare Tunnel (2 replicas) | Continuous | Redundant external access |
 | 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
 | 5 | Pi health reports | Every 5 days | System health summary to Mattermost |
 | 6 | Analytics reports | Weekly (Sunday 10 AM) | Portfolio analytics summary to Mattermost |
 | 7 | Portfolio Update | Manual (via `make portfolio-update`) | Sync portfolio from GitHub |
+| 8 | HDD SMART check | Daily 11:00 (timer) | USB HDD health; Mattermost report **only on Sunday** |
+
+### HDD health check (standalone, daily)
+
+- **Script**: `scripts/hdd-health-check.sh` (sources `health.d/40-disk-smart.sh`).
+- **Runs**: Once per day at 11:00 via `hdd-health-check.timer`.
+- **Report**: The “💾 USB HDDs health” summary (OK + space per disk) is sent to Mattermost **only on Sunday**; failures/warnings are sent immediately on any run.
+- **Deploy** (on server): From repo root, run `sudo bash scripts/deploy-hdd-health-check.sh` (it copies script, module, webhook, and systemd units; no need to `cd` first). Or copy manually: script and `health.d/40-disk-smart.sh` to `/usr/local/bin/` and `/usr/local/bin/health.d/`, `health_webhook_url` to `/usr/local/bin/`, then `systemd/hdd-health-check.service` and `systemd/hdd-health-check.timer` to `/etc/systemd/system/`, and `sudo systemctl daemon-reload && sudo systemctl enable --now hdd-health-check.timer`.
+- **Requires**: `smartmontools` (`apt install smartmontools`).
 
 ### Health Check Features
 
@@ -472,6 +481,7 @@ All monitoring alerts and reports are sent to Mattermost channels via webhooks:
   - Service failure alerts
   - Configuration drift alerts (Cloudflare/Caddyfile)
 - **Backup Verification Alerts**: `@all` for missing/corrupted backups, `@here` for old backups
+- **HDD SMART Alerts**: Failures and pre-failure signs (realloc/pending sectors) sent immediately; weekly “USB HDDs health” summary (status + space) on Sunday only
 - **System Health Reports**: `@here` - Sent every 5 days with system stats (CPU, memory, disk, Docker status)
 - **Analytics Reports**: `@here` - Weekly portfolio analytics summary
 

@@ -46,7 +46,7 @@ If you have configured the alias `alias lab-make='make -C "/home/goce/Desktop/Cu
 ## 📝 Notes
 
 **Health Check Configuration:**
-- Timer interval: **3 minutes** (changed from 30 seconds to reduce CPU usage)
+- Timer interval: **1 hour**
 - Log file: `/var/log/enhanced-health-check.log`
 - To check timer: `systemctl status enhanced-health-check.timer`
 - To view logs: `tail -f /var/log/enhanced-health-check.log`
@@ -58,6 +58,6 @@ If you have configured the alias `alias lab-make='make -C "/home/goce/Desktop/Cu
 
 **Recent Changes (2026-01-11):**
 - Removed Zulip service (was causing 220% CPU usage)
-- Reduced health check frequency from 30s to 3min
+- Health check runs every hour
 - Made portfolio updates manual instead of every 5 minutes
 - Added health check verification and fix commands

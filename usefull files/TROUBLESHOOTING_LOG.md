@@ -2,6 +2,78 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-03-09] HDD monitoring, health-check interval, and deploy (session summary)
+
+**Date:** 2026-03-09  
+**Summary of changes made in this session:**
+
+1. **Mattermost webhook for health alerts**  
+   - Added `scripts/health_webhook_url` (user-provided URL).  
+   - Added `**/health_webhook_url` to `.gitignore` so the URL is not committed.
+
+2. **Health check timer: 3 min → 1 hour**  
+   - Updated all references from “every 3 minutes” to “every hour”.  
+   - Files: `scripts/permanent-auto-recovery.sh`, `scripts/fix-health-check-timer.sh`, `scripts/verify-health-check.sh`, README, `usefull files/MONITORING_AND_RECOVERY.md`, `usefull files/HEALTH_CHECK_STATUS.md`, `docs/reference/infrastructure-diagram.md`, `scripts/deploy-health-check.sh`, `restart services/LAB_COMMANDS.md`.  
+   - On production, apply with: update `/etc/systemd/system/enhanced-health-check.timer` to `OnUnitActiveSec=1h`, then `sudo systemctl daemon-reload && sudo systemctl restart enhanced-health-check.timer`.
+
+3. **USB HDD SMART check – standalone daily run**  
+   - **`scripts/hdd-health-check.sh`**: Wrapper that sources `health.d/40-disk-smart.sh`; uses `/var/log/hdd-health-check.log`.  
+   - **`systemd/hdd-health-check.service`** and **`systemd/hdd-health-check.timer`**: Timer runs daily at 11:00.  
+   - **`scripts/deploy-hdd-health-check.sh`**: Deploys script, module, webhook, and systemd units; derives repo path from script location.  
+   - **`scripts/verify-health-check-interval.sh`**: Verifies enhanced-health-check timer interval and next run.  
+   - HDD check runs **once per day** (not with the main health check). The “💾 USB HDDs health” Mattermost summary (status + space per disk) is sent **only on Sunday**; failure/warning alerts are sent immediately on any run.
+
+4. **`health.d/40-disk-smart.sh`**  
+   - Added per-disk space (used/free) and one summary line per disk (OK / pre-failure / FAILED / not mounted).  
+   - Summary notification gated to Sunday 11:00 (day=7, hour=11, minute<5).
+
+5. **`systemd/hdd-health-check.service` fix**  
+   - Removed invalid `WantedBy=multi-user.target` from `[Unit]` (belongs only in `[Install]`).  
+   - After pulling, re-copy to `/etc/systemd/system/` and run `sudo systemctl daemon-reload`.
+
+**Production deploy (lemongrab):** Run from repo root: `sudo bash scripts/deploy-hdd-health-check.sh`.  
+**HDD capacities (from docs):** disk1 = 1 TB, disk2 = 2 TB, disk_old = 500 GB (legacy).  
+**SMART alerts observed:** disk1 (pending/offline uncorrectable), disk2 (reallocated sectors), disk_old (SMART FAILED) — back up data and plan replacement.
+
+---
+
+## [2026-03-08] Root disk space & SSD usage
+
+**Date:** 2026-03-08  
+**Context:** Root (/) was at 93%; health check alerts for Root and “SSD” both refer to the same partition (`/dev/nvme0n1p2` — root is 101G, and `/mnt/ssd` lives on that same partition).  
+**SSD space:** Root partition has **~6.9 GB free** (89G used of 101G). There is no separate SSD partition; `/mnt/ssd` is on root.  
+**To free root:** Run (requires sudo):  
+- `sudo apt-get clean` — frees ~5 GB (apt package cache in `/var/cache/apt/archives`).  
+- `sudo journalctl --vacuum-size=100M` — caps systemd journal at 100 MB (frees ~114 MB).  
+- Optional: `sudo find /var/log -name "*.log" -mtime +30 -exec truncate -s 0 {} \;` to truncate old logs (use with care).  
+**Note:** Docker data is already on `/home/docker-data` (not on root).
+
+### What else can be moved from root
+
+| What | Size (approx.) | How | Effort |
+|------|-----------------|-----|--------|
+| **Swap file** | **4 GB** | Move `/swapfile` to e.g. `/home/swapfile` and point fstab there | Low |
+| **Systemd journal** | **~1.3 GB** | Bind mount: store journal on `/home` and bind to `/var/log/journal` | Medium |
+| **Snap packages** | **~4.1 GB** | Change snap layout (e.g. `SNAP_REAL_HOME`) or remove unused snaps | Medium / High |
+| **Old Docker backups** | Tiny | Remove `/var/lib/docker_backup_*` (Docker already on `/home/docker-data`) | Low |
+| **/var/log (old files)** | Part of 1.4G | Aggressive logrotate + truncate old logs | Low |
+
+**Recommended order:** (1) Move swap to `/home`. (2) Cap or move journal. (3) Remove old docker_backup dirs. (4) Optionally trim snaps or move journal to `/home` via bind mount.
+
+---
+
+## [2026-03-08] USB HDD SMART health check (health.d module)
+
+**Date:** 2026-03-08  
+**Action:** Added SMART-based health check for the 3 USB HDDs (docking stations) so the homelab can warn before a disk is likely to fail.  
+**Result:** New module `scripts/health.d/40-disk-smart.sh` runs as part of the existing health check. It detects disks from mount points `/mnt/disk1`, `/mnt/disk2`, `/mnt/disk_old`, runs `smartctl` (trying `-d sat` for USB bridges if needed), and alerts on SMART overall FAILED or on pre-failure attributes (Reallocated_Sector_Ct, Current_Pending_Sector, Offline_Uncorrectable).  
+**Requirement:** Install smartmontools: `sudo apt install smartmontools`. If a USB enclosure does not pass SMART, the module logs and skips that drive.  
+**Optional:** To monitor different mounts, edit the `USB_DISK_MOUNTS` array in `40-disk-smart.sh`.  
+**Notification schedule:** The "💾 USB HDDs health" summary (OK + space per disk) is sent to Mattermost **only on Sunday** (when the daily run falls on Sunday 11:00). Failure/warning alerts are sent immediately on any run.  
+**Standalone daily run:** As of 2026-03-08 the HDD check runs separately from the main health check: use `scripts/hdd-health-check.sh` with systemd timer `hdd-health-check.timer` (daily 11:00). See README “HDD health check (standalone, daily)” for deploy steps.
+
+---
+
 ## [2026-03-03] FreshRSS: Unavailable on :8099 and URL – container not started + restarts required
 
 **Date:** 2026-03-03  

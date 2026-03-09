@@ -8,7 +8,7 @@ The server has a multi-layer monitoring system that ensures services stay online
 
 | Layer | Tool | Frequency | Purpose |
 |-------|------|-----------|---------|
-| 1 | enhanced-health-check.timer | Every 3 minutes | Check & restart all services |
+| 1 | enhanced-health-check.timer | Every hour | Check & restart all services |
 | 2 | Portfolio Update | Manual (via `make portfolio-update`) | Sync portfolio from GitHub |
 | 3 | service-watchdog.service | Continuous (20s loop) | Monitor critical services |
 | 4 | Uptime Kuma | Every 60 seconds | External monitoring & alerts |
@@ -20,7 +20,7 @@ The server has a multi-layer monitoring system that ensures services stay online
 
 **Service**: `enhanced-health-check.timer`  
 **Script**: `/usr/local/bin/enhanced-health-check.sh`  
-**Frequency**: Every 3 minutes  
+**Frequency**: Every hour  
 **Log**: `/var/log/enhanced-health-check.log`
 
 **Services Monitored**:
@@ -268,7 +268,7 @@ To prevent downtime:
 
 2. **Docker Restart Policies** - All containers have `restart: always`
 
-3. **Health Checks** - Running every 3 minutes
+3. **Health Checks** - Running every hour
 
 4. **Service Watchdog** - Continuous monitoring
 
