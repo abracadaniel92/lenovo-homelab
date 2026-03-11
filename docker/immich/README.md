@@ -5,8 +5,8 @@ Docs: https://immich.app/docs/install/docker-compose
 
 ## Storage (this instance)
 
-- **Photos/videos:** `/mnt/storage/immich-library` (3TB mergerfs pool). `.env` has `UPLOAD_LOCATION=/mnt/storage/immich-library` and `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` so the server starts on an empty library. Optional: run `sudo docker/immich/create-library-dirs.sh /mnt/storage/immich-library` to create `.immich` markers, then you can remove the ignore flag.
-- **Database:** `./postgres` (local to this compose; keep on SSD for performance).
+- **Photos/videos (primary):** `/mnt/ssd_1tb/immich-library` on the **1TB SATA SSD** (primary, healthiest drive). Set in `.env`: `UPLOAD_LOCATION=/mnt/ssd_1tb/immich-library`. To migrate from the old mergerfs location, run from repo root: `sudo bash scripts/migrate-immich-to-ssd1tb.sh`.
+- **Database:** `./postgres` (local to this compose; keep on fast storage for performance).
 
 ## First-time setup
 
@@ -38,4 +38,4 @@ Docs: https://immich.app/docs/install/docker-compose
 
 ## Troubleshooting
 
-- **Crash on start (encoded-video/.immich ENOENT):** Empty library lacks subdirs. Use `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` in `.env`, or run `sudo docker/immich/create-library-dirs.sh /mnt/storage/immich-library`. See `usefull files/TROUBLESHOOTING_LOG.md`.
+- **Crash on start (encoded-video/.immich ENOENT):** Empty library lacks subdirs. Use `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` in `.env`, or run `sudo docker/immich/create-library-dirs.sh /mnt/ssd_1tb/immich-library`. See `usefull files/TROUBLESHOOTING_LOG.md`.

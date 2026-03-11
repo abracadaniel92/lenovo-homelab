@@ -37,6 +37,21 @@ This log documents specific issues encountered on the server and their fixes.
 
 ---
 
+## [2026-03-11] Immich primary storage on 1TB SATA SSD
+
+**Date:** 2026-03-11  
+**Action:** Use the 1TB SATA SSD (/dev/sda, mounted at /mnt/ssd_1tb) as primary storage for Immich (healthiest drive).  
+**Changes:**  
+- **docker/immich/.env**: `UPLOAD_LOCATION=/mnt/ssd_1tb/immich-library` (if .env is tracked; otherwise set manually).  
+- **scripts/migrate-immich-to-ssd1tb.sh**: Migrates existing library from /mnt/storage/immich-library to /mnt/ssd_1tb/immich-library (rsync), updates .env, restarts Immich.  
+- **docker/immich/README.md**, **create-library-dirs.sh**: Default path now /mnt/ssd_1tb/immich-library.  
+- **health.d/40-disk-smart.sh**: Added `/mnt/ssd_1tb` to monitored mounts so the primary SSD appears in the Sunday HDD health report.  
+**On server:** Ensure /mnt/ssd_1tb is in fstab, then run `sudo bash scripts/migrate-immich-to-ssd1tb.sh` from repo root.
+
+**Result:** Migration completed successfully. Immich library now on primary 1TB SSD (/mnt/ssd_1tb/immich-library). Same data kept on mergerfs as backup. Wikipedia no-pics (~50GB) download planned for later (on mergerfs or after confirming primary storage usage).
+
+---
+
 ## [2026-03-08] Root disk space & SSD usage
 
 **Date:** 2026-03-08  

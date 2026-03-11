@@ -3,7 +3,7 @@
 # Run once: sudo ./create-library-dirs.sh
 
 set -e
-BASE="${1:-/mnt/storage/immich-library}"
+BASE="${1:-/mnt/ssd_1tb/immich-library}"
 for dir in upload library thumbs encoded-video profile backups; do
   mkdir -p "$BASE/$dir"
   touch "$BASE/$dir/.immich"
