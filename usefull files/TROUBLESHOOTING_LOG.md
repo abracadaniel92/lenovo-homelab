@@ -2,6 +2,21 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-03-12] Actual Budget added (budget.gmojsoski.com)
+
+**Date:** 2026-03-12  
+**Action:** Installed Actual Budget (personal finance) with subdomain budget.gmojsoski.com.  
+**Storage:** Data on NVMe at `/home/actual-budget` (per user preference).  
+**Changes:**  
+- **docker/actual-budget/**: docker-compose (port 5006, volume /home/actual-budget), README.  
+- **Caddy:** `config.d/50-utilities.caddy` — `@budget` host budget.gmojsoski.com → reverse_proxy 172.17.0.1:5006.  
+- **Cloudflare:** Added budget.gmojsoski.com to ingress in `cloudflare/config.yml`; applied to ~/.cloudflared and restarted Caddy + cloudflared.  
+- **scripts/verify-services.sh:** Added budget.gmojsoski.com to SUBDOMAINS.  
+- **README.md:** Actual Budget in services table and directory tree.  
+**Result:** https://budget.gmojsoski.com live after config copy and Caddy/cloudflared restart.
+
+---
+
 ## [2026-03-09] HDD monitoring, health-check interval, and deploy (session summary)
 
 **Date:** 2026-03-09  

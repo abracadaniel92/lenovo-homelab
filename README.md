@@ -160,6 +160,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Portfolio** | portfolio.gmojsoski.com | Ivana's portfolio site (Vue.js) |
 | **Immich** | immich.gmojsoski.com | Photo & video backup (Google Photos alternative) |
 | **FreshRSS** | rss.gmojsoski.com | RSS feed aggregator |
+| **Actual Budget** | budget.gmojsoski.com | Personal finance / budgeting (data on NVMe) |
 | **Home Assistant** | - | Home automation (local only) |
 | **Watchtower** | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | - | DELETE→PUT rewrite for iOS |
@@ -193,6 +194,7 @@ Pi-version-control/
 │   ├── jellyfin/              # (reference only - actual in /home/docker-projects/)
 │   ├── immich/                # Photo & video backup (primary: /mnt/ssd_1tb/immich-library, OAuth)
 │   ├── freshrss/               # RSS feed aggregator (rss.gmojsoski.com)
+│   ├── actual-budget/          # Personal finance (budget.gmojsoski.com, data on NVMe)
 │   ├── nextcloud/
 │   ├── nginx-vaultwarden/
 │   ├── paperless/
