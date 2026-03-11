@@ -1,0 +1,19 @@
+# Actual Budget - personal finance / budgeting
+# https://actualbudget.org/docs/install/docker/
+# Data on NVMe (/home partition)
+
+services:
+  actual_server:
+    image: docker.io/actualbudget/actual-server:latest
+    container_name: actual-budget
+    ports:
+      - "5006:5006"
+    volumes:
+      - /home/actual-budget:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'node src/scripts/health-check.js']
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped

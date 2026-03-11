@@ -31,6 +31,12 @@ handle @rss {
 	reverse_proxy http://172.17.0.1:8099
 }
 
+@budget host budget.gmojsoski.com
+handle @budget {
+	encode gzip
+	reverse_proxy http://172.17.0.1:5006
+}
+
 @auth host auth.gmojsoski.com
 handle @auth {
 	# NO gzip - can cause issues with authentication flows

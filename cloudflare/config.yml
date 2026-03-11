@@ -74,5 +74,9 @@ ingress:
   - hostname: rss.gmojsoski.com
     service: http://localhost:8080
 
+  # Actual Budget (routed through Caddy)
+  - hostname: budget.gmojsoski.com
+    service: http://localhost:8080
+
   # Catch-all (must be last)
   - service: http_status:404
