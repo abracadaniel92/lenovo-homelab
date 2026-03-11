@@ -54,8 +54,15 @@ This file defines the strict operating rules for this repository. FAILURE TO FOL
     *   `scripts/backup-retention-helper.sh`
     *   All files in `systemd/*.service` or `systemd/*.timer`
 
+## 💾 Storage Preference (Primary vs Secondary)
+9.  **Primary storage** (prefer for sensitive or important data, e.g. Immich photos):
+    *   **512GB NVMe** (root `/` and `/home`).
+    *   **1TB healthy SATA SSD** mounted at `/mnt/ssd_1tb`.
+    *   User is fine keeping the same data on both primary and mergerfs as backup.
+10. **Where to store**: When adding or configuring storage for a new service or data, **ALWAYS ask the user** where it should be stored (primary NVMe/ssd_1tb vs mergerfs `/mnt/storage` vs other). Do not assume.
+
 ## 🟡 Scope-Locked (Service Configs)
-9.  **Service Isolation**:
+11. **Service Isolation**:
     *   `docker/<service>/docker-compose.yml` and `.env` files are **LOCKED** to that service.
     *   **Rule**: You may edit `docker/paperless/docker-compose.yml` ONLY if the user asks to "Fix Paperless" or "Update Paperless".
     *   **Forbidden**: Never edit `docker/jellyfin/...` when working on Paperless.

@@ -37,7 +37,8 @@ The home lab consists of two devices working together:
 |--------|-------|
 | **Hostname** | lemongrab |
 | **OS** | Linux (Debian-based) |
-| **Storage** | 512GB NVMe SSD + 1TB HDD + 2TB HDD + 500GB HDD |
+| **Storage** | 512GB NVMe SSD + 1TB SATA SSD + 1TB HDD + 2TB HDD + 500GB HDD |
+| **Primary storage** | NVMe (`/`, `/home`) + 1TB SSD (`/mnt/ssd_1tb`) — sensitive data (e.g. Immich) here |
 | **Docker Data** | `/home/docker-data/` |
 | **Local Archives**| `/mnt/storage/kiwix-data/` |
 | **Backups** | `/mnt/ssd/backups/` |
@@ -52,7 +53,7 @@ The home lab consists of two devices working together:
 | **CPU** | Intel Core i5-7500T @ 2.70GHz (4 Cores, 4 Threads) |
 | **RAM** | 32GB DDR4 |
 | **Storage** | 512GB NVMe SSD + 1TB HDD + 2TB HDD + 500GB HDD |
-| **Storage (Internal)** | `/` (102GB ext4) + `/home` (374GB ext4) on NVMe |
+| **Storage (Internal)** | `/` (102GB ext4) + `/home` (374GB ext4) on NVMe; `/mnt/ssd_1tb` (1TB SATA SSD, primary for Immich) |
 | **Storage (External)** | `/mnt/storage` - 3TB mergerfs pool (1TB + 2TB USB) |
 | **Storage (Legacy)** | `/mnt/disk_old` - 500GB USB (2013, non-critical only) |
 | **Network** | Gigabit Ethernet |
@@ -190,7 +191,7 @@ Pi-version-control/
 │   ├── travelsync/
 │   ├── goatcounter/
 │   ├── jellyfin/              # (reference only - actual in /home/docker-projects/)
-│   ├── immich/                # Photo & video backup (3TB storage, OAuth)
+│   ├── immich/                # Photo & video backup (primary: /mnt/ssd_1tb/immich-library, OAuth)
 │   ├── freshrss/               # RSS feed aggregator (rss.gmojsoski.com)
 │   ├── nextcloud/
 │   ├── nginx-vaultwarden/

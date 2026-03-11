@@ -8,8 +8,8 @@ if ! command -v smartctl &>/dev/null; then
     return 0
 fi
 
-# Mount points that correspond to USB HDDs (from homelab storage setup)
-USB_DISK_MOUNTS=( "/mnt/disk1" "/mnt/disk2" "/mnt/disk_old" )
+# Mount points: primary 1TB SATA SSD + USB HDDs (from homelab storage setup)
+USB_DISK_MOUNTS=( "/mnt/ssd_1tb" "/mnt/disk1" "/mnt/disk2" "/mnt/disk_old" )
 
 # Get block device for a mount point (e.g. /mnt/disk1 -> /dev/sdb1), then parent disk (/dev/sdb)
 get_disk_for_mount() {
