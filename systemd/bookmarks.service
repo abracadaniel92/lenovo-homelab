@@ -6,8 +6,8 @@ After=network.target
 Type=simple
 User=goce
 WorkingDirectory=/mnt/ssd/apps/bookmarks
-# If using virtual environment, use: /mnt/ssd/apps/bookmarks/venv/bin/python3
-# If using system-wide install, use: /usr/bin/python3
+# Load webhook URL and token from .env (copy from repo apps/bookmarks/.env.example)
+EnvironmentFile=-/mnt/ssd/apps/bookmarks/.env
 Environment="PATH=/mnt/ssd/apps/bookmarks/venv/bin:/usr/local/bin:/usr/bin:/bin:/home/goce/.local/bin"
 ExecStart=/mnt/ssd/apps/bookmarks/venv/bin/python3 /mnt/ssd/apps/bookmarks/secure_slack_bookmarks.py
 Restart=always

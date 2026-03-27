@@ -2,6 +2,18 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-03-27] System Boot Hangs Without USB HDDs Attached
+
+**Date:** 2026-03-27  
+**Action:** Added `nofail` to fstab for the mergerfs pool to allow system boot without USB HDDs.  
+**Symptoms:** Unplugging the 1TB or 2TB USB drives could cause the OS to hang on boot or enter Emergency Mode because the `/mnt/storage` mergerfs pool depended on them without a `nofail` flag.  
+**Fix:**  
+- Checked `/etc/fstab` and verified individual USB HDDs already had the `nofail` flag.  
+- Added `nofail` to the `fuse.mergerfs` entry (`/mnt/storage`) to prevent it from halting boot.  
+**Result:** The system will gracefully timeout (90s) and continue booting into the OS even if the USB HDDs are unplugged.
+
+---
+
 ## [2026-03-12] Actual Budget added (budget.gmojsoski.com)
 
 **Date:** 2026-03-12  
