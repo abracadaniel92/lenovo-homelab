@@ -1,0 +1,9 @@
+#!/bin/bash
+###############################################################################
+# CSS site update — callable from anywhere (install: /usr/local/bin/css-update)
+# Usage: css-update
+###############################################################################
+
+PROJECT_DIR="/home/goce/Desktop/Cursor projects/Pi-version-control"
+
+cd "$PROJECT_DIR" && exec make css-update

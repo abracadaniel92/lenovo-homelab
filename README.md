@@ -440,7 +440,7 @@ The server has a multi-layer monitoring system:
 | 5 | Pi health reports | Every 5 days | System health summary to Mattermost |
 | 6 | Analytics reports | Weekly (Sunday 10 AM) | Portfolio analytics summary to Mattermost |
 | 7 | Portfolio Update | Manual (via `make portfolio-update`) | Sync portfolio from GitHub |
-| 8 | Centar Srbija Stil (CSS) | Manual (via `make css-update`) | Pull `centar-srbija-stil` from GitHub, rebuild Docker (`8084`) |
+| 8 | Centar Srbija Stil (CSS) | Manual (`make css-update` or `css-update` in PATH) | Pull `centar-srbija-stil` from GitHub, rebuild Docker (`8084`) |
 | 9 | HDD SMART check | Daily 11:00 (timer) | USB HDD health; Mattermost report **only on Sunday** |
 
 ### HDD health check (standalone, daily)

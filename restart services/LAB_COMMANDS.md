@@ -28,6 +28,17 @@ If you have configured the alias `alias lab-make='make -C "/home/goce/Desktop/Cu
 *   **`lab-make portfolio-update`**
     Manually update portfolio website (pull from GitHub and sync to Caddy).
     *   *Note:* Portfolio updates are now manual (timer disabled to reduce CPU usage).
+*   **`lab-make css-update`**
+    Pull **centar-srbija-stil** from GitHub and rebuild the **css.gmojsoski.com** Docker image (same as `make css-update` from the repo root).
+
+## Global commands (any directory)
+
+If these wrappers are installed in **`/usr/local/bin/`**, you can run them without `cd` or `lab-make` (same pattern as **`portfolio-update`**):
+
+| Command | Installs from repo |
+|---------|-------------------|
+| **`portfolio-update`** | (already on this server) |
+| **`css-update`** | `sudo cp "…/Pi-version-control/scripts/css-update" /usr/local/bin/ && sudo chmod +x /usr/local/bin/css-update` |
 
 ## 💬 Mattermost
 *   **`lab-make lab-mattermost`**
@@ -51,9 +62,10 @@ If you have configured the alias `alias lab-make='make -C "/home/goce/Desktop/Cu
 - To check timer: `systemctl status enhanced-health-check.timer`
 - To view logs: `tail -f /var/log/enhanced-health-check.log`
 
-**Portfolio Updates:**
+**Portfolio & CSS site updates:**
 - Portfolio auto-update timer has been disabled
-- Updates must be done manually with `lab-make portfolio-update`
+- Portfolio: `lab-make portfolio-update` or **`portfolio-update`** (global)
+- Centar Srbija Stil: `lab-make css-update` or **`css-update`** (global, after install)
 - This reduces CPU usage on the system
 
 **Recent Changes (2026-01-11):**
