@@ -78,5 +78,9 @@ ingress:
   - hostname: budget.gmojsoski.com
     service: http://localhost:8080
 
+  # Centar Srbija Stil (routed through Caddy)
+  - hostname: css.gmojsoski.com
+    service: http://localhost:8080
+
   # Catch-all (must be last)
   - service: http_status:404

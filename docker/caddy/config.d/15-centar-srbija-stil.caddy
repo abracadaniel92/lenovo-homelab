@@ -1,0 +1,6 @@
+# Centar Srbija Stil — Vite static site (css.gmojsoski.com)
+@css host css.gmojsoski.com
+handle @css {
+	reverse_proxy http://172.17.0.1:8084
+}
+

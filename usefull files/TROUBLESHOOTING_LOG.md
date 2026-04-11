@@ -2,6 +2,25 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-04-11] Centar Srbija Stil (css.gmojsoski.com)
+
+**Date:** 2026-04-11  
+**Action:** Deployed Vue/Vite static site from `centar-srbija-stil` (port **8084**, checked free with `ss -tulpn`).  
+**Changes:**  
+- **Caddy:** `docker/caddy/config.d/15-centar-srbija-stil.caddy` — `@css` host css.gmojsoski.com → `reverse_proxy http://172.17.0.1:8084`.  
+- **Cloudflare tunnel:** Added `css.gmojsoski.com` → `http://localhost:8080` in `~/.cloudflared/config.yml` (same pattern as other subdomains; CNAME points to tunnel).  
+- **Runtime:** `systemctl --user` unit `centar-srbija-stil.service` runs `vite preview` on `0.0.0.0:8084` from the project directory.  
+- **scripts/verify-services.sh:** Added css.gmojsoski.com to SUBDOMAINS.  
+- **Site repo:** `npm install` + `npm run build`; `package.json` script `preview:prod` for manual runs.  
+- **Vite:** `vite.config.js` sets `preview.allowedHosts` for `css.gmojsoski.com` / `.gmojsoski.com` — without this, Vite preview returns **403** when Caddy sends the public Host header.  
+- **Cloudflared:** Ingress change requires `docker restart cloudflared-cloudflared-1` (container mounts `~/.cloudflared`).  
+- **Persistence:** `vite preview` is running under your user (started in this session). To survive reboot without sudo: `loginctl enable-linger goce` then `systemctl --user enable --now centar-srbija-stil`, or install `/etc/systemd/system/centar-srbija-stil.service` (see `~/.config/systemd/user/centar-srbija-stil.service` as a template) with `sudo systemctl enable --now centar-srbija-stil`.  
+**Result:** https://css.gmojsoski.com serves the built site (verified 200).
+
+**Follow-up [2026-04-11]:** Migrated off host `vite preview` to **Docker** (`docker/centar-srbija-stil/`) per SERVICE_ADDITION_CHECKLIST — multi-stage build, nginx serves `dist`, `restart: unless-stopped`, port **8084:80**. Repo `cloudflare/config.yml` updated with `css.gmojsoski.com` to match `~/.cloudflared`.
+
+---
+
 ## [2026-03-27] System Boot Hangs Without USB HDDs Attached
 
 **Date:** 2026-03-27  

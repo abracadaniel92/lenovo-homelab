@@ -158,6 +158,7 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **TravelSync** | tickets.gmojsoski.com | Travel document processing |
 | **Linkwarden** | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
 | **Portfolio** | portfolio.gmojsoski.com | Ivana's portfolio site (Vue.js) |
+| **Centar Srbija Stil** | css.gmojsoski.com | Marketing site (Vue + Vite, nginx static, port 8084) |
 | **Immich** | immich.gmojsoski.com | Photo & video backup (Google Photos alternative) |
 | **FreshRSS** | rss.gmojsoski.com | RSS feed aggregator |
 | **Actual Budget** | budget.gmojsoski.com | Personal finance / budgeting (data on NVMe) |
