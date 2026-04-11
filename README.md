@@ -17,6 +17,7 @@ This repository contains all configuration files, scripts, and setup instruction
 - [Backup System](#backup-system)
 - [Maintenance](#maintenance)
 - [Troubleshooting](#troubleshooting)
+- [Security Notes](#security-notes)
 
 ## <a name="overview"></a>🎯 Overview
 
@@ -761,6 +762,8 @@ sed -i 's/127.0.0.1:8080/localhost:8080/g' ~/.cloudflared/config.yml
 - Auto-restarts tunnel after fixes
 
 ## 🔐 Security Notes
+
+**Reporting vulnerabilities:** See **[SECURITY.md](SECURITY.md)**. GitHub also shows this under **Security → Policy** on the repository.
 
 1. **Passwords**: Update all default passwords in docker-compose.yml files
 2. **Credentials**: Keep Cloudflare tunnel credentials file secure
