@@ -2,22 +2,37 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
-## [2026-04-11] Centar Srbija Stil (css.gmojsoski.com)
+## [2026-04-26] Android emulator + ws-scrcpy service addition (local only)
 
-**Date:** 2026-04-11  
-**Action:** Deployed Vue/Vite static site from `centar-srbija-stil` (port **8084**, checked free with `ss -tulpn`).  
+**Date:** 2026-04-26  
+**Action:** Added Docker-based Android emulator stack with browser control via ws-scrcpy. **Local/LAN access only** — no Cloudflare tunnel or Caddy reverse proxy. Public exposure was deliberately skipped (no `android.gmojsoski.com`).  
+**Storage:** Persistent emulator data and ADB keys under `/home/docker-projects/android-emulator/` (root filesystem avoided per storage rules).  
 **Changes:**  
-- **Caddy:** `docker/caddy/config.d/15-centar-srbija-stil.caddy` — `@css` host css.gmojsoski.com → `reverse_proxy http://172.17.0.1:8084`.  
-- **Cloudflare tunnel:** Added `css.gmojsoski.com` → `http://localhost:8080` in `~/.cloudflared/config.yml` (same pattern as other subdomains; CNAME points to tunnel).  
-- **Runtime:** `systemctl --user` unit `centar-srbija-stil.service` runs `vite preview` on `0.0.0.0:8084` from the project directory.  
-- **scripts/verify-services.sh:** Added css.gmojsoski.com to SUBDOMAINS.  
-- **Site repo:** `npm install` + `npm run build`; `package.json` script `preview:prod` for manual runs.  
-- **Vite:** `vite.config.js` sets `preview.allowedHosts` for `css.gmojsoski.com` / `.gmojsoski.com` — without this, Vite preview returns **403** when Caddy sends the public Host header.  
-- **Cloudflared:** Ingress change requires `docker restart cloudflared-cloudflared-1` (container mounts `~/.cloudflared`).  
-- **Persistence:** `vite preview` is running under your user (started in this session). To survive reboot without sudo: `loginctl enable-linger goce` then `systemctl --user enable --now centar-srbija-stil`, or install `/etc/systemd/system/centar-srbija-stil.service` (see `~/.config/systemd/user/centar-srbija-stil.service` as a template) with `sudo systemctl enable --now centar-srbija-stil`.  
-**Result:** https://css.gmojsoski.com serves the built site (verified 200).
+- **docker/android-emulator/docker-compose.yml:** New stack — `halimqarroum/docker-android:api-33-playstore` (KVM-accelerated, Play Store image) and `shmayro/scrcpy-web` (`ws-scrcpy`) on host port `8233`. ADB exposed only on `127.0.0.1:5555`.  
+- **docker/android-emulator/.env.example:** Runtime tunables (image variant, memory/cores, animation flags, storage paths).  
+- **docker/android-emulator/README.md:** Start, access, iOS-via-LAN usage notes, optional APK export script.  
+- **README.md:** Added Android Emulator (`<device-ip>:8233`) to running services table and directory tree.
+**Access:**  
+- Browser (server): `http://localhost:8233`  
+- Browser (LAN devices, incl. iOS Safari): `http://<device-ip>:8233`  
+- ADB (host only): `adb connect 127.0.0.1:5555`
+**Notes:**  
+- Requires `/dev/kvm`. First boot can take several minutes; recommended ≥ 8 GB RAM.  
+- If you later want public access, the standard service-addition checklist applies: add a Caddy `@android_emulator` block, add `android.gmojsoski.com` to `cloudflare/config.yml`, and add the subdomain to `scripts/verify-services.sh`.
 
-**Follow-up [2026-04-11]:** Migrated off host `vite preview` to **Docker** (`docker/centar-srbija-stil/`) per SERVICE_ADDITION_CHECKLIST — multi-stage build, nginx serves `dist`, `restart: unless-stopped`, port **8084:80**. Repo `cloudflare/config.yml` updated with `css.gmojsoski.com` to match `~/.cloudflared`.
+---
+
+## [2026-04-23] Stirling PDF local-only deployment (1TB internal SSD)
+
+**Date:** 2026-04-23  
+**Action:** Added Stirling PDF as a Docker service for local/LAN access only (no Cloudflare subdomain).  
+**Storage:** Persistent paths mapped to internal 1TB SSD under `/mnt/ssd_1tb/stirling-pdf/`.  
+**Changes:**  
+- **docker/stirling-pdf/docker-compose.yml:** New service using `stirlingtools/stirling-pdf:latest`, `restart: unless-stopped`, host port `8095:8080`.  
+- **Volumes:** `/mnt/ssd_1tb/stirling-pdf/{trainingData,config,customFiles,logs,pipeline}` mapped into container.  
+- **docker/stirling-pdf/README.md:** Added local access and management instructions.  
+- **README.md:** Added Stirling PDF to running services and directory tree.
+**Result:** Service is available locally at `http://localhost:8095/login` and on LAN at `http://<server-ip>:8095/login`.
 
 ---
 
@@ -271,29 +286,6 @@ CPU upgrade completed successfully. System operational with improved multi-core 
 - `scripts/update-portfolio.sh` - Sync script
 
 **Status**: ✅ Resolved - Site restored to clean state from `main` branch
-
----
-
-## [2026-01-28] Portfolio Subdomain Inaccessible (404 Error)
-
-**Date:** 2026-01-28
-**Action:** Identified missing ingress rule in Cloudflare Tunnel for `portfolio.gmojsoski.com`.
-**Result:** External access restored to the portfolio subdomain.
-
-### 🔍 Root Cause Identified
-- While Caddy was correctly configured to handle `portfolio.gmojsoski.com`, the Cloudflare Tunnel configuration (`config.yml`) was missing the corresponding ingress rule. This caused Cloudflare to return a 404 error before the request even reached the server.
-
-### ✅ Solution Applied
-1. **Added Ingress Rule**: Updated `/home/goce/.cloudflared/config.yml` and `cloudflare/config.yml` (repo) to include:
-   ```yaml
-   - hostname: portfolio.gmojsoski.com
-     service: http://localhost:8080
-   ```
-2. **Restored Caddy Logic**: Reverted Caddy configuration to use the known working logic (restored gzip and simplified proxy).
-3. **Tunnel Restart**: Restarted the `cloudflared` container to apply the new configuration.
-
-### 🧪 Verification
-- Ran `scripts/verify-services.sh` which confirmed `portfolio.gmojsoski.com: 200` and all other services are healthy.
 
 ---
 

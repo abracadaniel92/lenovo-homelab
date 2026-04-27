@@ -158,12 +158,12 @@ Documentation has been reorganized into a structured format. See [docs/README.md
 | **Gokapi** | files.gmojsoski.com | File sharing |
 | **TravelSync** | tickets.gmojsoski.com | Travel document processing |
 | **Linkwarden** | linkwarden.gmojsoski.com | Bookmark manager with web archiving |
-| **Portfolio** | portfolio.gmojsoski.com | Ivana's portfolio site (Vue.js) |
-| **Centar Srbija Stil** | css.gmojsoski.com | Marketing site (Vue + Vite, nginx static, port 8084) |
 | **Immich** | immich.gmojsoski.com | Photo & video backup (Google Photos alternative) |
 | **FreshRSS** | rss.gmojsoski.com | RSS feed aggregator |
 | **Actual Budget** | budget.gmojsoski.com | Personal finance / budgeting (data on NVMe) |
+| **Android Emulator** | <device-ip>:8233 | Android emulator + ws-scrcpy browser control (Play Store image, local/LAN only) |
 | **Home Assistant** | - | Home automation (local only) |
+| **Stirling PDF** | <device-ip>:8095 | PDF toolkit (local only, data on `/mnt/ssd_1tb`) |
 | **Watchtower** | - | Auto-updates (daily 2 AM) |
 | **Nginx (Vaultwarden)** | - | DELETE→PUT rewrite for iOS |
 
@@ -197,6 +197,7 @@ Pi-version-control/
 │   ├── immich/                # Photo & video backup (primary: /mnt/ssd_1tb/immich-library, OAuth)
 │   ├── freshrss/               # RSS feed aggregator (rss.gmojsoski.com)
 │   ├── actual-budget/          # Personal finance (budget.gmojsoski.com, data on NVMe)
+│   ├── android-emulator/       # Android emulator + ws-scrcpy (local only, port 8233, data on /home)
 │   ├── nextcloud/
 │   ├── nginx-vaultwarden/
 │   ├── paperless/
@@ -207,6 +208,7 @@ Pi-version-control/
 │   ├── pi-alert/              # Network monitoring & device discovery
 │   ├── portainer/
 │   ├── homeassistant/         # Home automation (local only)
+│   ├── stirling-pdf/          # PDF toolkit (local only, port 8095, data on /mnt/ssd_1tb)
 │   ├── unbound/               # Recursive DNS resolver
 │   ├── uptime-kuma/
 │   ├── vaultwarden/
@@ -441,8 +443,7 @@ The server has a multi-layer monitoring system:
 | 5 | Pi health reports | Every 5 days | System health summary to Mattermost |
 | 6 | Analytics reports | Weekly (Sunday 10 AM) | Portfolio analytics summary to Mattermost |
 | 7 | Portfolio Update | Manual (via `make portfolio-update`) | Sync portfolio from GitHub |
-| 8 | Centar Srbija Stil (CSS) | Manual (`make css-update` or `css-update` in PATH) | Pull `centar-srbija-stil` from GitHub, rebuild Docker (`8084`) |
-| 9 | HDD SMART check | Daily 11:00 (timer) | USB HDD health; Mattermost report **only on Sunday** |
+| 8 | HDD SMART check | Daily 11:00 (timer) | USB HDD health; Mattermost report **only on Sunday** |
 
 ### HDD health check (standalone, daily)
 

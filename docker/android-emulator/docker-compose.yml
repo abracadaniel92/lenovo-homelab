@@ -1,0 +1,38 @@
+name: android-emulator
+
+services:
+  android-emulator:
+    image: ${ANDROID_IMAGE:-halimqarroum/docker-android:api-33-playstore}
+    container_name: android-emulator
+    restart: unless-stopped
+    devices:
+      - /dev/kvm:/dev/kvm
+    ports:
+      - "127.0.0.1:5555:5555"
+    environment:
+      TZ: ${TZ:-Europe/Skopje}
+      MEMORY: ${MEMORY:-8192}
+      CORES: ${CORES:-4}
+      DISABLE_ANIMATION: ${DISABLE_ANIMATION:-false}
+      DISABLE_HIDDEN_POLICY: ${DISABLE_HIDDEN_POLICY:-false}
+      SKIP_AUTH: ${SKIP_AUTH:-true}
+    volumes:
+      - ${ANDROID_DATA_PATH:-/home/docker-projects/android-emulator/data}:/data
+      - ${ADB_KEYS_PATH:-/home/docker-projects/android-emulator/keys}:/keys
+      - ${ADB_KEYS_PATH:-/home/docker-projects/android-emulator/keys}:/root/.android
+
+  ws-scrcpy:
+    image: shmayro/scrcpy-web:latest
+    container_name: ws-scrcpy
+    restart: unless-stopped
+    depends_on:
+      - android-emulator
+    ports:
+      - "8233:8000"
+    volumes:
+      - ${ADB_KEYS_PATH:-/home/docker-projects/android-emulator/keys}:/root/.android
+    command: >
+      sh -c "
+        (while true; do adb connect android-emulator:5555 || true; sleep 5; done) &
+        npm start
+      "

@@ -13,7 +13,7 @@
 	
 	# Import service-specific configurations
 	import /etc/caddy/config.d/*.caddy
-	
+
 	# Catch-all fallback (default file server)
 	handle {
 		root * /srv/site

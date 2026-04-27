@@ -14,17 +14,19 @@ Single source of truth for which service uses which host port. Check this (and r
 | 8081  | Nextcloud         | cloud.gmojsoski.com               |
 | 8082  | Vaultwarden       | (internal; Caddy uses 8083)       |
 | 8083  | nginx-vaultwarden | vault.gmojsoski.com               |
-| 8085  | Portfolio         | portfolio.gmojsoski.com           |
 | 8088  | GoatCounter       | analytics.gmojsoski.com           |
 | 8089  | Kiwix             | device-ip:8089                    |
 | 8091  | Gokapi            | files.gmojsoski.com               |
 | 8090  | Linkwarden        | linkwarden.gmojsoski.com          |
 | 8092  | KitchenOwl        | shopping.gmojsoski.com            |
+| 8095  | Stirling PDF      | device-ip:8095 (local only)       |
 | 8096  | Jellyfin          | jellyfin.gmojsoski.com            |
 | 8097  | Paperless         | paperless.gmojsoski.com           |
 | 8098  | Outline           | (wiki, local only)                |
 | 8099  | FreshRSS          | rss.gmojsoski.com                 |
 | 8100+ | —                 | available                         |
+| 8233  | ws-scrcpy         | device-ip:8233 (Android emulator UI, local only) |
+| 5555  | ADB (emulator)    | 127.0.0.1 only                    |
 | 9091  | Authentik         | auth.gmojsoski.com                |
 | 9000  | Portainer         | internal only                     |
 | 9443  | Portainer HTTPS   | internal only                     |
