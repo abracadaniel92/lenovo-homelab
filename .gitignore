@@ -48,3 +48,7 @@ Thumbs.db
 *.swp
 *.swo
 
+# Temporary services (kept running on host, hidden from repo)
+docker/daka-dragan/
+docker/caddy/config.d/16-daka-dragan.caddy
+
