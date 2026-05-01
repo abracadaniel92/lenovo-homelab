@@ -1,5 +1,9 @@
 # Service Addition Checklist (Gold Standard)
 
+> **AI agents**: a condensed, model-invokable version of this checklist lives at
+> `.cursor/skills/add-homelab-service/SKILL.md`. This file remains the human
+> source of truth.
+
 Follow this checklist whenever adding a new service to the homelab. This ensures stability and prevents the "Service Down" issues we've experienced.
 
 ## 1. Docker Compose Configuration
