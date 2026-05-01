@@ -2,6 +2,10 @@
 ###############################################################################
 # Deploy Enhanced Health Check to Production
 # Copies updated script to /usr/local/bin/ and reloads systemd
+#
+# Status: ACTIVE — manual deploy script. Run after editing
+# scripts/enhanced-health-check.sh to push the new version to
+# /usr/local/bin/enhanced-health-check.sh and reload the systemd timer.
 ###############################################################################
 
 set -e
@@ -89,7 +93,3 @@ echo "  • Disk space on / (warns at 80%, critical at 90%)"
 echo "  • Disk space on /mnt/ssd (warns at 80%, critical at 90%)"
 echo ""
 echo "Notifications will be sent to Mattermost when thresholds are exceeded."
-
-
-
-

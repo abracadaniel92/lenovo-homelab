@@ -2,6 +2,11 @@
 ###############################################################################
 # Verify Health Check Configuration
 # Checks that the health check timer is properly configured with 3-minute interval
+#
+# Status: STALE — the header still references the old 3-minute interval, but
+# production has been on a 1-hour interval since fix-health-check-timer.sh ran.
+# Prefer scripts/verify-health-check-interval.sh for current verification, or
+# update this script's expectations before relying on it.
 ###############################################################################
 
 echo "🔍 Verifying Enhanced Health Check Configuration..."
@@ -76,7 +81,7 @@ fi
 # Check if timer is active
 if systemctl is-active enhanced-health-check.timer >/dev/null 2>&1; then
     echo "✅ Timer is active (running)"
-    
+
     # Show next run time
     NEXT_RUN=$(systemctl list-timers enhanced-health-check.timer --no-legend 2>/dev/null | awk '{print $1, $2, $3}' || echo "Unknown")
     if [ "$NEXT_RUN" != "Unknown" ]; then
@@ -89,7 +94,7 @@ fi
 # Check if script exists
 if [ -f "/usr/local/bin/enhanced-health-check.sh" ]; then
     echo "✅ Health check script exists: /usr/local/bin/enhanced-health-check.sh"
-    
+
     # Check if script is executable
     if [ -x "/usr/local/bin/enhanced-health-check.sh" ]; then
         echo "✅ Script is executable"
@@ -118,4 +123,3 @@ echo "   - To check timer status: systemctl status enhanced-health-check.timer"
 echo "   - To view logs: tail -f /var/log/enhanced-health-check.log"
 echo "   - To manually run: sudo bash /usr/local/bin/enhanced-health-check.sh"
 echo "   - To reload timer after changes: sudo systemctl daemon-reload && sudo systemctl restart enhanced-health-check.timer"
-

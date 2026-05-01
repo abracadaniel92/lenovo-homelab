@@ -1,6 +1,11 @@
 #!/bin/bash
 ###############################################################################
 # Enhanced Health Check with Auto-Recovery
+#
+# Status: ACTIVE — production health check. Deployed to /usr/local/bin/ via
+# scripts/deploy-health-check.sh, runs hourly via enhanced-health-check.timer.
+# Called by Makefile `health` target. Governance: READ-ONLY — only edit when
+# explicitly upgrading the monitoring/recovery system itself.
 ###############################################################################
 
 LOG_FILE="/var/log/enhanced-health-check.log"
@@ -21,25 +26,25 @@ send_slack_notification() {
     local title="$1"
     local message="$2"
     local emoji="${3:-⚠️}"
-    
+
     # Load webhook URL from .env if available
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     if [ -f "$SCRIPT_DIR/.env" ]; then
         source "$SCRIPT_DIR/.env"
     fi
-    
+
     # Prioritize monitoring-specific webhook (Mattermost or legacy Slack)
     [ -n "$MONITORING_MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$MONITORING_MATTERMOST_WEBHOOK_URL"
     [ -n "$MONITORING_SLACK_WEBHOOK_URL" ] && [ -z "$MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$MONITORING_SLACK_WEBHOOK_URL"
-    
+
     # Default Mattermost webhook for uptime/health monitoring (same as slack-pi-monitoring.sh)
     MATTERMOST_WEBHOOK_URL="${MATTERMOST_WEBHOOK_URL:-https://mattermost.gmojsoski.com/hooks/bettcnqps7ngpfp74i6zux5s8w}"
-    
+
     if [ -z "$MATTERMOST_WEBHOOK_URL" ]; then
         log "WARNING: MATTERMOST_WEBHOOK_URL not set. Cannot send Mattermost notification."
         return 1
     fi
-    
+
     # Build Mattermost message payload (Slack-compatible blocks format)
     read -r -d '' PAYLOAD << EOF || true
 {
@@ -77,10 +82,10 @@ EOF
     RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -H 'Content-type: application/json' \
         --data "$PAYLOAD" \
         "$MATTERMOST_WEBHOOK_URL" 2>/dev/null)
-    
+
     HTTP_CODE=$(echo "$RESPONSE" | tail -1)
     BODY=$(echo "$RESPONSE" | head -n -1)
-    
+
     if [ "$HTTP_CODE" = "200" ] && [ "$BODY" = "ok" ]; then
         log "Mattermost notification sent successfully"
         return 0
@@ -108,13 +113,13 @@ check_config_integrity() {
         log "ERROR: Cloudflare config file not found at $CONFIG_FILE"
         return 1
     fi
-    
+
     # Check for 127.0.0.1 (unstable on this host setup)
     if grep -q "127.0.0.1:8080" "$CONFIG_FILE"; then
         log "WARNING: Detected 127.0.0.1 in cloudflared config. This causes intermittent failures!"
         log "Fixing to localhost:8080 for stability..."
         sed -i 's/127.0.0.1:8080/localhost:8080/g' "$CONFIG_FILE"
-        
+
         # Verify fix
         if grep -q "127.0.0.1:8080" "$CONFIG_FILE"; then
             log "ERROR: Failed to fix Cloudflare config. Manual intervention required."
@@ -136,7 +141,7 @@ check_config_integrity() {
 *Issue:* Cloudflare config contained \`127.0.0.1:8080\` (unstable)
 *Auto-fix:* ✅ Fixed to \`localhost:8080\`
 *Action:* Tunnel will restart automatically" "✅"
-            
+
             # Restart tunnel to apply fix
             cd /home/docker-projects/cloudflared || cd /mnt/ssd/docker-projects/cloudflared
             if docker compose restart >> "$LOG_FILE" 2>&1; then
@@ -147,17 +152,17 @@ check_config_integrity() {
             return 0
         fi
     fi
-    
+
     # Check that all ingress rules use localhost:8080 (required for stability)
     INGRESS_COUNT=$(grep -c "service:" "$CONFIG_FILE" || echo "0")
     LOCALHOST_COUNT=$(grep -c "service: http://localhost:8080" "$CONFIG_FILE" || echo "0")
-    
+
     if [ "$INGRESS_COUNT" -gt 0 ] && [ "$LOCALHOST_COUNT" -lt "$INGRESS_COUNT" ]; then
         log "WARNING: Not all Cloudflare ingress rules use localhost:8080"
         log "Some services may have inconsistent external access"
         # Don't auto-fix this - might be intentional
     fi
-    
+
     return 0
 }
 
@@ -167,7 +172,7 @@ check_caddyfile_integrity() {
     CADDYFILE_MAIN="/home/docker-projects/caddy/Caddyfile"
     CADDYFILE_CONFIG="/home/docker-projects/caddy/config/Caddyfile"
     CADDYFILE_DIR="/home/docker-projects/caddy/config.d"
-    
+
     # Determine which Caddyfile location exists (production might use config/ subdirectory)
     if [ -f "$CADDYFILE_CONFIG" ]; then
         CADDYFILE="$CADDYFILE_CONFIG"
@@ -177,10 +182,10 @@ check_caddyfile_integrity() {
         log "WARNING: Caddyfile not found at $CADDYFILE_MAIN or $CADDYFILE_CONFIG"
         return 1
     fi
-    
+
     # Check for encode gzip in mobile-sensitive services (causes Cloudflare double-compression)
     PROBLEMATIC_SERVICES=("@jellyfin" "@paperless" "@vault" "@tickets" "@cloud")
-    
+
     for service in "${PROBLEMATIC_SERVICES[@]}"; do
         # Check main Caddyfile
         if grep -A10 "$service" "$CADDYFILE" 2>/dev/null | grep -q "encode gzip"; then
@@ -188,7 +193,7 @@ check_caddyfile_integrity() {
             log "$warning_msg"
             send_caddyfile_warning "$service" "$CADDYFILE"
         fi
-        
+
         # Check split config files if they exist
         if [ -d "$CADDYFILE_DIR" ]; then
             for config_file in "$CADDYFILE_DIR"/*.caddyfile; do
@@ -207,11 +212,11 @@ send_caddyfile_warning() {
     local service=$1
     local file_path=$2
     local config_name=${3:-""}
-    
+
     local slack_title="Homelab Alert: Caddyfile Configuration Issue"
     local file_ref="$file_path"
     [ -n "$config_name" ] && file_ref="$config_name (in config.d/)"
-    
+
     local slack_message="@here
 
 *Service:* \`$service\`
@@ -224,7 +229,7 @@ Remove \`encode gzip\` from the \`$service\` block in:
 
 *View log:*
 \`sudo tail -50 /var/log/enhanced-health-check.log\`"
-    
+
     send_slack_notification "$slack_title" "$slack_message" "⚠️"
     # Don't auto-fix - requires manual review to ensure proper headers are in place
 }
@@ -240,7 +245,7 @@ check_udp_buffers() {
             log "ERROR: Failed to increase UDP buffer"
         fi
     fi
-    
+
     local wmem_max=$(sysctl -n net.core.wmem_max)
     if [ "$wmem_max" -lt $TARGET_BUFFER ]; then
         log "WARNING: UDP send buffer too small ($wmem_max). Fixing..."
@@ -261,18 +266,18 @@ check_memory_usage() {
     MEM_PERCENT=$((MEM_USED * 100 / MEM_TOTAL))
     MEM_TOTAL_GB=$(free -h | awk '/^Mem:/ {print $2}')
     MEM_USED_GB=$(free -h | awk '/^Mem:/ {print $3}')
-    
+
     # Thresholds
     MEM_WARNING_THRESHOLD=85
     MEM_CRITICAL_THRESHOLD=90
-    
+
     # Notification throttling (only alert once per hour for same issue)
     MEM_ALERT_FILE="/tmp/memory-alert-sent"
     CURRENT_HOUR=$(date +%Y%m%d-%H)
-    
+
     if [ "$MEM_PERCENT" -ge "$MEM_CRITICAL_THRESHOLD" ]; then
         log "CRITICAL: Memory usage at ${MEM_PERCENT}% (${MEM_USED_GB}/${MEM_TOTAL_GB})"
-        
+
         # Check if we already sent alert this hour
         if [ ! -f "$MEM_ALERT_FILE" ] || [ "$(cat "$MEM_ALERT_FILE" 2>/dev/null)" != "$CURRENT_HOUR" ]; then
             send_slack_notification "🚨 CRITICAL: High Memory Usage" "@all
@@ -292,7 +297,7 @@ check_memory_usage() {
         return 1
     elif [ "$MEM_PERCENT" -ge "$MEM_WARNING_THRESHOLD" ]; then
         log "WARNING: Memory usage at ${MEM_PERCENT}% (${MEM_USED_GB}/${MEM_TOTAL_GB})"
-        
+
         # Check if we already sent alert this hour
         if [ ! -f "$MEM_ALERT_FILE" ] || [ "$(cat "$MEM_ALERT_FILE" 2>/dev/null)" != "$CURRENT_HOUR" ]; then
             send_slack_notification "⚠️ WARNING: High Memory Usage" "@here
@@ -321,30 +326,30 @@ check_disk_space() {
     local name=$2
     local warning_threshold=80
     local critical_threshold=90
-    
+
     # Notification throttling per mount point
     local alert_file="/tmp/disk-alert-${name//\//-}-sent"
     local current_hour=$(date +%Y%m%d-%H)
-    
+
     # Check if mount point exists
     if ! mountpoint -q "$mount" 2>/dev/null && [ ! -d "$mount" ]; then
         log "WARNING: Mount point not found: $mount"
         return 0
     fi
-    
+
     # Get disk usage percentage (remove % sign)
     local disk_usage=$(df "$mount" 2>/dev/null | awk 'NR==2 {print $5}' | sed 's/%//')
     local disk_info=$(df -h "$mount" 2>/dev/null | awk 'NR==2 {print $3" / "$2" ("$5")"}')
     local disk_available=$(df -h "$mount" 2>/dev/null | awk 'NR==2 {print $4}')
-    
+
     if [ -z "$disk_usage" ]; then
         log "WARNING: Could not get disk usage for $mount"
         return 0
     fi
-    
+
     if [ "$disk_usage" -ge "$critical_threshold" ]; then
         log "CRITICAL: Disk space on $name ($mount) at ${disk_usage}% - ${disk_info}"
-        
+
         # Check if we already sent alert this hour
         if [ ! -f "$alert_file" ] || [ "$(cat "$alert_file" 2>/dev/null)" != "$current_hour" ]; then
             send_slack_notification "🚨 CRITICAL: Low Disk Space - ${name}" "@all
@@ -366,7 +371,7 @@ check_disk_space() {
         return 1
     elif [ "$disk_usage" -ge "$warning_threshold" ]; then
         log "WARNING: Disk space on $name ($mount) at ${disk_usage}% - ${disk_info}"
-        
+
         # Check if we already sent alert this hour
         if [ ! -f "$alert_file" ] || [ "$(cat "$alert_file" 2>/dev/null)" != "$current_hour" ]; then
             send_slack_notification "⚠️ WARNING: Low Disk Space - ${name}" "@here
@@ -480,7 +485,7 @@ fi
 # If external access is down, run fix-subdomains-down script
 if [ "$EXTERNAL_DOWN" = true ]; then
     log "CRITICAL: External access down detected. Running fix-external-access.sh..."
-    
+
     # Send Slack notification for critical outage
     local slack_title="🚨 CRITICAL: External Access Down"
     local slack_message="@all
@@ -492,14 +497,14 @@ if [ "$EXTERNAL_DOWN" = true ]; then
 *Check log:*
 \`sudo tail -50 /var/log/enhanced-health-check.log\`"
     send_slack_notification "$slack_title" "$slack_message" "🚨"
-    
+
     FIX_SCRIPT="/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-external-access.sh"
     if [ -f "$FIX_SCRIPT" ]; then
         # Run the fix script (it will handle sudo internally)
         bash "$FIX_SCRIPT" >> "$LOG_FILE" 2>&1
         log "Fix script executed. Waiting 10 seconds for services to recover..."
         sleep 10
-        
+
         # Verify fix worked
         if check_external_access "gmojsoski.com"; then
             log "SUCCESS: External access restored after fix"
@@ -576,11 +581,11 @@ done
 # Check Bookmarks specifically for port 5000 conflict
 if ! check_service_http "http://localhost:5000/" 5; then
     log "WARNING: Bookmarks service not answering on port 5000"
-    
+
     # Check if port 5000 is occupied by something else
     PORT_USER=$(sudo lsof -t -i:5000 -sTCP:LISTEN 2>/dev/null)
     BOOKMARKS_PID=$(systemctl show -p MainPID bookmarks.service | cut -d= -f2)
-    
+
     if [ -n "$PORT_USER" ] && [ "$PORT_USER" != "$BOOKMARKS_PID" ] && [ "$BOOKMARKS_PID" != "0" ]; then
         PROCESS_NAME=$(ps -p $PORT_USER -o comm=)
         log "CRITICAL: Port 5000 conflict denied! Used by PID $PORT_USER ($PROCESS_NAME). Killing..."

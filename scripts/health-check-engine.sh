@@ -2,6 +2,11 @@
 ###############################################################################
 # Modular Health Check Engine
 # Dynamically executes check modules from health.d/
+#
+# Status: STAGED REFACTOR — modular successor to enhanced-health-check.sh that
+# reads modules from health.d/. NOT yet wired up in production: production still
+# uses enhanced-health-check.sh. Confirm with the user before switching the
+# systemd timer to point at this engine.
 ###############################################################################
 
 LOG_FILE="/var/log/enhanced-health-check.log"
@@ -24,7 +29,7 @@ send_slack_notification() {
     local title="$1"
     local message="$2"
     local icon="${3:-🚨}"
-    
+
     # Get webhook from environment or file
     WEBHOOK_URL=$(cat "$SCRIPT_DIR/health_webhook_url" 2>/dev/null || echo "")
     if [ -z "$WEBHOOK_URL" ]; then

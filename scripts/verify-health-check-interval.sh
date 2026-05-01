@@ -1,5 +1,6 @@
 #!/bin/bash
 # Quick verification of enhanced-health-check.timer interval (run on server)
+# Status: ACTIVE — current interval-verification utility for the health check timer.
 
 TIMER_FILE="/etc/systemd/system/enhanced-health-check.timer"
 

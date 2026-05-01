@@ -2,6 +2,10 @@
 ###############################################################################
 # Deploy HDD health check to /usr/local/bin and enable systemd timer
 # Run from anywhere: bash /path/to/Pi-version-control/scripts/deploy-hdd-health-check.sh
+#
+# Status: ACTIVE — manual deploy script. Run after editing
+# scripts/hdd-health-check.sh to push the new version to /usr/local/bin/ and
+# (re)enable the systemd timer at systemd/hdd-health-check.timer.
 ###############################################################################
 
 set -e

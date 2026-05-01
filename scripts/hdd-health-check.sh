@@ -3,6 +3,9 @@
 # Standalone HDD SMART health check (USB docking stations)
 # Run daily via systemd; sends Mattermost report only on Sunday 11:00.
 # Requires: smartmontools, health.d/40-disk-smart.sh, health_webhook_url
+#
+# Status: ACTIVE — production HDD SMART check. Wired up via
+# systemd/hdd-health-check.timer. Deployed via scripts/deploy-hdd-health-check.sh.
 ###############################################################################
 
 LOG_FILE="/var/log/hdd-health-check.log"

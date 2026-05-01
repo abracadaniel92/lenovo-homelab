@@ -1,6 +1,10 @@
 #!/bin/bash
 ###############################################################################
 # Fix Health Check Timer - Updates timer to 1-hour interval
+#
+# Status: ONE-SHOT, ALREADY APPLIED — the 3min -> 1h timer migration has been
+# completed in production (see useful-files/TROUBLESHOOTING_LOG.md). Retained
+# for reference only; do NOT re-run unless the timer has been reset to 3 min.
 ###############################################################################
 
 echo "🔧 Updating Enhanced Health Check Timer to 1-hour interval..."
@@ -77,4 +81,3 @@ fi
 
 echo ""
 echo "🎉 Health check timer updated! It will now run every hour."
-
