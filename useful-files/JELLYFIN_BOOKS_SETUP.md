@@ -4,8 +4,8 @@
 Books are in `/mnt/ssd/docker-projects/jellyfin/media/books/` but not showing in Jellyfin.
 
 ## Diagnosis
-✅ Files exist on host: `/mnt/ssd/docker-projects/jellyfin/media/books/`  
-✅ Files accessible in container: `/media/books/`  
+✅ Files exist on host: `/mnt/ssd/docker-projects/jellyfin/media/books/`
+✅ Files accessible in container: `/media/books/`
 ❌ Jellyfin logs show: "Library folder /media/books is inaccessible or empty, skipping"
 
 ## Solution
@@ -121,4 +121,3 @@ docker exec jellyfin find /media/books -name "*.epub" | wc -l
 2. Add Books library pointing to `/media/books`
 3. Wait for scan to complete (or trigger manually)
 4. Books should appear in the Books section!
-

@@ -30,7 +30,7 @@ Follow the steps below to manually create collections and documents.
 Create these 4 collections in Outline:
 
 1. **Infrastructure** (Blue) - Core infrastructure rules and governance
-2. **Services** (Green) - Documentation for all homelab services  
+2. **Services** (Green) - Documentation for all homelab services
 3. **Troubleshooting** (Red) - Known issues, fixes, and recovery procedures
 4. **Operations** (Orange) - Daily operations, maintenance, and procedures
 
@@ -71,7 +71,7 @@ This document defines the strict operating rules for the homelab infrastructure.
 
 ### Governance
 - **NEVER** modify existing, working Caddyfile blocks while troubleshooting a new service
-- **ALWAYS** check `usefull files/TROUBLESHOOTING_LOG.md` before suggesting a fix
+- **ALWAYS** check `useful-files/TROUBLESHOOTING_LOG.md` before suggesting a fix
 - **ALWAYS** run `scripts/verify-services.sh` after any network change
 
 ### Service Addition Protocol
@@ -341,14 +341,3 @@ After creating these documents, you can:
 4. **Organize by tags** for better searchability
 
 Happy documenting! 📚
-
-
-
-
-
-
-
-
-
-
-

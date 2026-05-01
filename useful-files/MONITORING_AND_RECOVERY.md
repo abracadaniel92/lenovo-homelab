@@ -18,9 +18,9 @@ The server has a multi-layer monitoring system that ensures services stay online
 
 ### 1. Enhanced Health Check Timer
 
-**Service**: `enhanced-health-check.timer`  
-**Script**: `/usr/local/bin/enhanced-health-check.sh`  
-**Frequency**: Every hour  
+**Service**: `enhanced-health-check.timer`
+**Script**: `/usr/local/bin/enhanced-health-check.sh`
+**Frequency**: Every hour
 **Log**: `/var/log/enhanced-health-check.log`
 
 **Services Monitored**:
@@ -43,9 +43,9 @@ tail -50 /var/log/enhanced-health-check.log
 
 ### 2. Service Watchdog
 
-**Service**: `service-watchdog.service`  
-**Script**: `/usr/local/bin/service-watchdog.sh`  
-**Frequency**: Continuous (20 second intervals)  
+**Service**: `service-watchdog.service`
+**Script**: `/usr/local/bin/service-watchdog.sh`
+**Frequency**: Continuous (20 second intervals)
 
 **Services Monitored**:
 - Caddy
@@ -59,9 +59,9 @@ systemctl status service-watchdog.service
 
 ### 3. Portfolio Update (Manual)
 
-**Command**: `make portfolio-update`  
-**Script**: `scripts/update-portfolio.sh`  
-**Frequency**: Manual (run when needed)  
+**Command**: `make portfolio-update`
+**Script**: `scripts/update-portfolio.sh`
+**Frequency**: Manual (run when needed)
 **Log**: `/var/log/portfolio-update.log`
 
 **Usage**:
@@ -74,8 +74,8 @@ tail -50 /var/log/portfolio-update.log
 
 ### 4. Uptime Kuma
 
-**URL**: http://localhost:3001 (internal only)  
-**Container**: uptime-kuma  
+**URL**: http://localhost:3001 (internal only)
+**Container**: uptime-kuma
 **Location**: `/mnt/ssd/docker-projects/uptime-kuma`
 
 **Monitors All Services**:
@@ -132,7 +132,7 @@ After boot, services start in this order:
 
 ### Issue: All subdomains return 502/404
 
-**Cause**: Cloudflare tunnel or Caddy not running  
+**Cause**: Cloudflare tunnel or Caddy not running
 **Fix**:
 ```bash
 sudo systemctl restart cloudflared.service
@@ -141,7 +141,7 @@ docker restart caddy
 
 ### Issue: Services work locally but not externally
 
-**Cause**: Cloudflare tunnel disconnected  
+**Cause**: Cloudflare tunnel disconnected
 **Fix**:
 ```bash
 sudo systemctl restart cloudflared.service
@@ -161,7 +161,7 @@ sudo systemctl restart <service-name>
 
 ### Issue: Services go down after reboot
 
-**Cause**: Startup order issues or race conditions  
+**Cause**: Startup order issues or race conditions
 **Fix**: Run the permanent auto-recovery script (once):
 ```bash
 sudo bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/permanent-auto-recovery.sh"
@@ -196,7 +196,7 @@ Caddy (localhost:8080)
 
 ### Automated Backups
 
-**Schedule**: Daily at 2:00 AM  
+**Schedule**: Daily at 2:00 AM
 **Cron Entry**: `/etc/crontab`
 
 ```bash
@@ -277,7 +277,3 @@ To prevent downtime:
 ## Last Updated
 
 January 2026
-
-
-
-

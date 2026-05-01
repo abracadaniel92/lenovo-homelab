@@ -5,7 +5,7 @@ description: Append a properly-formatted entry to the homelab TROUBLESHOOTING_LO
 
 # Log Troubleshooting Entry
 
-The `usefull files/TROUBLESHOOTING_LOG.md` is the homelab's **learning diary** — not just a problem log. It captures issues, fixes, successful projects, lessons learned, and configuration changes.
+The `useful-files/TROUBLESHOOTING_LOG.md` is the homelab's **learning diary** — not just a problem log. It captures issues, fixes, successful projects, lessons learned, and configuration changes.
 
 ## When to log
 
@@ -26,7 +26,7 @@ Do NOT clutter the log with smooth, standard work:
 
 ## Entry template
 
-Append to [TROUBLESHOOTING_LOG.md](../../../usefull%20files/TROUBLESHOOTING_LOG.md) using this exact structure:
+Append to [TROUBLESHOOTING_LOG.md](../../../useful-files/TROUBLESHOOTING_LOG.md) using this exact structure:
 
 ```markdown
 ## [YYYY-MM-DD] Descriptive Title
@@ -81,4 +81,4 @@ Append to [TROUBLESHOOTING_LOG.md](../../../usefull%20files/TROUBLESHOOTING_LOG.
 
 ## Reference
 
-For the full guidelines authored by the user, see [TROUBLESHOOTING_LOG_GUIDELINES.md](../../../usefull%20files/TROUBLESHOOTING_LOG_GUIDELINES.md).
+For the full guidelines authored by the user, see [TROUBLESHOOTING_LOG_GUIDELINES.md](../../../useful-files/TROUBLESHOOTING_LOG_GUIDELINES.md).

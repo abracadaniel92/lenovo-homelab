@@ -88,7 +88,7 @@ Step 2...
 Each imported recipe has:
 - **Name**: Recipe title (e.g., "ЈАЈЦА НА ТУРСКИ НАЧИН")
 - **Items**: Ingredients list (spices excluded)
-- **Description**: 
+- **Description**:
   - Preparation method
   - Spices section (if any)
   - Calorie info (regular + vegan variant if present)

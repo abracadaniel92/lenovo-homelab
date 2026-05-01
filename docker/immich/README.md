@@ -1,6 +1,6 @@
 # Immich
 
-Self-hosted photo and video backup, similar to Google Photos.  
+Self-hosted photo and video backup, similar to Google Photos.
 Docs: https://immich.app/docs/install/docker-compose
 
 ## Storage (this instance)
@@ -23,8 +23,8 @@ Docs: https://immich.app/docs/install/docker-compose
 
 ## URLs
 
-- **Internal:** http://localhost:2283  
-- **External (after Caddy + tunnel):** https://immich.gmojsoski.com  
+- **Internal:** http://localhost:2283
+- **External (after Caddy + tunnel):** https://immich.gmojsoski.com
 
 ## Port
 
@@ -38,4 +38,4 @@ Docs: https://immich.app/docs/install/docker-compose
 
 ## Troubleshooting
 
-- **Crash on start (encoded-video/.immich ENOENT):** Empty library lacks subdirs. Use `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` in `.env`, or run `sudo docker/immich/create-library-dirs.sh /mnt/ssd_1tb/immich-library`. See `usefull files/TROUBLESHOOTING_LOG.md`.
+- **Crash on start (encoded-video/.immich ENOENT):** Empty library lacks subdirs. Use `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` in `.env`, or run `sudo docker/immich/create-library-dirs.sh /mnt/ssd_1tb/immich-library`. See `useful-files/TROUBLESHOOTING_LOG.md`.

@@ -4,33 +4,33 @@ This log documents specific issues encountered on the server and their fixes.
 
 ## [2026-04-26] Android emulator + ws-scrcpy service addition (local only)
 
-**Date:** 2026-04-26  
-**Action:** Added Docker-based Android emulator stack with browser control via ws-scrcpy. **Local/LAN access only** — no Cloudflare tunnel or Caddy reverse proxy. Public exposure was deliberately skipped (no `android.gmojsoski.com`).  
-**Storage:** Persistent emulator data and ADB keys under `/home/docker-projects/android-emulator/` (root filesystem avoided per storage rules).  
-**Changes:**  
-- **docker/android-emulator/docker-compose.yml:** New stack — `halimqarroum/docker-android:api-33-playstore` (KVM-accelerated, Play Store image) and `shmayro/scrcpy-web` (`ws-scrcpy`) on host port `8233`. ADB exposed only on `127.0.0.1:5555`.  
-- **docker/android-emulator/.env.example:** Runtime tunables (image variant, memory/cores, animation flags, storage paths).  
-- **docker/android-emulator/README.md:** Start, access, iOS-via-LAN usage notes, optional APK export script.  
+**Date:** 2026-04-26
+**Action:** Added Docker-based Android emulator stack with browser control via ws-scrcpy. **Local/LAN access only** — no Cloudflare tunnel or Caddy reverse proxy. Public exposure was deliberately skipped (no `android.gmojsoski.com`).
+**Storage:** Persistent emulator data and ADB keys under `/home/docker-projects/android-emulator/` (root filesystem avoided per storage rules).
+**Changes:**
+- **docker/android-emulator/docker-compose.yml:** New stack — `halimqarroum/docker-android:api-33-playstore` (KVM-accelerated, Play Store image) and `shmayro/scrcpy-web` (`ws-scrcpy`) on host port `8233`. ADB exposed only on `127.0.0.1:5555`.
+- **docker/android-emulator/.env.example:** Runtime tunables (image variant, memory/cores, animation flags, storage paths).
+- **docker/android-emulator/README.md:** Start, access, iOS-via-LAN usage notes, optional APK export script.
 - **README.md:** Added Android Emulator (`<device-ip>:8233`) to running services table and directory tree.
-**Access:**  
-- Browser (server): `http://localhost:8233`  
-- Browser (LAN devices, incl. iOS Safari): `http://<device-ip>:8233`  
+**Access:**
+- Browser (server): `http://localhost:8233`
+- Browser (LAN devices, incl. iOS Safari): `http://<device-ip>:8233`
 - ADB (host only): `adb connect 127.0.0.1:5555`
-**Notes:**  
-- Requires `/dev/kvm`. First boot can take several minutes; recommended ≥ 8 GB RAM.  
+**Notes:**
+- Requires `/dev/kvm`. First boot can take several minutes; recommended ≥ 8 GB RAM.
 - If you later want public access, the standard service-addition checklist applies: add a Caddy `@android_emulator` block, add `android.gmojsoski.com` to `cloudflare/config.yml`, and add the subdomain to `scripts/verify-services.sh`.
 
 ---
 
 ## [2026-04-23] Stirling PDF local-only deployment (1TB internal SSD)
 
-**Date:** 2026-04-23  
-**Action:** Added Stirling PDF as a Docker service for local/LAN access only (no Cloudflare subdomain).  
-**Storage:** Persistent paths mapped to internal 1TB SSD under `/mnt/ssd_1tb/stirling-pdf/`.  
-**Changes:**  
-- **docker/stirling-pdf/docker-compose.yml:** New service using `stirlingtools/stirling-pdf:latest`, `restart: unless-stopped`, host port `8095:8080`.  
-- **Volumes:** `/mnt/ssd_1tb/stirling-pdf/{trainingData,config,customFiles,logs,pipeline}` mapped into container.  
-- **docker/stirling-pdf/README.md:** Added local access and management instructions.  
+**Date:** 2026-04-23
+**Action:** Added Stirling PDF as a Docker service for local/LAN access only (no Cloudflare subdomain).
+**Storage:** Persistent paths mapped to internal 1TB SSD under `/mnt/ssd_1tb/stirling-pdf/`.
+**Changes:**
+- **docker/stirling-pdf/docker-compose.yml:** New service using `stirlingtools/stirling-pdf:latest`, `restart: unless-stopped`, host port `8095:8080`.
+- **Volumes:** `/mnt/ssd_1tb/stirling-pdf/{trainingData,config,customFiles,logs,pipeline}` mapped into container.
+- **docker/stirling-pdf/README.md:** Added local access and management instructions.
 - **README.md:** Added Stirling PDF to running services and directory tree.
 **Result:** Service is available locally at `http://localhost:8095/login` and on LAN at `http://<server-ip>:8095/login`.
 
@@ -38,75 +38,75 @@ This log documents specific issues encountered on the server and their fixes.
 
 ## [2026-03-27] System Boot Hangs Without USB HDDs Attached
 
-**Date:** 2026-03-27  
-**Action:** Added `nofail` to fstab for the mergerfs pool to allow system boot without USB HDDs.  
-**Symptoms:** Unplugging the 1TB or 2TB USB drives could cause the OS to hang on boot or enter Emergency Mode because the `/mnt/storage` mergerfs pool depended on them without a `nofail` flag.  
-**Fix:**  
-- Checked `/etc/fstab` and verified individual USB HDDs already had the `nofail` flag.  
-- Added `nofail` to the `fuse.mergerfs` entry (`/mnt/storage`) to prevent it from halting boot.  
+**Date:** 2026-03-27
+**Action:** Added `nofail` to fstab for the mergerfs pool to allow system boot without USB HDDs.
+**Symptoms:** Unplugging the 1TB or 2TB USB drives could cause the OS to hang on boot or enter Emergency Mode because the `/mnt/storage` mergerfs pool depended on them without a `nofail` flag.
+**Fix:**
+- Checked `/etc/fstab` and verified individual USB HDDs already had the `nofail` flag.
+- Added `nofail` to the `fuse.mergerfs` entry (`/mnt/storage`) to prevent it from halting boot.
 **Result:** The system will gracefully timeout (90s) and continue booting into the OS even if the USB HDDs are unplugged.
 
 ---
 
 ## [2026-03-12] Actual Budget added (budget.gmojsoski.com)
 
-**Date:** 2026-03-12  
-**Action:** Installed Actual Budget (personal finance) with subdomain budget.gmojsoski.com.  
-**Storage:** Data on NVMe at `/home/actual-budget` (per user preference).  
-**Changes:**  
-- **docker/actual-budget/**: docker-compose (port 5006, volume /home/actual-budget), README.  
-- **Caddy:** `config.d/50-utilities.caddy` — `@budget` host budget.gmojsoski.com → reverse_proxy 172.17.0.1:5006.  
-- **Cloudflare:** Added budget.gmojsoski.com to ingress in `cloudflare/config.yml`; applied to ~/.cloudflared and restarted Caddy + cloudflared.  
-- **scripts/verify-services.sh:** Added budget.gmojsoski.com to SUBDOMAINS.  
-- **README.md:** Actual Budget in services table and directory tree.  
+**Date:** 2026-03-12
+**Action:** Installed Actual Budget (personal finance) with subdomain budget.gmojsoski.com.
+**Storage:** Data on NVMe at `/home/actual-budget` (per user preference).
+**Changes:**
+- **docker/actual-budget/**: docker-compose (port 5006, volume /home/actual-budget), README.
+- **Caddy:** `config.d/50-utilities.caddy` — `@budget` host budget.gmojsoski.com → reverse_proxy 172.17.0.1:5006.
+- **Cloudflare:** Added budget.gmojsoski.com to ingress in `cloudflare/config.yml`; applied to ~/.cloudflared and restarted Caddy + cloudflared.
+- **scripts/verify-services.sh:** Added budget.gmojsoski.com to SUBDOMAINS.
+- **README.md:** Actual Budget in services table and directory tree.
 **Result:** https://budget.gmojsoski.com live after config copy and Caddy/cloudflared restart.
 
 ---
 
 ## [2026-03-09] HDD monitoring, health-check interval, and deploy (session summary)
 
-**Date:** 2026-03-09  
+**Date:** 2026-03-09
 **Summary of changes made in this session:**
 
-1. **Mattermost webhook for health alerts**  
-   - Added `scripts/health_webhook_url` (user-provided URL).  
+1. **Mattermost webhook for health alerts**
+   - Added `scripts/health_webhook_url` (user-provided URL).
    - Added `**/health_webhook_url` to `.gitignore` so the URL is not committed.
 
-2. **Health check timer: 3 min → 1 hour**  
-   - Updated all references from “every 3 minutes” to “every hour”.  
-   - Files: `scripts/permanent-auto-recovery.sh`, `scripts/fix-health-check-timer.sh`, `scripts/verify-health-check.sh`, README, `usefull files/MONITORING_AND_RECOVERY.md`, `usefull files/HEALTH_CHECK_STATUS.md`, `docs/reference/infrastructure-diagram.md`, `scripts/deploy-health-check.sh`, `restart services/LAB_COMMANDS.md`.  
+2. **Health check timer: 3 min → 1 hour**
+   - Updated all references from “every 3 minutes” to “every hour”.
+   - Files: `scripts/permanent-auto-recovery.sh`, `scripts/fix-health-check-timer.sh`, `scripts/verify-health-check.sh`, README, `usefull files/MONITORING_AND_RECOVERY.md`, `usefull files/HEALTH_CHECK_STATUS.md`, `docs/reference/infrastructure-diagram.md`, `scripts/deploy-health-check.sh`, `restart services/LAB_COMMANDS.md`.
    - On production, apply with: update `/etc/systemd/system/enhanced-health-check.timer` to `OnUnitActiveSec=1h`, then `sudo systemctl daemon-reload && sudo systemctl restart enhanced-health-check.timer`.
 
-3. **USB HDD SMART check – standalone daily run**  
-   - **`scripts/hdd-health-check.sh`**: Wrapper that sources `health.d/40-disk-smart.sh`; uses `/var/log/hdd-health-check.log`.  
-   - **`systemd/hdd-health-check.service`** and **`systemd/hdd-health-check.timer`**: Timer runs daily at 11:00.  
-   - **`scripts/deploy-hdd-health-check.sh`**: Deploys script, module, webhook, and systemd units; derives repo path from script location.  
-   - **`scripts/verify-health-check-interval.sh`**: Verifies enhanced-health-check timer interval and next run.  
+3. **USB HDD SMART check – standalone daily run**
+   - **`scripts/hdd-health-check.sh`**: Wrapper that sources `health.d/40-disk-smart.sh`; uses `/var/log/hdd-health-check.log`.
+   - **`systemd/hdd-health-check.service`** and **`systemd/hdd-health-check.timer`**: Timer runs daily at 11:00.
+   - **`scripts/deploy-hdd-health-check.sh`**: Deploys script, module, webhook, and systemd units; derives repo path from script location.
+   - **`scripts/verify-health-check-interval.sh`**: Verifies enhanced-health-check timer interval and next run.
    - HDD check runs **once per day** (not with the main health check). The “💾 USB HDDs health” Mattermost summary (status + space per disk) is sent **only on Sunday**; failure/warning alerts are sent immediately on any run.
 
-4. **`health.d/40-disk-smart.sh`**  
-   - Added per-disk space (used/free) and one summary line per disk (OK / pre-failure / FAILED / not mounted).  
+4. **`health.d/40-disk-smart.sh`**
+   - Added per-disk space (used/free) and one summary line per disk (OK / pre-failure / FAILED / not mounted).
    - Summary notification gated to Sunday 11:00 (day=7, hour=11, minute<5).
 
-5. **`systemd/hdd-health-check.service` fix**  
-   - Removed invalid `WantedBy=multi-user.target` from `[Unit]` (belongs only in `[Install]`).  
+5. **`systemd/hdd-health-check.service` fix**
+   - Removed invalid `WantedBy=multi-user.target` from `[Unit]` (belongs only in `[Install]`).
    - After pulling, re-copy to `/etc/systemd/system/` and run `sudo systemctl daemon-reload`.
 
-**Production deploy (lemongrab):** Run from repo root: `sudo bash scripts/deploy-hdd-health-check.sh`.  
-**HDD capacities (from docs):** disk1 = 1 TB, disk2 = 2 TB, disk_old = 500 GB (legacy).  
+**Production deploy (lemongrab):** Run from repo root: `sudo bash scripts/deploy-hdd-health-check.sh`.
+**HDD capacities (from docs):** disk1 = 1 TB, disk2 = 2 TB, disk_old = 500 GB (legacy).
 **SMART alerts observed:** disk1 (pending/offline uncorrectable), disk2 (reallocated sectors), disk_old (SMART FAILED) — back up data and plan replacement.
 
 ---
 
 ## [2026-03-11] Immich primary storage on 1TB SATA SSD
 
-**Date:** 2026-03-11  
-**Action:** Use the 1TB SATA SSD (/dev/sda, mounted at /mnt/ssd_1tb) as primary storage for Immich (healthiest drive).  
-**Changes:**  
-- **docker/immich/.env**: `UPLOAD_LOCATION=/mnt/ssd_1tb/immich-library` (if .env is tracked; otherwise set manually).  
-- **scripts/migrate-immich-to-ssd1tb.sh**: Migrates existing library from /mnt/storage/immich-library to /mnt/ssd_1tb/immich-library (rsync), updates .env, restarts Immich.  
-- **docker/immich/README.md**, **create-library-dirs.sh**: Default path now /mnt/ssd_1tb/immich-library.  
-- **health.d/40-disk-smart.sh**: Added `/mnt/ssd_1tb` to monitored mounts so the primary SSD appears in the Sunday HDD health report.  
+**Date:** 2026-03-11
+**Action:** Use the 1TB SATA SSD (/dev/sda, mounted at /mnt/ssd_1tb) as primary storage for Immich (healthiest drive).
+**Changes:**
+- **docker/immich/.env**: `UPLOAD_LOCATION=/mnt/ssd_1tb/immich-library` (if .env is tracked; otherwise set manually).
+- **scripts/migrate-immich-to-ssd1tb.sh**: Migrates existing library from /mnt/storage/immich-library to /mnt/ssd_1tb/immich-library (rsync), updates .env, restarts Immich.
+- **docker/immich/README.md**, **create-library-dirs.sh**: Default path now /mnt/ssd_1tb/immich-library.
+- **health.d/40-disk-smart.sh**: Added `/mnt/ssd_1tb` to monitored mounts so the primary SSD appears in the Sunday HDD health report.
 **On server:** Ensure /mnt/ssd_1tb is in fstab, then run `sudo bash scripts/migrate-immich-to-ssd1tb.sh` from repo root.
 
 **Result:** Migration completed successfully. Immich library now on primary 1TB SSD (/mnt/ssd_1tb/immich-library). Same data kept on mergerfs as backup. Wikipedia no-pics (~50GB) download planned for later (on mergerfs or after confirming primary storage usage).
@@ -115,13 +115,13 @@ This log documents specific issues encountered on the server and their fixes.
 
 ## [2026-03-08] Root disk space & SSD usage
 
-**Date:** 2026-03-08  
-**Context:** Root (/) was at 93%; health check alerts for Root and “SSD” both refer to the same partition (`/dev/nvme0n1p2` — root is 101G, and `/mnt/ssd` lives on that same partition).  
-**SSD space:** Root partition has **~6.9 GB free** (89G used of 101G). There is no separate SSD partition; `/mnt/ssd` is on root.  
-**To free root:** Run (requires sudo):  
-- `sudo apt-get clean` — frees ~5 GB (apt package cache in `/var/cache/apt/archives`).  
-- `sudo journalctl --vacuum-size=100M` — caps systemd journal at 100 MB (frees ~114 MB).  
-- Optional: `sudo find /var/log -name "*.log" -mtime +30 -exec truncate -s 0 {} \;` to truncate old logs (use with care).  
+**Date:** 2026-03-08
+**Context:** Root (/) was at 93%; health check alerts for Root and “SSD” both refer to the same partition (`/dev/nvme0n1p2` — root is 101G, and `/mnt/ssd` lives on that same partition).
+**SSD space:** Root partition has **~6.9 GB free** (89G used of 101G). There is no separate SSD partition; `/mnt/ssd` is on root.
+**To free root:** Run (requires sudo):
+- `sudo apt-get clean` — frees ~5 GB (apt package cache in `/var/cache/apt/archives`).
+- `sudo journalctl --vacuum-size=100M` — caps systemd journal at 100 MB (frees ~114 MB).
+- Optional: `sudo find /var/log -name "*.log" -mtime +30 -exec truncate -s 0 {} \;` to truncate old logs (use with care).
 **Note:** Docker data is already on `/home/docker-data` (not on root).
 
 ### What else can be moved from root
@@ -140,47 +140,47 @@ This log documents specific issues encountered on the server and their fixes.
 
 ## [2026-03-08] USB HDD SMART health check (health.d module)
 
-**Date:** 2026-03-08  
-**Action:** Added SMART-based health check for the 3 USB HDDs (docking stations) so the homelab can warn before a disk is likely to fail.  
-**Result:** New module `scripts/health.d/40-disk-smart.sh` runs as part of the existing health check. It detects disks from mount points `/mnt/disk1`, `/mnt/disk2`, `/mnt/disk_old`, runs `smartctl` (trying `-d sat` for USB bridges if needed), and alerts on SMART overall FAILED or on pre-failure attributes (Reallocated_Sector_Ct, Current_Pending_Sector, Offline_Uncorrectable).  
-**Requirement:** Install smartmontools: `sudo apt install smartmontools`. If a USB enclosure does not pass SMART, the module logs and skips that drive.  
-**Optional:** To monitor different mounts, edit the `USB_DISK_MOUNTS` array in `40-disk-smart.sh`.  
-**Notification schedule:** The "💾 USB HDDs health" summary (OK + space per disk) is sent to Mattermost **only on Sunday** (when the daily run falls on Sunday 11:00). Failure/warning alerts are sent immediately on any run.  
+**Date:** 2026-03-08
+**Action:** Added SMART-based health check for the 3 USB HDDs (docking stations) so the homelab can warn before a disk is likely to fail.
+**Result:** New module `scripts/health.d/40-disk-smart.sh` runs as part of the existing health check. It detects disks from mount points `/mnt/disk1`, `/mnt/disk2`, `/mnt/disk_old`, runs `smartctl` (trying `-d sat` for USB bridges if needed), and alerts on SMART overall FAILED or on pre-failure attributes (Reallocated_Sector_Ct, Current_Pending_Sector, Offline_Uncorrectable).
+**Requirement:** Install smartmontools: `sudo apt install smartmontools`. If a USB enclosure does not pass SMART, the module logs and skips that drive.
+**Optional:** To monitor different mounts, edit the `USB_DISK_MOUNTS` array in `40-disk-smart.sh`.
+**Notification schedule:** The "💾 USB HDDs health" summary (OK + space per disk) is sent to Mattermost **only on Sunday** (when the daily run falls on Sunday 11:00). Failure/warning alerts are sent immediately on any run.
 **Standalone daily run:** As of 2026-03-08 the HDD check runs separately from the main health check: use `scripts/hdd-health-check.sh` with systemd timer `hdd-health-check.timer` (daily 11:00). See README “HDD health check (standalone, daily)” for deploy steps.
 
 ---
 
 ## [2026-03-03] FreshRSS: Unavailable on :8099 and URL – container not started + restarts required
 
-**Date:** 2026-03-03  
-**Symptoms:** http://localhost:8099 and https://rss.gmojsoski.com were unavailable.  
-**Causes:** (1) FreshRSS container had never been started. (2) After adding a new service, Caddy and cloudflared must be restarted or the public URL stays 404.  
-**Fix:**  
-1. Start container: `cd docker/freshrss && docker compose up -d`.  
-2. **Apply config and restart (required for any new service):**  
-   - `cp cloudflare/config.yml ~/.cloudflared/config.yml`  
-   - `cd docker/caddy && docker compose restart caddy`  
-   - `cd docker/cloudflared && docker compose restart`  
-3. Run `./scripts/verify-services.sh`.  
-**Result:** Local :8099 and https://rss.gmojsoski.com both work (302 installer).  
+**Date:** 2026-03-03
+**Symptoms:** http://localhost:8099 and https://rss.gmojsoski.com were unavailable.
+**Causes:** (1) FreshRSS container had never been started. (2) After adding a new service, Caddy and cloudflared must be restarted or the public URL stays 404.
+**Fix:**
+1. Start container: `cd docker/freshrss && docker compose up -d`.
+2. **Apply config and restart (required for any new service):**
+   - `cp cloudflare/config.yml ~/.cloudflared/config.yml`
+   - `cd docker/caddy && docker compose restart caddy`
+   - `cd docker/cloudflared && docker compose restart`
+3. Run `./scripts/verify-services.sh`.
+**Result:** Local :8099 and https://rss.gmojsoski.com both work (302 installer).
 **Remember:** New Caddy/tunnel routes only take effect after copying the tunnel config and restarting Caddy then cloudflared. See SERVICE_ADDITION_CHECKLIST.md “Restart Sequence”.
 
 ---
 
 ## [2026-03-03] Bookmarks: "URL is required" – rebuilt to accept form + JSON
 
-**Date:** 2026-03-03  
-**Symptoms:** POST to bookmarks.gmojsoski.com returned "URL is required" even when sending a URL.  
-**Cause:** Old app only read `request.json` and expected key `url`; form submissions or different keys (e.g. `link`) were ignored.  
-**Fix:** Rebuilt app in `Pi-version-control/apps/bookmarks/`: accepts both JSON and form data, accepts `url` / `link` / `bookmark_url`, validates URL (http/https), uses env for webhook and token (`.env` + systemd `EnvironmentFile`), added simple HTML form at `/`.  
+**Date:** 2026-03-03
+**Symptoms:** POST to bookmarks.gmojsoski.com returned "URL is required" even when sending a URL.
+**Cause:** Old app only read `request.json` and expected key `url`; form submissions or different keys (e.g. `link`) were ignored.
+**Fix:** Rebuilt app in `Pi-version-control/apps/bookmarks/`: accepts both JSON and form data, accepts `url` / `link` / `bookmark_url`, validates URL (http/https), uses env for webhook and token (`.env` + systemd `EnvironmentFile`), added simple HTML form at `/`.
 **Deploy:** Copy `apps/bookmarks/*` to `/mnt/ssd/apps/bookmarks/`, ensure `.env` has `MATTERMOST_WEBHOOK_URL` and `BOOKMARKS_SECRET_TOKEN`, then `sudo systemctl restart bookmarks.service`.
 
 ---
 
 ## [2026-03-03] Immich: Photo backup service added
 
-**Date:** 2026-03-03  
-**Action:** Added Immich for self-hosted photo/video backup (Google Photos alternative).  
+**Date:** 2026-03-03
+**Action:** Added Immich for self-hosted photo/video backup (Google Photos alternative).
 **Result:** Service at https://immich.gmojsoski.com, local http://localhost:2283 (port 2283).
 
 ### Configuration
@@ -197,8 +197,8 @@ This log documents specific issues encountered on the server and their fixes.
 
 ## [2026-02-17] Clawdbot: Switched from Google Gemini to local Ollama
 
-**Date:** 2026-02-17  
-**Action:** Removed Gemini API key and configured Clawdbot to use local Ollama (DeepSeek R1 1.5B).  
+**Date:** 2026-02-17
+**Action:** Removed Gemini API key and configured Clawdbot to use local Ollama (DeepSeek R1 1.5B).
 **Result:** Clawdbot now uses `ollama/deepseek-r1:1.5b` on the host; no cloud API key required.
 
 ### Changes
@@ -220,8 +220,8 @@ This log documents specific issues encountered on the server and their fixes.
 
 ## [2026-01-29] CPU Upgrade - Intel Pentium G4560T → Intel Core i5-7500T
 
-**Date:** 2026-01-29  
-**Action:** Replaced CPU from Intel Pentium G4560T (2 cores, 4 threads) to Intel Core i5-7500T (4 cores, 4 threads)  
+**Date:** 2026-01-29
+**Action:** Replaced CPU from Intel Pentium G4560T (2 cores, 4 threads) to Intel Core i5-7500T (4 cores, 4 threads)
 **Result:** Successful upgrade with no software changes required
 
 ### ✅ Hardware Change
@@ -250,7 +250,7 @@ CPU upgrade completed successfully. System operational with improved multi-core 
 
 ## [2026-01-28] Portfolio Layout Issues - Cache Busting Mismatch
 
-**Date:** 2026-01-28  
+**Date:** 2026-01-28
 **Symptoms:**
 - Portfolio site (`gmojsoski.com`) showing broken layout on desktop
 - Duplicated social icons visible in Contact section
@@ -919,8 +919,8 @@ After fix is applied:
 
 ## [2026-02-22] Hardware Upgrade & Docker Data Migration
 
-**Date:** 2026-02-22  
-**Action:** Attached a new 1TB HDD, formatted it to ext4, mounted it to `/mnt/storage`, and migrated the Docker root directory from root (`/var/lib/docker`) to `/home/docker-data`.  
+**Date:** 2026-02-22
+**Action:** Attached a new 1TB HDD, formatted it to ext4, mounted it to `/mnt/storage`, and migrated the Docker root directory from root (`/var/lib/docker`) to `/home/docker-data`.
 **Result:** Reclaimed space on the root partition and enabled large local storage for extensive data like Kiwix archives.
 
 ### ✅ Changes Made

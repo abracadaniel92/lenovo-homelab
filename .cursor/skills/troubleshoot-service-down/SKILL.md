@@ -19,7 +19,7 @@ Copy this checklist:
 
 ```
 - [ ] 1. Run safety-net: ./scripts/verify-services.sh
-- [ ] 2. Check prior incidents: search usefull files/TROUBLESHOOTING_LOG.md
+- [ ] 2. Check prior incidents: search useful-files/TROUBLESHOOTING_LOG.md
 - [ ] 3. Check Docker daemon + container state
 - [ ] 4. Check Caddy specifically (most outages are here or tunnel)
 - [ ] 5. Check Cloudflare Tunnel
@@ -39,10 +39,10 @@ This reveals which subdomains are down and which are healthy. Use this to scope 
 
 ## 2. Check prior incidents
 
-Before suggesting a fix, search [TROUBLESHOOTING_LOG.md](../../../usefull%20files/TROUBLESHOOTING_LOG.md) for the symptom. Many outages have known fixes — do not reinvent them.
+Before suggesting a fix, search [TROUBLESHOOTING_LOG.md](../../../useful-files/TROUBLESHOOTING_LOG.md) for the symptom. Many outages have known fixes — do not reinvent them.
 
 ```bash
-rg -i "<symptom keyword>" "usefull files/TROUBLESHOOTING_LOG.md"
+rg -i "<symptom keyword>" useful-files/TROUBLESHOOTING_LOG.md
 ```
 
 ## 3. Docker state
@@ -146,7 +146,7 @@ If the fix involved anything beyond a clean container restart, log it via the `l
 
 ## Reference
 
-- Full recovery system overview: [MONITORING_AND_RECOVERY.md](../../../usefull%20files/MONITORING_AND_RECOVERY.md)
-- Historical incidents: [TROUBLESHOOTING_LOG.md](../../../usefull%20files/TROUBLESHOOTING_LOG.md)
-- Cloudflare-specific: [CLOUDFLARE_MONITORING.md](../../../usefull%20files/CLOUDFLARE_MONITORING.md)
-- Health check status: [HEALTH_CHECK_STATUS.md](../../../usefull%20files/HEALTH_CHECK_STATUS.md)
+- Full recovery system overview: [MONITORING_AND_RECOVERY.md](../../../useful-files/MONITORING_AND_RECOVERY.md)
+- Historical incidents: [TROUBLESHOOTING_LOG.md](../../../useful-files/TROUBLESHOOTING_LOG.md)
+- Cloudflare-specific: [CLOUDFLARE_MONITORING.md](../../../useful-files/CLOUDFLARE_MONITORING.md)
+- Health check status: [HEALTH_CHECK_STATUS.md](../../../useful-files/HEALTH_CHECK_STATUS.md)

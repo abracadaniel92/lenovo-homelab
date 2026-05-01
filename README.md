@@ -237,7 +237,7 @@ Pi-version-control/
 │   └── config.yml
 ├── fail2ban/
 │   └── jail.local.template
-├── usefull files/            # Documentation & guides
+├── useful-files/            # Documentation & guides
 │   ├── MONITORING_AND_RECOVERY.md
 │   ├── KITCHENOWL_RECIPE_IMPORT.md
 │   ├── NEXTCLOUD_FRESH_INSTALL.md
@@ -351,7 +351,7 @@ The Caddyfile has been split into service-specific config files for better maint
 
 ### 5. Setup Services
 
-See individual setup guides in `usefull files/`:
+See individual setup guides in `useful-files/`:
 - `NEXTCLOUD_FRESH_INSTALL.md` - Cloud storage setup
 - `VAULTWARDEN_SETUP.md` - Password manager setup
 - `KITCHENOWL_RECIPE_IMPORT.md` - Recipe import guide
@@ -805,7 +805,7 @@ This repository contains configuration files for personal use. Please review and
 
 ---
 
-**Last Updated**: February 2026  
-**Home Lab**: Lenovo ThinkCentre (lemongrab) + Raspberry Pi 4 (pihole)  
-**OS**: Linux (Debian-based)  
+**Last Updated**: February 2026
+**Home Lab**: Lenovo ThinkCentre (lemongrab) + Raspberry Pi 4 (pihole)
+**OS**: Linux (Debian-based)
 **Repository**: https://github.com/abracadaniel92/lenovo-homelab

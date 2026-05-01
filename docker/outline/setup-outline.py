@@ -69,7 +69,7 @@ This document defines the strict operating rules for the homelab infrastructure.
 
 ### Governance
 - **NEVER** modify existing, working Caddyfile blocks while troubleshooting a new service
-- **ALWAYS** check `usefull files/TROUBLESHOOTING_LOG.md` before suggesting a fix
+- **ALWAYS** check `useful-files/TROUBLESHOOTING_LOG.md` before suggesting a fix
 - **ALWAYS** run `scripts/verify-services.sh` after any network change
 
 ### Service Addition Protocol
@@ -319,20 +319,20 @@ def create_collection(api_key, name, description, color):
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    
+
     data = {
         "name": name,
         "description": description,
         "color": color,
         "private": False
     }
-    
+
     response = requests.post(
         f"{OUTLINE_URL}/api/collections.create",
         headers=headers,
         json=data
     )
-    
+
     if response.status_code == 200:
         return response.json()["data"]["id"]
     else:
@@ -346,20 +346,20 @@ def create_document(api_key, collection_id, title, content):
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    
+
     data = {
         "collectionId": collection_id,
         "title": title,
         "text": content,
         "publish": True
     }
-    
+
     response = requests.post(
         f"{OUTLINE_URL}/api/documents.create",
         headers=headers,
         json=data
     )
-    
+
     if response.status_code == 200:
         return response.json()["data"]["id"]
     else:
@@ -377,10 +377,10 @@ def main():
         print("4. Run: export OUTLINE_API_KEY='your-key-here'")
         print("5. Run this script again")
         sys.exit(1)
-    
+
     print("🚀 Setting up Outline wiki...")
     print(f"📡 Connecting to {OUTLINE_URL}\n")
-    
+
     # Test connection
     try:
         response = requests.get(f"{OUTLINE_URL}/api/auth.info", headers={
@@ -394,7 +394,7 @@ def main():
         print(f"❌ Cannot connect to Outline at {OUTLINE_URL}")
         print("Make sure Outline is running: docker compose ps")
         sys.exit(1)
-    
+
     # Create collections
     collection_ids = {}
     print("📁 Creating collections...")
@@ -411,14 +411,14 @@ def main():
             print(f"  ✅ Created '{collection['name']}'")
         else:
             print(f"  ⚠️  Failed to create '{collection['name']}' (may already exist)")
-    
+
     # Create documents
     print("\n📄 Creating documents...")
     for collection_name, documents in DOCUMENTS.items():
         if collection_name not in collection_ids:
             print(f"  ⚠️  Skipping documents for '{collection_name}' (collection not found)")
             continue
-        
+
         collection_id = collection_ids[collection_name]
         for doc in documents:
             print(f"  Creating '{doc['title']}' in '{collection_name}'...")
@@ -432,14 +432,10 @@ def main():
                 print(f"  ✅ Created '{doc['title']}'")
             else:
                 print(f"  ⚠️  Failed to create '{doc['title']}' (may already exist)")
-    
+
     print("\n✅ Setup complete!")
     print(f"\n🌐 Access your wiki at: {OUTLINE_URL}")
 
 
 if __name__ == "__main__":
     main()
-
-
-
-

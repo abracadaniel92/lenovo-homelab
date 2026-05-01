@@ -130,4 +130,3 @@ sudo systemctl daemon-reload && sudo systemctl restart enhanced-health-check.tim
 - This should significantly reduce CPU usage
 - The script checks multiple services and can restart them if they fail
 - All actions are logged to `/var/log/enhanced-health-check.log`
-
