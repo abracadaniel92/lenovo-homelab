@@ -82,5 +82,12 @@ ingress:
   - hostname: css.gmojsoski.com
     service: http://localhost:8080
 
+  # Daka Dragan marketing site (routed through Caddy)
+  - hostname: daka-dragan.mk
+    service: http://localhost:8080
+
+  - hostname: www.daka-dragan.mk
+    service: http://localhost:8080
+
   # Catch-all (must be last)
   - service: http_status:404
