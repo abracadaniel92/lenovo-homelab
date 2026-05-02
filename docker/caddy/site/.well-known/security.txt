@@ -1,5 +1,0 @@
-Contact: mailto:contact@gmojsoski.com
-Expires: 2028-05-02T23:59:00Z
-Preferred-Languages: en
-Canonical: https://gmojsoski.com/.well-known/security.txt
-Policy: https://github.com/abracadaniel92/lenovo-homelab/blob/main/SECURITY.md
