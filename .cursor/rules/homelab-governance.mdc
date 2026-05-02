@@ -5,6 +5,13 @@ alwaysApply: true
 
 This file defines the strict operating rules for the Pi-version-control homelab repository. FAILURE TO FOLLOW THESE RULES will result in service outages.
 
+## This machine is production; GitHub is version control
+
+- **Where things run**: This **Lenovo** host is the homelab **server** — Docker stacks, Caddy, Cloudflare Tunnel (cloudflared), systemd timers, and related services run **on this machine**, not on some separate “prod box” implied by the repo alone.
+- **What the repo is for**: The **`Pi-version-control`** tree (GitHub: `lenovo-homelab`) is **version control** and documentation. Changing files **only** under that clone **does not** change live behaviour unless those exact paths are what bind-mounted services read **or** you **copy/restart** so runtime picks up the change.
+- **Rule for the agent**: When the user wants a **live** fix or rollout, **apply changes where runtime actually reads them first** (examples: `~/.cloudflared/config.yml` then restart cloudflared; live `docker/caddy/...` then `docker compose restart caddy`; scripts deployed to `/usr/local/bin/` via their deploy helpers). Treat “edited the GitHub-linked clone” as **incomplete** unless the user **explicitly** asked for a repo-only / preparatory change. After live is correct, **mirror** into the repo and commit/push **when the user wants** history to match — never assume a repo edit alone fixed prod.
+- **Reminder**: Say clearly when a step is **“repo / VCS only”** vs **“must run on this server to take effect”** so the user is never left thinking production moved when only git changed.
+
 ## CRITICAL: Networking & Ingress (NEVER CHANGE)
 
 1. **Cloudflare Tunnel Binding**:
@@ -38,7 +45,11 @@ This file defines the strict operating rules for the Pi-version-control homelab 
 
 ## Documentation
 
-5. **Logging**: All major changes and troubleshooting steps must be logged in `useful-files/TROUBLESHOOTING_LOG.md`.
+5. **Troubleshooting log (mandatory for traceable work)**:
+   - **Always** append a new entry to `useful-files/TROUBLESHOOTING_LOG.md` when you **resolve** an incident, **apply** a production-affecting change on this server, or **document** a non-obvious fix — so future sessions (and the user) have a dated record of **what changed**, **what was updated**, and **how it was verified**.
+   - The entry must be **useful for future reference**: at minimum — **symptom** (or goal), **what you changed** (file paths; distinguish **live** paths vs repo mirror if both), **commands / restarts** run (e.g. `docker compose restart`, `cloudflared` reload), **verification** (e.g. `./scripts/verify-services.sh`, `curl`), and **outcome** (fixed / mitigated / follow-up needed). Follow the structure in `useful-files/TROUBLESHOOTING_LOG_GUIDELINES.md` (append-only; **never** rewrite or delete past entries).
+   - This applies to work such as: tunnel/Caddy routing, Docker stack fixes, service-down recovery, ingress/DNS-related fixes, script deploys to `/usr/local/bin/`, and similar infra — **not** optional “only if major.”
+   - **Exception**: If the user **explicitly** asks not to log a given change (e.g. sensitivity), skip the log and state in chat that logging was skipped by user request.
 
 ## Scope Enforcement (The "Surgical" Rule)
 
@@ -56,9 +67,21 @@ This file defines the strict operating rules for the Pi-version-control homelab 
    - `scripts/verify-services.sh`: Add new domains to the `SUBDOMAINS` array.
    - `README.md`: Add new service descriptions.
 
+## Service removal from Caddy / Cloudflare (CONFIRMATION REQUIRED)
+
+8. **Removing public routing is destructive**:
+   - You **MUST NOT** delete, comment out, or otherwise remove a service's **Caddy** routing (this includes `docker/caddy/Caddyfile`, `docker/caddy/config.d/*.caddy`, and any **production** Caddy snippets on the host that perform the same role) **nor** remove that service's **`hostname:`** ingress block from the **Cloudflare tunnel** config (`~/.cloudflared/config.yml` on prod, and the repo copy `cloudflare/config.yml` only when the user is syncing VCS) **unless** the user has **explicitly confirmed** after your impact summary.
+   - **Before** asking for confirmation, you **MUST** explain what will happen if the user approves. At minimum, cover:
+     1. **Which hostnames** will stop working from the public internet (and whether users may see **404** from the tunnel catch-all if ingress is removed, or **no route** from Caddy if the handle block is removed).
+     2. **Backend fate**: whether Docker/systemd **keeps running** while only **external access** is removed (usually yes until they tear down the stack separately).
+     3. **Operational follow-through**: that tunnel changes on prod require the **live** `~/.cloudflared/config.yml` to be updated and **cloudflared restarted** (or equivalent) before behaviour changes; Caddy changes require **reload/restart** of Caddy as appropriate.
+     4. **Related housekeeping** (optional, call out if relevant): e.g. `scripts/verify-services.sh` / `README.md` still listing the hostname, stale monitoring — do **not** silently remove those unless the user also asks.
+   - **Only after** the user gives **explicit** approval (e.g. clear "yes, remove public routing" / "approved") may you apply the deletion. Vague assent ("ok", "sure") is insufficient — if ambiguous, ask again.
+   - If the user declines or does not confirm, **do not** remove routing; offer alternatives (e.g. maintenance page, rate limit, DNS-only) if they only wanted to reduce exposure.
+
 ## Read-Only (Core Infrastructure)
 
-8. **Do Not Touch**:
+9. **Do Not Touch**:
    The following files are the "operating system" of the homelab. Never edit them as part of a routine service addition. Only touch them if the **Explicit User Goal** is to upgrade the monitoring/recovery system itself.
    - `scripts/enhanced-health-check.sh`
    - `scripts/fix-external-access.sh`
@@ -67,16 +90,16 @@ This file defines the strict operating rules for the Pi-version-control homelab 
 
 ## Storage Preference (Primary vs Secondary)
 
-9. **Primary storage** (prefer for sensitive or important data, e.g. Immich photos):
+10. **Primary storage** (prefer for sensitive or important data, e.g. Immich photos):
    - **512GB NVMe** (root `/` and `/home`).
    - **1TB healthy SATA SSD** mounted at `/mnt/ssd_1tb`.
    - User is fine keeping the same data on both primary and mergerfs as backup.
 
-10. **Where to store**: When adding or configuring storage for a new service or data, **ALWAYS ask the user** where it should be stored (primary NVMe/ssd_1tb vs mergerfs `/mnt/storage` vs other). Do not assume.
+11. **Where to store**: When adding or configuring storage for a new service or data, **ALWAYS ask the user** where it should be stored (primary NVMe/ssd_1tb vs mergerfs `/mnt/storage` vs other). Do not assume.
 
 ## Scope-Locked (Service Configs)
 
-11. **Service Isolation**:
+12. **Service Isolation**:
     - `docker/<service>/docker-compose.yml` and `.env` files are **LOCKED** to that service.
     - **Rule**: You may edit `docker/paperless/docker-compose.yml` ONLY if the user asks to "Fix Paperless" or "Update Paperless".
     - **Forbidden**: Never edit `docker/jellyfin/...` when working on Paperless.

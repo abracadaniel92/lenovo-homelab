@@ -16,13 +16,16 @@ Log an entry when ANY of these apply:
 - A lesson was learned (what worked, what didn't, mistakes to avoid)
 - A network, security, or infrastructure modification was made
 
+**Governance override:** `homelab-governance.mdc` §5 requires **always** appending to `useful-files/TROUBLESHOOTING_LOG.md` after **resolving** an incident or **applying** a production-affecting change on this server (tunnel, Caddy, Docker stack, deploys, etc.), with enough detail for future reference — unless the user **explicitly** asked not to log. When that rule applies, treat logging as **part of closing the task**, not optional.
+
 ## When NOT to log
 
-Do NOT clutter the log with smooth, standard work:
+Skip **only** when:
 
-- A clean container restart that just worked
-- A standard new-service addition that followed the checklist with no surprises (the README update is enough)
-- Trivial config tweaks with no learning value
+- The user **explicitly** asked not to log (per governance §5 exception), or
+- The work is **purely** cosmetic documentation elsewhere with **zero** runtime impact and no troubleshooting story (e.g. typo in an unrelated doc).
+
+If unsure whether it counts as production-affecting or incident resolution, **log it** — a short entry is better than no trail.
 
 ## Entry template
 
