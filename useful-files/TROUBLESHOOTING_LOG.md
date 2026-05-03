@@ -23,6 +23,30 @@ This log documents specific issues encountered on the server and their fixes.
 
 ---
 
+## [2026-05-03] Paperless-ngx: crash loop — PostgreSQL rejects session timezone `UTC`
+
+**Date:** 2026-05-03
+**Symptom:** `paperless-webserver` exited / restarted during init; logs showed `django.db.utils.DataError: invalid value for parameter "TimeZone": "UTC"` when Django opened a DB connection to the shared Nextcloud Postgres (`nextcloud-postgres`).
+
+**Cause:**
+- On this Postgres instance, `SELECT count(*) FROM pg_timezone_names` is **0**, and `SET TIME ZONE 'UTC'` fails while **`SET TIME ZONE 'Etc/UTC'`** succeeds (same for `'GMT'`).
+- Paperless sets global `TIME_ZONE` from `PAPERLESS_TIME_ZONE`, but **Django sets the PostgreSQL session timezone from `DATABASES["default"]["TIME_ZONE"]`**. Paperless does not set that key, so it stays `None` and Django always runs **`SET TIME ZONE 'UTC'`** for PostgreSQL when `USE_TZ` is true — **ignoring** `PAPERLESS_TIME_ZONE`. Changing only `.env` is not enough.
+
+**Fix (live stack under `/home/docker-projects/paperless`):**
+1. **`Dockerfile`** — extend `ghcr.io/paperless-ngx/paperless-ngx:latest` and patch `/usr/src/paperless/src/paperless/settings.py` immediately after `DATABASES = _parse_db_settings()` so that when `PAPERLESS_DBHOST` is set,
+   `DATABASES["default"]["TIME_ZONE"] = os.getenv("PAPERLESS_TIME_ZONE", "UTC")`.
+2. **`docker-compose.yml`** — `webserver` uses `build: .` and image tag `paperless-webserver:local` (instead of pulling upstream image only).
+3. **`.env`** — `PAPERLESS_TIME_ZONE=Etc/UTC` (valid for `SET TIME ZONE` on this server; avoids the broken `'UTC'` name).
+
+**Verification:**
+- Container completes init: migrations OK, Granian listening; no timezone traceback in logs.
+- HTTP check: `curl` to `127.0.0.1:8097` may reset on some hosts; **`http://172.17.0.1:8097/`** or the public URL (`https://paperless.gmojsoski.com`) works when the app is up.
+
+**Rebuild after upstream image updates:**
+`docker compose build --pull webserver && docker compose up -d webserver`
+
+---
+
 ## [2026-04-26] Android emulator + ws-scrcpy service addition (local only)
 
 **Date:** 2026-04-26

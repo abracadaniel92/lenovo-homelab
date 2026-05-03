@@ -34,7 +34,7 @@ This file defines the strict operating rules for the Pi-version-control homelab 
 
 3. **Governance**:
    - **NEVER** modify existing, working Caddyfile blocks while troubleshooting a new service.
-   - **ALWAYS** check `useful-files/TROUBLESHOOTING_LOG.md` before suggesting a fix.
+   - **ALWAYS** check `useful-files/TROUBLESHOOTING_LOG.md` before suggesting a fix **or** before appending a new log entry (same goal: avoid contradicting or duplicating what is already recorded).
    - **ALWAYS** run `scripts/verify-services.sh` after any network change.
 
 4. **Service Addition Protocol**:
@@ -46,6 +46,7 @@ This file defines the strict operating rules for the Pi-version-control homelab 
 ## Documentation
 
 5. **Troubleshooting log (mandatory for traceable work)**:
+   - **Read before you write**: Before **adding** a new `## [...]` entry to `useful-files/TROUBLESHOOTING_LOG.md`, **read** the file end-to-end or **search** it (dates, service names, symptoms, error strings). **Do not** create a **duplicate** section for an incident that is **already logged** (same root cause and fix). If it is already documented, **skip** a new entry unless the user asks for an addendum or there is **material new** detail worth a separate dated follow-up — and then make clear how it differs from the existing entry.
    - **Always** append a new entry to `useful-files/TROUBLESHOOTING_LOG.md` when you **resolve** an incident, **apply** a production-affecting change on this server, or **document** a non-obvious fix — so future sessions (and the user) have a dated record of **what changed**, **what was updated**, and **how it was verified**.
    - The entry must be **useful for future reference**: at minimum — **symptom** (or goal), **what you changed** (file paths; distinguish **live** paths vs repo mirror if both), **commands / restarts** run (e.g. `docker compose restart`, `cloudflared` reload), **verification** (e.g. `./scripts/verify-services.sh`, `curl`), and **outcome** (fixed / mitigated / follow-up needed). Follow the structure in `useful-files/TROUBLESHOOTING_LOG_GUIDELINES.md` (append-only; **never** rewrite or delete past entries).
    - This applies to work such as: tunnel/Caddy routing, Docker stack fixes, service-down recovery, ingress/DNS-related fixes, script deploys to `/usr/local/bin/`, and similar infra — **not** optional “only if major.”
