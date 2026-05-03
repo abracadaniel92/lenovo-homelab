@@ -97,9 +97,16 @@ This file defines the strict operating rules for the Pi-version-control homelab 
 
 11. **Where to store**: When adding or configuring storage for a new service or data, **ALWAYS ask the user** where it should be stored (primary NVMe/ssd_1tb vs mergerfs `/mnt/storage` vs other). Do not assume.
 
+12. **Keep root (`/`) clean** — the root partition is only **101G** and must stay lean:
+    - **NEVER** place service data, volumes, uploads, or large files on root. Use `/home`, `/mnt/ssd_1tb`, or `/mnt/storage` instead.
+    - When installing or configuring anything that defaults to `/var/lib/`, `/opt/`, or another root path, **proactively suggest** relocating the data to `/home` (or ask the user which mount to use).
+    - Docker data root is already at `/home/docker-data` and containerd is symlinked to `/home/containerd`. Do NOT change these.
+    - If root usage exceeds ~80%, flag it and suggest cleanup (apt cache, journal vacuum, snap cleanup, moving data off root).
+    - **Already moved off root**: Docker (`/home/docker-data`), containerd (`/home/containerd` via symlink). Keep this list updated when more data is relocated.
+
 ## Scope-Locked (Service Configs)
 
-12. **Service Isolation**:
+13. **Service Isolation**:
     - `docker/<service>/docker-compose.yml` and `.env` files are **LOCKED** to that service.
     - **Rule**: You may edit `docker/paperless/docker-compose.yml` ONLY if the user asks to "Fix Paperless" or "Update Paperless".
     - **Forbidden**: Never edit `docker/jellyfin/...` when working on Paperless.

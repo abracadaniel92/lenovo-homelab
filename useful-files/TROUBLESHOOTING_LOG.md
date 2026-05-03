@@ -2,6 +2,27 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-05-03] Containerd data migrated from root to /home
+
+**Date:** 2026-05-03
+**Symptom:** Root partition (`/dev/nvme0n1p2`, 101G) at **98% usage** (2GB free). `/var/lib/containerd` was 76GB on root despite Docker data root already being on `/home/docker-data`.
+**Action:** Migrated containerd data from `/var/lib/containerd` (root) to `/home/containerd` (`/dev/nvme0n1p3`, 368G) using rsync + symlink approach.
+**Changes:**
+- **scripts/migrate-containerd-to-home.sh** [NEW]: Migration script — stops docker/containerd, rsyncs data, renames old dir, creates symlink, restarts services, verifies.
+- **Live**: `/var/lib/containerd` is now a symlink → `/home/containerd`. Old data (`/var/lib/containerd.old`) removed by user after verification.
+**Commands run:**
+- `sudo bash scripts/migrate-containerd-to-home.sh` (rsync ~76GB, ~13 min)
+- `sudo rm -rf /var/lib/containerd.old` (user confirmed containers healthy first)
+**Verification:**
+- Docker: RUNNING ✅
+- Containerd: RUNNING ✅
+- All containers came back up (20+ containers listed)
+- Symlink in place: `/var/lib/containerd -> /home/containerd`
+- Root partition freed ~76GB (98% → ~24%)
+**Result:** Root partition space reclaimed. `/home` now at 42% (146G/368G used).
+
+---
+
 ## [2026-04-26] Android emulator + ws-scrcpy service addition (local only)
 
 **Date:** 2026-04-26
