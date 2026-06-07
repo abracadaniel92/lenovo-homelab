@@ -9,7 +9,7 @@ Single source of truth for which service uses which host port. Check this (and r
 | 3001  | Uptime Kuma       | internal only                     |
 | 5000  | Bookmarks         | bookmarks.gmojsoski.com (systemd) |
 | 8000  | TravelSync / documents-to-calendar | tickets.gmojsoski.com; API `/api/health` |
-| 8001  | MCP Knowledge (`knowledge-mcp`) | **LAN only** — Cursor SSE `http://<host>:8001/sse`; see [MCP_KNOWLEDGE_SERVER.md](../../useful-files/MCP_KNOWLEDGE_SERVER.md) |
+| 8001  | MCP Knowledge (`knowledge-mcp`) | **LAN only** — Cursor SSE `http://<host>:8001/sse`; see [mcp-knowledge-server.md](../how-to-guides/mcp-knowledge-server.md) |
 | 8066  | Mattermost        | mattermost.gmojsoski.com          |
 | 8080  | Caddy             | reverse proxy (tunnel → 8080)     |
 | 8081  | Nextcloud         | cloud.gmojsoski.com               |

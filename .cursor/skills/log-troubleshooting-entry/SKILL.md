@@ -5,7 +5,7 @@ description: Append a properly-formatted entry to the homelab TROUBLESHOOTING_LO
 
 # Log Troubleshooting Entry
 
-The `useful-files/TROUBLESHOOTING_LOG.md` is the homelab's **learning diary** — not just a problem log. It captures issues, fixes, successful projects, lessons learned, and configuration changes.
+The `docs/reference/troubleshooting-log.md` is the homelab's **learning diary** — not just a problem log. It captures issues, fixes, successful projects, lessons learned, and configuration changes.
 
 ## When to log
 
@@ -16,7 +16,7 @@ Log an entry when ANY of these apply:
 - A lesson was learned (what worked, what didn't, mistakes to avoid)
 - A network, security, or infrastructure modification was made
 
-**Governance override:** `homelab-governance.mdc` §5 requires **always** appending to `useful-files/TROUBLESHOOTING_LOG.md` after **resolving** an incident or **applying** a production-affecting change on this server (tunnel, Caddy, Docker stack, deploys, etc.), with enough detail for future reference — unless the user **explicitly** asked not to log. When that rule applies, treat logging as **part of closing the task**, not optional.
+**Governance override:** `homelab-governance.mdc` §5 requires **always** appending to `docs/reference/troubleshooting-log.md` after **resolving** an incident or **applying** a production-affecting change on this server (tunnel, Caddy, Docker stack, deploys, etc.), with enough detail for future reference — unless the user **explicitly** asked not to log. When that rule applies, treat logging as **part of closing the task**, not optional.
 
 ## When NOT to log
 
@@ -29,7 +29,7 @@ If unsure whether it counts as production-affecting or incident resolution, **lo
 
 ## Entry template
 
-Append to [TROUBLESHOOTING_LOG.md](../../../useful-files/TROUBLESHOOTING_LOG.md) using this exact structure:
+Append to [TROUBLESHOOTING_LOG.md](../../../docs/reference/troubleshooting-log.md) using this exact structure:
 
 ```markdown
 ## [YYYY-MM-DD] Descriptive Title
@@ -84,4 +84,4 @@ Append to [TROUBLESHOOTING_LOG.md](../../../useful-files/TROUBLESHOOTING_LOG.md)
 
 ## Reference
 
-For the full guidelines authored by the user, see [TROUBLESHOOTING_LOG_GUIDELINES.md](../../../useful-files/TROUBLESHOOTING_LOG_GUIDELINES.md).
+For the full guidelines authored by the user, see [TROUBLESHOOTING_LOG_GUIDELINES.md](../../../docs/reference/troubleshooting-log-guidelines.md).

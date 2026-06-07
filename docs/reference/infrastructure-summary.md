@@ -53,7 +53,7 @@ The lab consists of two devices:
 | **Portainer** | 9000 | - | Docker UI |
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel docs |
-| **MCP Knowledge** | 8001 | LAN only (`/sse`) | Private knowledge index for Cursor; [MCP_KNOWLEDGE_SERVER.md](../../useful-files/MCP_KNOWLEDGE_SERVER.md) |
+| **MCP Knowledge** | 8001 | LAN only (`/sse`) | Private knowledge index for Cursor; [mcp-knowledge-server.md](../how-to-guides/mcp-knowledge-server.md) |
 | **Watchtower** | - | - | Auto-updates 2 AM |
 | **Nginx (Vaultwarden)** | 8083 | - | iOS DELETE fix |
 
@@ -230,7 +230,7 @@ docker compose up -d  # Restart
 10. ✅ **Fixed health check script** (Jan 2, 2026) - Now correctly detects Docker containers instead of non-existent systemd service
 11. ✅ **Added Pi-hole setup guide** for Raspberry Pi 4 (4GB RAM)
 12. ✅ **Pi-hole deployed and operational** (January 2026) - Network-wide DNS and ad blocking
-12. ✅ **Investigated and fixed external access issues** - See `docs/how-to-guides/EXTERNAL_ACCESS_INVESTIGATION.md`
+12. ✅ **Investigated and fixed external access issues** - See `docs/how-to-guides/external-access-investigation.md`
 13. ✅ **Configured Backblaze B2 offsite backup** (Jan 2, 2026) - rclone sync to B2 daily at 3 AM
 14. ✅ **Added Cloudflare Tunnel metrics endpoint** (Jan 2, 2026) - Metrics exposed on port 2000, accessible at http://localhost:2000/metrics
 15. ✅ **Created Uptime Kuma + ntfy.sh notification setup guide** - See `docs/UPTIME_KUMA_NTFY_SETUP.md`

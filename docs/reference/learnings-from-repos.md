@@ -16,7 +16,7 @@ Analysis of repositories to identify improvements for our homelab infrastructure
 
 ### 1. Cloudflare Tunnel Metrics ✅ **EASY WIN**
 
-**Current**: No metrics endpoint exposed  
+**Current**: No metrics endpoint exposed
 **Learning**: The homelab config exposes metrics at `0.0.0.0:2000`
 
 **Implementation**:
@@ -36,7 +36,7 @@ metrics: 0.0.0.0:2000
 
 ### 2. Prometheus Monitoring Setup 💡 **VALUABLE ADDITION**
 
-**Current**: Uptime Kuma only (basic uptime monitoring)  
+**Current**: Uptime Kuma only (basic uptime monitoring)
 **Learning**: Full Prometheus + Grafana stack for metrics collection
 
 **What We Could Add**:
@@ -62,7 +62,7 @@ metrics: 0.0.0.0:2000
 
 ### 3. Automated Backup with Restic 🚀 **HIGH VALUE**
 
-**Current**: Manual backup scripts with tar.gz, rclone sync  
+**Current**: Manual backup scripts with tar.gz, rclone sync
 **Learning**: Automated Restic-based backups with retention policies
 
 **Their Setup**:
@@ -91,7 +91,7 @@ restic forget --keep-hourly 6 --keep-daily 5 --keep-weekly 4 --keep-monthly 2 --
 
 ### 4. Secrets Management with SOPS 🔒 **ADVANCED**
 
-**Current**: Plain text credentials in files, `.gitignore` to exclude  
+**Current**: Plain text credentials in files, `.gitignore` to exclude
 **Learning**: SOPS (Secrets Operations) for encrypted secrets in Git
 
 **Their Setup**:
@@ -123,14 +123,14 @@ sops -d config/credentials.env.enc > config/credentials.env
 
 ### 5. Backup Strategy - Retention Policies 📊 **IMPROVEMENT**
 
-**Current**: Keep last 30 backups, then delete  
+**Current**: Keep last 30 backups, then delete
 **Learning**: Multi-tier retention (hourly, daily, weekly, monthly, yearly)
 
 **Better Approach**:
 ```bash
 # Keep:
 # - Last 6 hourly backups
-# - Last 5 daily backups  
+# - Last 5 daily backups
 # - Last 4 weekly backups
 # - Last 2 monthly backups
 # - Last 1 yearly backup
@@ -147,7 +147,7 @@ sops -d config/credentials.env.enc > config/credentials.env
 
 ### 6. Monitoring Alerts via ntfy 📱 **USEFUL**
 
-**Current**: Uptime Kuma can send alerts (but not configured)  
+**Current**: Uptime Kuma can send alerts (but not configured)
 **Learning**: AlertManager → ntfy.sh for mobile notifications
 
 **Their Setup**:
@@ -170,7 +170,7 @@ sops -d config/credentials.env.enc > config/credentials.env
 
 ### 7. Health Check Improvements 🔍 **ENHANCEMENT**
 
-**Current**: Enhanced health check script every 30 seconds  
+**Current**: Enhanced health check script every 30 seconds
 **Learning**: Their setup has multiple layers:
 - Automatic container restarts
 - Health checks
@@ -185,7 +185,7 @@ sops -d config/credentials.env.enc > config/credentials.env
 
 ### 8. Documentation Structure 📚 **ORGANIZATION**
 
-**Current**: Single INFRASTRUCTURE_SUMMARY.md  
+**Current**: Single INFRASTRUCTURE_SUMMARY.md
 **Learning**: Organized documentation:
 - `/docs/concepts/` - Architecture concepts
 - `/docs/how-to-guides/` - Step-by-step guides
@@ -245,19 +245,19 @@ Pi-version-control/
 
 ## What We're Already Doing Well
 
-✅ **Docker Compose** - Simple, effective for our needs  
-✅ **Basic Monitoring** - Uptime Kuma covers uptime needs  
-✅ **Automated Backups** - Daily backups with retention  
-✅ **Health Checks** - Enhanced script with auto-restart  
-✅ **Cloudflare Tunnel** - Redundant replicas for HA  
-✅ **Offsite Backups** - Backblaze B2 integration  
+✅ **Docker Compose** - Simple, effective for our needs
+✅ **Basic Monitoring** - Uptime Kuma covers uptime needs
+✅ **Automated Backups** - Daily backups with retention
+✅ **Health Checks** - Enhanced script with auto-restart
+✅ **Cloudflare Tunnel** - Redundant replicas for HA
+✅ **Offsite Backups** - Backblaze B2 integration
 
 ---
 
 ## Technologies to Explore (If Interested)
 
 1. **Prometheus + Grafana** - Full metrics monitoring
-2. **Restic** - Incremental, deduplicated backups  
+2. **Restic** - Incremental, deduplicated backups
 3. **SOPS** - Encrypted secrets in Git
 4. **AlertManager** - Advanced alert routing
 5. **Loki** - Log aggregation (they use with Grafana)
@@ -277,4 +277,3 @@ Most of their setup is **Kubernetes-focused**, which is overkill for Docker Comp
 ---
 
 *Generated: January 2026*
-
