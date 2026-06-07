@@ -185,7 +185,7 @@ Pi-version-control/
 │   ├── caddy/
 │   │   ├── Caddyfile          # Main Caddyfile (imports config.d files)
 │   │   └── config.d/          # Split service-specific configs
-│   │       ├── 10-portfolio.caddyfile
+│   │       ├── 10-gmojsoski-home.caddy
 │   │       ├── 20-media.caddyfile
 │   │       ├── 30-storage.caddyfile
 │   │       ├── 40-communication.caddyfile
@@ -334,7 +334,7 @@ The Caddyfile has been split into service-specific config files for better maint
 
 - **Main Caddyfile**: `docker/caddy/Caddyfile` - Imports all service configs
 - **Service Configs**: `docker/caddy/config.d/` - Split by category:
-  - `10-portfolio.caddyfile` - Portfolio site
+  - `10-gmojsoski-home.caddy` - Personal homepage (gmojsoski.com / www)
   - `20-media.caddyfile` - Media services (Jellyfin, Paperless, Vaultwarden)
   - `30-storage.caddyfile` - Storage services (Nextcloud, TravelSync, Gokapi)
   - `40-communication.caddyfile` - Communication (Mattermost, Planning Poker)

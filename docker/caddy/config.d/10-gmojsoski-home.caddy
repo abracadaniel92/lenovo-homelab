@@ -1,0 +1,8 @@
+# Personal homepage (apex + www): static files from /srv/site (synced via scripts/update-portfolio.sh).
+# Ivana's site previously lived at portfolio.gmojsoski.com (separate Docker app); that stack was removed.
+@gmojsoski host gmojsoski.com www.gmojsoski.com
+handle @gmojsoski {
+	header Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+	root * /srv/site
+	file_server
+}

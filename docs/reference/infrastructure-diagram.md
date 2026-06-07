@@ -15,7 +15,7 @@ graph TB
 
     subgraph HomeNetwork["🏠 Home Network - 192.168.1.x"]
         ROUTER["Router<br/>DHCP DNS → Pi-hole"]
-        
+
         subgraph RaspberryPi["🥧 Raspberry Pi 4 (pihole)<br/>4GB RAM | ARM64 | Gigabit Ethernet"]
             subgraph PiServices["Docker Services (host network)"]
                 PIHOLE["Pi-hole<br/>:53 DNS<br/>:80 Web UI<br/>Network-wide Ad Blocking"]
@@ -24,32 +24,32 @@ graph TB
                 UPTIME_KUMA_PI["Uptime Kuma<br/>:3001<br/>Secondary Instance"]
             end
         end
-        
+
         subgraph ThinkCentre["💻 Lenovo ThinkCentre (lemongrab)<br/>Intel Core i5-7500T @ 2.70GHz | 4C/4T | 32GB DDR4 | 512GB NVMe SSD"]
             subgraph Storage["💾 Storage Layout"]
                 ROOT["/root - 102GB"]
                 HOME["/home - 374GB<br/>Docker Data Location"]
                 MNT_SSD["/mnt/ssd<br/>Symlinks + Backups"]
             end
-            
+
             subgraph CoreInfra["🔧 Core Infrastructure"]
                 CADDY["Caddy Reverse Proxy<br/>:8080 HTTP | :8443 HTTPS<br/>Split Config Architecture<br/>mem: unlimited"]
                 CLOUDFLARED_1["Cloudflared Replica 1<br/>host network<br/>Tunnel: portfolio"]
                 CLOUDFLARED_2["Cloudflared Replica 2<br/>host network<br/>High Availability"]
                 WATCHTOWER["Watchtower<br/>Auto-updates @ 2 AM<br/>Excludes: Nextcloud,<br/>Vaultwarden, Jellyfin,<br/>KitchenOwl"]
             end
-            
+
             subgraph MediaServices["📺 Media Services (profile: media)"]
                 JELLYFIN["Jellyfin<br/>:8096<br/>jellyfin.gmojsoski.com<br/>Movies, TV, Music, Books<br/>mem: 8GB | cpu: 2.0"]
             end
-            
+
             subgraph StorageServices["☁️ Storage Services"]
                 NEXTCLOUD_APP["Nextcloud App<br/>:8081<br/>cloud.gmojsoski.com<br/>Apache + PostgreSQL<br/>mem: 4GB | cpu: 1.0"]
                 NEXTCLOUD_DB["PostgreSQL 16<br/>:5432<br/>nextcloud DB<br/>mem: 2GB | cpu: 1.0<br/>Health Check: pg_isready"]
                 VAULTWARDEN["Vaultwarden<br/>:8082<br/>vault.gmojsoski.com<br/>Password Manager<br/>CRITICAL backups"]
                 NGINX_VW["Nginx Proxy<br/>:8083<br/>DELETE→PUT rewrite<br/>iOS Compatibility Fix"]
             end
-            
+
             subgraph ProductivityServices["📝 Productivity (profile: productivity)"]
                 PAPERLESS_WEB["Paperless-ngx<br/>:8097<br/>paperless.gmojsoski.com<br/>Document Management<br/>mem: 2GB | cpu: 1.0"]
                 PAPERLESS_REDIS["Redis 8<br/>:6379<br/>Paperless Broker<br/>mem: 512MB | cpu: 0.5"]
@@ -59,7 +59,7 @@ graph TB
                 OUTLINE_DB["PostgreSQL<br/>Outline Database"]
                 OUTLINE_REDIS["Redis<br/>Outline Cache"]
             end
-            
+
             subgraph UtilityServices["🛠️ Utilities (profile: utilities)"]
                 KITCHENOWL["KitchenOwl<br/>:8092<br/>shopping.gmojsoski.com<br/>27 Recipes<br/>Shopping Lists"]
                 GOKAPI["Gokapi<br/>:8091<br/>files.gmojsoski.com<br/>File Sharing"]
@@ -70,19 +70,19 @@ graph TB
                 PORTAINER["Portainer<br/>:9000<br/>Docker Management UI"]
                 HOMEPAGE["Homepage<br/>:3002<br/>Service Dashboard"]
             end
-            
+
             subgraph SystemdServices["⚙️ Systemd Services"]
                 PLANNING_POKER["Planning Poker<br/>:3000<br/>poker.gmojsoski.com<br/>Node.js App"]
                 BOOKMARKS["Flask Bookmarks<br/>:5000<br/>bookmarks.gmojsoski.com<br/>Python App"]
             end
-            
+
             subgraph MonitoringAutomation["🛡️ Monitoring & Automation"]
                 HEALTH_CHECK["Enhanced Health Check<br/>Timer: Every hour<br/>Script: /usr/local/bin/<br/>enhanced-health-check.sh"]
                 BACKUP_VERIFY["Backup Verification<br/>Hourly via Health Check<br/>verify-backups.sh"]
                 ANALYTICS_REPORT["Analytics Bot<br/>Weekly Report<br/>Sunday @ 10 AM<br/>→ Mattermost"]
                 PI_MONITORING["System Bot<br/>Health Reports<br/>Every 5 days<br/>→ Mattermost"]
             end
-            
+
             subgraph BackupSystem["💾 Backup System"]
                 LOCAL_BACKUPS["/mnt/ssd/backups/<br/>vaultwarden/ (48h max)<br/>nextcloud/ (48h max)<br/>kitchenowl/ (72h max)<br/>travelsync/ (72h max)<br/>linkwarden/ (96h max)"]
                 BACKUP_SCRIPTS["Backup Scripts<br/>Daily @ 2:00 AM<br/>backup-all-critical.sh<br/>Multi-tier Retention:<br/>6 hourly, 5 daily,<br/>4 weekly, 2 monthly,<br/>1 yearly"]
@@ -95,21 +95,21 @@ graph TB
     CF_DNS -->|DNS Resolution| CF_TUNNEL_CLOUD
     CF_TUNNEL_CLOUD -->|Encrypted Tunnel| CLOUDFLARED_1
     CF_TUNNEL_CLOUD -->|Encrypted Tunnel| CLOUDFLARED_2
-    
+
     %% Router & DNS Flow
     ROUTER -->|DNS Queries| PIHOLE
     PIHOLE -->|Upstream DNS<br/>127.0.0.1:5335| UNBOUND
     UNBOUND -->|Root DNS Queries| Internet
-    
+
     %% Pi-hole Monitoring
     PI_ALERT -->|Network Alerts| MATTERMOST_APP
-    
+
     %% Cloudflare Tunnel to Caddy
     CLOUDFLARED_1 -->|localhost:8080| CADDY
     CLOUDFLARED_2 -->|localhost:8080| CADDY
-    
+
     %% Caddy Routing (organized by config files)
-    CADDY -->|10-portfolio.caddyfile<br/>gmojsoski.com| HOMEPAGE
+    CADDY -->|10-gmojsoski-home.caddy<br/>gmojsoski.com + www| HOMEPAGE
     CADDY -->|20-media.caddyfile<br/>jellyfin.gmojsoski.com| JELLYFIN
     CADDY -->|20-media.caddyfile<br/>paperless.gmojsoski.com| PAPERLESS_WEB
     CADDY -->|20-media.caddyfile<br/>vault.gmojsoski.com| NGINX_VW
@@ -122,20 +122,20 @@ graph TB
     CADDY -->|50-utilities.caddyfile<br/>bookmarks.gmojsoski.com| BOOKMARKS
     CADDY -->|50-utilities.caddyfile<br/>shopping.gmojsoski.com| KITCHENOWL
     CADDY -->|50-utilities.caddyfile<br/>linkwarden.gmojsoski.com| LINKWARDEN
-    
+
     %% Nginx to Vaultwarden
     NGINX_VW -->|:8082<br/>Method Rewrite| VAULTWARDEN
-    
+
     %% Database Dependencies
     NEXTCLOUD_DB -->|service_healthy| NEXTCLOUD_APP
     MATTERMOST_DB -->|service_healthy| MATTERMOST_APP
     PAPERLESS_REDIS -->|service_started| PAPERLESS_WEB
     OUTLINE_DB -->|service_healthy| OUTLINE_APP
     OUTLINE_REDIS -->|service_healthy| OUTLINE_APP
-    
+
     %% Shared Database (Paperless uses Nextcloud's PostgreSQL)
     NEXTCLOUD_DB -.->|paperless DB| PAPERLESS_WEB
-    
+
     %% Storage Paths
     HOME -->|/home/docker-projects/| CoreInfra
     HOME -->|/home/docker-projects/| MediaServices
@@ -143,7 +143,7 @@ graph TB
     HOME -->|/home/docker-projects/| ProductivityServices
     MNT_SSD -->|symlink| HOME
     MNT_SSD -->|/mnt/ssd/backups/| LOCAL_BACKUPS
-    
+
     %% Backup Flows
     VAULTWARDEN -.->|Daily Backup| BACKUP_SCRIPTS
     NEXTCLOUD_APP -.->|Daily Backup| BACKUP_SCRIPTS
@@ -153,7 +153,7 @@ graph TB
     BACKUP_SCRIPTS -->|tar.gz archives| LOCAL_BACKUPS
     LOCAL_BACKUPS -->|rclone sync| B2_SYNC
     B2_SYNC -->|443 files synced| BACKBLAZE
-    
+
     %% Monitoring Flows
     HEALTH_CHECK -->|Every hour<br/>Check Services| CoreInfra
     HEALTH_CHECK -->|Check Services| MediaServices
@@ -168,12 +168,12 @@ graph TB
     BACKUP_VERIFY -->|Backup Alerts @all| MATTERMOST_APP
     ANALYTICS_REPORT -->|Weekly Stats| MATTERMOST_APP
     PI_MONITORING -->|System Health<br/>Every 5 days| MATTERMOST_APP
-    
+
     %% Uptime Kuma Monitoring
     UPTIME_KUMA -->|Monitor All<br/>Services| CADDY
     UPTIME_KUMA -->|External Checks| CF_TUNNEL_CLOUD
     UPTIME_KUMA_PI -->|Secondary<br/>Monitoring| PIHOLE
-    
+
     %% Watchtower Updates
     WATCHTOWER -.->|Auto-update<br/>Daily @ 2 AM| CoreInfra
     WATCHTOWER -.->|Auto-update| UtilityServices
@@ -182,7 +182,7 @@ graph TB
     WATCHTOWER -.->|EXCLUDED| VAULTWARDEN
     WATCHTOWER -.->|EXCLUDED| JELLYFIN
     WATCHTOWER -.->|EXCLUDED| KITCHENOWL
-    
+
     %% Portainer Management
     PORTAINER -.->|Docker Socket<br/>Management| CoreInfra
     PORTAINER -.->|Manage| MediaServices
@@ -201,7 +201,7 @@ graph TB
     classDef monitoring fill:#ffebee,stroke:#b71c1c,stroke-width:2px
     classDef backup fill:#f1f8e9,stroke:#33691e,stroke-width:2px
     classDef database fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px
-    
+
     class CF_DNS,CF_TUNNEL_CLOUD,BACKBLAZE internet
     class ThinkCentre,RaspberryPi hardware
     class CADDY,CLOUDFLARED_1,CLOUDFLARED_2,WATCHTOWER core
@@ -295,7 +295,7 @@ graph TB
 ### Security & Configuration
 
 **Caddy Split Config**:
-- `10-portfolio.caddyfile` - Portfolio site
+- `10-gmojsoski-home.caddy` - Personal homepage (gmojsoski.com / www → `/srv/site`)
 - `20-media.caddyfile` - Media services (Jellyfin, Paperless, Vaultwarden)
 - `30-storage.caddyfile` - Storage (Nextcloud, TravelSync, Gokapi)
 - `40-communication.caddyfile` - Communication (Mattermost, Planning Poker)

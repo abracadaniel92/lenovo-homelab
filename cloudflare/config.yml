@@ -3,7 +3,7 @@ credentials-file: /home/goce/.cloudflared/df638884-0d3e-4799-8a98-60e844fcd164.j
 origincert: /home/goce/.cloudflared/cert.pem
 
 ingress:
-  # Main portfolio site (routed through Caddy)
+  # Personal homepage apex + www (routed through Caddy)
   - hostname: gmojsoski.com
     service: http://localhost:8080
 
@@ -62,10 +62,6 @@ ingress:
   - hostname: linkwarden.gmojsoski.com
     service: http://localhost:8080
 
-  # Ivana's Portfolio (routed through Caddy)
-  - hostname: portfolio.gmojsoski.com
-    service: http://localhost:8080
-
   # Immich (routed through Caddy)
   - hostname: immich.gmojsoski.com
     service: http://localhost:8080
@@ -80,13 +76,6 @@ ingress:
 
   # Centar Srbija Stil (routed through Caddy)
   - hostname: css.gmojsoski.com
-    service: http://localhost:8080
-
-  # Daka Dragan marketing site (routed through Caddy)
-  - hostname: daka-dragan.mk
-    service: http://localhost:8080
-
-  - hostname: www.daka-dragan.mk
     service: http://localhost:8080
 
   # Catch-all (must be last)

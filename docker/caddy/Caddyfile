@@ -3,14 +3,14 @@
 	auto_https off
 }
 
-# Main portfolio site
+# Homelab HTTP on :80 — per-host handlers in config.d/; default is /srv/site
 :80 {
 	# Prevent caching of error responses
 	handle_errors {
 		header Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
 		respond "{err.status_code} {err.status_text}"
 	}
-	
+
 	# Import service-specific configurations
 	import /etc/caddy/config.d/*.caddy
 

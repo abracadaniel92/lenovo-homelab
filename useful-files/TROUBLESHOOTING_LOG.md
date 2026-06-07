@@ -2,6 +2,17 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-05-09] daka-dragan.mk: Docker → Netlify; Cloudflare Tunnel hostname removed
+
+**Date:** 2026-05-09
+**Context:** Static/marketing site `daka-dragan.mk` (and `www`) was hosted in Docker behind Caddy + Cloudflare Tunnel; it is **migrated to Netlify**.
+**Public:** DNS/TLS handled by Cloudflare → Netlify (tunnel route for these hostnames **deleted**).
+**Docker:** Container may remain **stopped** (image/compose retained if ever needed again).
+**Repo:** Removed tunnel ingress from **cloudflare/config.yml**; deleted **docker/caddy/config.d/16-daka-dragan.caddy** and **docker/daka-dragan/** (compose, nginx, Dockerfile); dropped related **.gitignore** entries.
+**Live follow-through:** Sync Caddy config to the server (or pull) and **`docker compose restart caddy`** (or equivalent) so the Pi no longer loads the removed snippet. Remove/stop any leftover **daka-dragan** container on the host if still present.
+
+---
+
 ## [2026-05-03] Containerd data migrated from root to /home
 
 **Date:** 2026-05-03
