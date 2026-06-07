@@ -17,7 +17,7 @@ services:
       - freshrss_data:/var/www/FreshRSS/data
       - freshrss_extensions:/var/www/FreshRSS/extensions
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
+      test: ["CMD-SHELL", "php -r \"exit(@file_get_contents('http://localhost/')===false?1:0);\""]
       interval: 30s
       timeout: 10s
       retries: 5

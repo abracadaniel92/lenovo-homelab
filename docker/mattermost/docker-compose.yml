@@ -41,34 +41,34 @@ services:
       # Database
       MM_SQLSETTINGS_DRIVERNAME: postgres
       MM_SQLSETTINGS_DATASOURCE: postgres://mmuser:mmuser_password@database:5432/mattermost?sslmode=disable&connect_timeout=10
-      
+
       # Server configuration
       MM_SERVICESETTINGS_SITEURL: https://mattermost.gmojsoski.com
       MM_SERVICESETTINGS_LISTENADDRESS: ":8065"
       MM_SERVICESETTINGS_ENABLELOCALMODE: "false"
-      
+
       # Email (console backend for initial setup)
       MM_EMAILSETTINGS_ENABLESIGNUPWITHEMAIL: "true"
       MM_EMAILSETTINGS_ENABLESIGNINWITHEMAIL: "true"
       MM_EMAILSETTINGS_ENABLESMTPAUTH: "false"
-      
+
       # Push Notifications (TPNS - Test Push Notification Service for non-commercial self-hosted)
       # Note: TPNS is free but not recommended for production (no SLA)
       # For production, consider upgrading to Enterprise/Professional for HPNS
       MM_EMAILSETTINGS_SENDPUSHNOTIFICATIONS: "true"
       MM_EMAILSETTINGS_PUSHNOTIFICATIONSERVER: "https://push-test.mattermost.com"
-      
+
       # Security
       MM_SERVICESETTINGS_ENABLEOPENSERVER: "true"
       MM_SERVICESETTINGS_ENABLEMULTIFACTORAUTHENTICATION: "true"
       MM_SERVICESETTINGS_ENFORCEMULTIFACTORAUTHENTICATION: "false" # Set to true later to enforce
-      
+
       # File storage
       MM_FILESETTINGS_MAXFILESIZE: 52428800  # 50MB
-      
+
       # Plugins
       MM_PLUGINSETTINGS_ENABLEUPLOADS: "true"
-      
+
     volumes:
       - mattermost-data:/mattermost/data
       - mattermost-config:/mattermost/config
@@ -81,14 +81,9 @@ services:
     cpus: '1.0'
     networks:
       - mattermost-net
-    # Health check removed - Mattermost container doesn't have curl/wget
-    # Mattermost is running fine (verified via API ping from host)
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8065/api/v4/system/ping"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 60s
+    # Built-in image healthcheck uses mmctl local mode, which is disabled here.
+    healthcheck:
+      disable: true
 
 volumes:
   mattermost-database:
@@ -102,4 +97,3 @@ volumes:
 networks:
   mattermost-net:
     driver: bridge
-
