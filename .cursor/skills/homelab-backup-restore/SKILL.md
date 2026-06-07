@@ -117,5 +117,5 @@ bash scripts/setup-kitchenowl-backup-cron.sh
 
 ## Reference
 
-- Daily cron schedule and service list: see [MONITORING_AND_RECOVERY.md "Backup System" section](../../../usefull%20files/MONITORING_AND_RECOVERY.md).
+- Daily cron schedule and service list: see [MONITORING_AND_RECOVERY.md "Backup System" section](../../../docs/concepts/monitoring-and-recovery.md).
 - For a non-trivial restore or recovery, log it via the `log-troubleshooting-entry` skill afterwards.

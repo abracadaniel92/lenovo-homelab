@@ -380,4 +380,3 @@ echo "0 3 * * * rsync -avz --delete /mnt/ssd/backups/ user@rsync.net:lemongrab-b
 ---
 
 *Last updated: January 2026*
-

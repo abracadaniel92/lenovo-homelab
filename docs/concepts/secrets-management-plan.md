@@ -393,4 +393,3 @@ This is simpler but doesn't allow editing individual secrets without full decryp
 ---
 
 *Last Updated: January 2026*
-

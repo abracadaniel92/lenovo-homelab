@@ -40,22 +40,57 @@ All backup scripts use smart retention with the following policy:
 
 ## Backup Scripts
 
-All backup scripts use the smart retention helper:
+All backup scripts use the smart retention helper (`scripts/backup-retention-helper.sh`):
 - `backup-vaultwarden.sh`
 - `backup-nextcloud.sh`
 - `backup-kitchenowl.sh`
 - `backup-travelsync.sh`
+- `backup-linkwarden.sh`
 
-Helper script: `scripts/backup-retention-helper.sh`
+```bash
+# Run all critical backups
+bash scripts/backup-all-critical.sh
+
+# Or individually
+bash scripts/backup-vaultwarden.sh
+bash scripts/backup-nextcloud.sh
+bash scripts/backup-kitchenowl.sh
+bash scripts/backup-travelsync.sh
+bash scripts/backup-linkwarden.sh
+```
 
 ## Backup Locations
 
-| Service | Local Path | Pattern |
-|---------|-----------|---------|
-| Vaultwarden | `/mnt/ssd/backups/vaultwarden/` | `vaultwarden-*.tar.gz` |
-| Nextcloud | `/mnt/ssd/backups/nextcloud/` | `nextcloud-*.tar.gz` |
-| KitchenOwl | `/mnt/ssd/backups/kitchenowl/` | `kitchenowl-*.db` |
-| TravelSync | `/mnt/ssd/backups/travelsync/` | `travelsync-*.tar.gz` |
+| Service | Local Path | Importance |
+|---------|-----------|------------|
+| Vaultwarden | `/mnt/ssd/backups/vaultwarden/` | CRITICAL |
+| Nextcloud | `/mnt/ssd/backups/nextcloud/` | High |
+| Paperless | Docker volumes (data, media) | High |
+| KitchenOwl | `/mnt/ssd/backups/kitchenowl/` | Medium |
+| TravelSync | `/mnt/ssd/backups/travelsync/` | Medium |
+| Linkwarden | `/mnt/ssd/backups/linkwarden/` | Medium |
+
+## Verification
+
+Backup integrity is verified **hourly** by the health check (`scripts/verify-backups.sh`): it checks `tar.gz` extractability, file sizes, backup age, and missing backups, and alerts Mattermost on problems.
+
+```bash
+# Run verification manually
+bash scripts/verify-backups.sh
+
+# View the verification log
+tail -f ~/backup-verification.log
+```
+
+**Max-age thresholds** (verification alerts if exceeded):
+
+| Service | Max age |
+|---------|---------|
+| Vaultwarden (CRITICAL) | 48h |
+| Nextcloud (CRITICAL) | 48h |
+| TravelSync (IMPORTANT) | 72h |
+| KitchenOwl (IMPORTANT) | 72h |
+| Linkwarden (MEDIUM) | 96h |
 
 ## Offsite Sync
 
@@ -66,11 +101,6 @@ Backups are automatically synced to Backblaze B2:
 - **Excludes**: Problematic directories with permission issues
 
 See also:
-- [Backup Setup Guide](../how-to-guides/setup-backup.md)
-- [Backup Options Comparison](CHEAPEST_BACKUP_OPTIONS.md)
-- [Replication Strategy](REPLICATION_STRATEGY.md)
-
----
-
-*Last updated: January 2026*
-
+- [Backup Options Comparison](cheapest-backup-options.md)
+- [Replication Strategy](replication-strategy.md)
+- [Setup Instructions](../how-to-guides/setup.md)

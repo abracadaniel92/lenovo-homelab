@@ -163,11 +163,10 @@ rclone copy b2-backup:lemongrab-backups/vaultwarden/ /tmp/test-restore/ --dry-ru
 - ✅ Can scale if needed (still cheap)
 - ✅ Industry standard
 
-**Setup time**: 15 minutes  
-**Monthly cost**: **$0**  
+**Setup time**: 15 minutes
+**Monthly cost**: **$0**
 **Protection level**: High
 
 ---
 
 *Last updated: January 2026*
-

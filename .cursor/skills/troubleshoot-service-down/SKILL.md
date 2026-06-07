@@ -19,7 +19,7 @@ Copy this checklist:
 
 ```
 - [ ] 1. Run safety-net: ./scripts/verify-services.sh
-- [ ] 2. Check prior incidents: search useful-files/TROUBLESHOOTING_LOG.md
+- [ ] 2. Check prior incidents: search docs/reference/troubleshooting-log.md
 - [ ] 3. Check Docker daemon + container state
 - [ ] 4. Check Caddy specifically (most outages are here or tunnel)
 - [ ] 5. Check Cloudflare Tunnel
@@ -39,10 +39,10 @@ This reveals which subdomains are down and which are healthy. Use this to scope 
 
 ## 2. Check prior incidents
 
-Before suggesting a fix, search [TROUBLESHOOTING_LOG.md](../../../useful-files/TROUBLESHOOTING_LOG.md) for the symptom. Many outages have known fixes — do not reinvent them.
+Before suggesting a fix, search [TROUBLESHOOTING_LOG.md](../../../docs/reference/troubleshooting-log.md) for the symptom. Many outages have known fixes — do not reinvent them.
 
 ```bash
-rg -i "<symptom keyword>" useful-files/TROUBLESHOOTING_LOG.md
+rg -i "<symptom keyword>" docs/reference/troubleshooting-log.md
 ```
 
 ## 3. Docker state
@@ -116,8 +116,8 @@ ONLY when multiple services are down (broad outage), and after the above didn't 
 
 ```bash
 bash "restart services/fix-all-services.sh"     # comprehensive
-bash "restart services/fix-subdomains-down.sh"  # 502/404 broadly
-bash "restart services/emergency-fix.sh"        # faster, less thorough
+bash "restart services/fix-external-access.sh"  # 502/404 broadly
+bash "restart services/fix-all-services.sh"        # faster, less thorough
 ```
 
 These are READ-ONLY in this skill — do not edit them.
@@ -132,7 +132,7 @@ curl -I https://<subdomain>.gmojsoski.com
 
 ## 9. Log it (if non-standard)
 
-If the fix involved anything beyond a clean container restart, log it via the `log-troubleshooting-entry` skill or directly to [TROUBLESHOOTING_LOG.md](../../../usefull%20files/TROUBLESHOOTING_LOG.md).
+If the fix involved anything beyond a clean container restart, log it via the `log-troubleshooting-entry` skill or directly to [TROUBLESHOOTING_LOG.md](../../../docs/reference/troubleshooting-log.md).
 
 ## Common fixes (high-confidence)
 
@@ -146,7 +146,7 @@ If the fix involved anything beyond a clean container restart, log it via the `l
 
 ## Reference
 
-- Full recovery system overview: [MONITORING_AND_RECOVERY.md](../../../useful-files/MONITORING_AND_RECOVERY.md)
-- Historical incidents: [TROUBLESHOOTING_LOG.md](../../../useful-files/TROUBLESHOOTING_LOG.md)
-- Cloudflare-specific: [CLOUDFLARE_MONITORING.md](../../../useful-files/CLOUDFLARE_MONITORING.md)
-- Health check status: [HEALTH_CHECK_STATUS.md](../../../useful-files/HEALTH_CHECK_STATUS.md)
+- Full recovery system overview: [MONITORING_AND_RECOVERY.md](../../../docs/concepts/monitoring-and-recovery.md)
+- Historical incidents: [TROUBLESHOOTING_LOG.md](../../../docs/reference/troubleshooting-log.md)
+- Cloudflare-specific: [CLOUDFLARE_MONITORING.md](../../../docs/how-to-guides/cloudflare-monitoring.md)
+- Health check status: [HEALTH_CHECK_STATUS.md](../../../docs/reference/health-check-status.md)
