@@ -530,12 +530,22 @@ The fix-external-access.sh script was not found at:
     fi
 fi
 
-# Check TravelSync
+# Check TravelSync / documents-to-calendar (host port 8000)
 if ! check_service_http "http://localhost:8000/api/health" 5; then
     log "WARNING: TravelSync not responding. Restarting..."
     cd /mnt/ssd/docker-projects/documents-to-calendar
     docker compose restart
     sleep 3
+fi
+
+# Check MCP Knowledge Server (host port 8001, LAN-only Cursor MCP)
+MCP_SSE_FIRST=$(curl -sN --max-time 4 http://127.0.0.1:8001/sse 2>/dev/null | head -1)
+if ! echo "$MCP_SSE_FIRST" | grep -q 'event: endpoint'; then
+    log "WARNING: MCP Knowledge Server (knowledge-mcp) not responding on :8001. Restarting..."
+    if [ -d "/home/goce/Desktop/Cursor projects/mcp_server" ]; then
+        cd "/home/goce/Desktop/Cursor projects/mcp_server" && docker compose up -d
+        sleep 5
+    fi
 fi
 
 # Check Planning Poker

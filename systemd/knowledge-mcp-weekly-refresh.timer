@@ -1,0 +1,10 @@
+[Unit]
+Description=Run MCP knowledge refresh every Sunday at 3:00 AM
+
+[Timer]
+OnCalendar=Sun *-*-* 03:00:00
+Persistent=true
+AccuracySec=15min
+
+[Install]
+WantedBy=timers.target

@@ -53,6 +53,7 @@ The lab consists of two devices:
 | **Portainer** | 9000 | - | Docker UI |
 | **Gokapi** | 8091 | files.gmojsoski.com | File sharing |
 | **TravelSync** | 8000 | tickets.gmojsoski.com | Travel docs |
+| **MCP Knowledge** | 8001 | LAN only (`/sse`) | Private knowledge index for Cursor; [MCP_KNOWLEDGE_SERVER.md](../../useful-files/MCP_KNOWLEDGE_SERVER.md) |
 | **Watchtower** | - | - | Auto-updates 2 AM |
 | **Nginx (Vaultwarden)** | 8083 | - | iOS DELETE fix |
 
@@ -87,6 +88,7 @@ The lab consists of two devices:
 /home/docker-projects/caddy/config.d/*.caddy
 /home/goce/Desktop/Cursor projects/Pi-version-control/scripts/health-check-engine.sh
 /home/goce/Desktop/Cursor projects/Pi-version-control/scripts/health.d/*.sh
+/home/goce/Desktop/Cursor projects/mcp_server/docker-compose.yml
 /var/log/enhanced-health-check.log
 ```
 
