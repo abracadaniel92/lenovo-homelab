@@ -81,6 +81,18 @@ This log documents specific issues encountered on the server and their fixes.
 
 ---
 
+## [2026-06-08] Knowledge-MCP weekly refresh disabled (index frozen on current data)
+
+**Date:** 2026-06-08
+**Context:** The `knowledge-mcp` index no longer needs weekly re-pulls; decision to freeze it on the current data.
+**Action (live):** `sudo systemctl disable --now knowledge-mcp-weekly-refresh.timer` on lemongrab — removed the `timers.target.wants` symlink; timer now `disabled` + `inactive`. No cron backup existed.
+**Repo:** Removed `systemd/knowledge-mcp-weekly-refresh.{service,timer}` and `scripts/deploy-knowledge-mcp-weekly-refresh.sh`; updated `docs/how-to-guides/mcp-knowledge-server.md` to manual-only refresh.
+**Result:** `knowledge-mcp` keeps serving the current data unchanged (`/sse` → 200). Manual refresh still available via `mcp_server/scripts/weekly-knowledge-refresh.sh`.
+**Optional cleanup:** the now-disabled unit files remain installed — `sudo rm /etc/systemd/system/knowledge-mcp-weekly-refresh.{service,timer} && sudo systemctl daemon-reload`.
+
+
+---
+
 ## [2026-05-09] daka-dragan.mk: Docker → Netlify; Cloudflare Tunnel hostname removed
 
 **Date:** 2026-05-09
