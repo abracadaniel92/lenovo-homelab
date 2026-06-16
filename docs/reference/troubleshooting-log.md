@@ -2,6 +2,85 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-06-16] Decommissioned budget + css services; shut down shopping (KitchenOwl)
+
+**Date:** 2026-06-16
+**Action:** Retired two services completely and powered down a third for possible future use.
+**Result:** `budget`/`css` → HTTP 404 externally (fully removed); `shopping` → 502 (intentionally stopped, ready to revive). No collateral impact — `vault`/`immich` etc. still 200, tunnel re-registered all 4 connections.
+
+### ✅ Implementation
+**budget.gmojsoski.com — Actual Budget — REMOVED COMPLETELY**
+1. `docker stop actual-budget && docker rm actual-budget`; `docker rmi actualbudget/actual-server:latest`
+2. Removed `@budget` block from `docker/caddy/config.d/50-utilities.caddy` (was → `172.17.0.1:5006`)
+3. Removed ingress entry from **both** `cloudflare/config.yml` (repo) and `/home/goce/.cloudflared/config.yml` (live)
+4. Deleted compose dir `docker/actual-budget/`
+5. **Data backed up** before removal: `/home/goce/actual-budget-data-backup-20260616-222617.tar.gz` (28K, from `/home/actual-budget`)
+
+**css.gmojsoski.com — Centar Srbija Stil — REMOVED COMPLETELY**
+1. `docker stop centar-srbija-stil && docker rm centar-srbija-stil`; `docker rmi centar-srbija-stil-centar-srbija-stil`
+2. Deleted `docker/caddy/config.d/15-centar-srbija-stil.caddy` (was → `172.17.0.1:8084`); removed ingress from both cloudflared configs
+3. Deleted compose dir `docker/centar-srbija-stil/`. Stateless (no data volume) — nothing to back up.
+
+**shopping.gmojsoski.com — KitchenOwl — SHUT DOWN ONLY (preserve for future)**
+1. `docker stop kitchenowl` — data (`/mnt/ssd/docker-projects/kitchenowl`), compose, Caddy block, and tunnel route all **left intact**.
+2. Disabled its Uptime-Kuma monitor (id 10, `active=0`) so it doesn't alert while intentionally off.
+3. **Revive with:** `docker start kitchenowl` then re-enable Kuma monitor id 10 (`active=1`).
+
+### 🧪 Verification
+- `budget.gmojsoski.com` → 404, `css.gmojsoski.com` → 404, `shopping.gmojsoski.com` → 502 (expected), `vault`/`immich` → 200.
+- `actual-budget` & `centar-srbija-stil` containers gone; `kitchenowl` exited; cloudflared 4 connections registered on new config.
+
+### 📝 Pending user actions (sudo / dashboard)
+- Delete root-owned data dir: `sudo rm -rf /home/actual-budget` (then remove the backup tarball once confident).
+- Delete the public DNS CNAME records for `budget` and `css` in the **Cloudflare dashboard** (they currently 404 via the tunnel catch-all).
+
+### 📍 Files Involved
+- `cloudflare/config.yml` + `/home/goce/.cloudflared/config.yml` (live), `docker/caddy/config.d/50-utilities.caddy`, deleted: `docker/caddy/config.d/15-centar-srbija-stil.caddy`, `docker/actual-budget/`, `docker/centar-srbija-stil/`
+
+**Status**: ✅ Done on-box; data dir deletion + dashboard DNS pending user.
+
+---
+
+## [2026-06-16] Services "going up and down" — root-caused to tunnel + ISP reconnect (not the apps)
+
+**Date:** 2026-06-16
+**Symptom:** Multiple public services appeared to drop and recover throughout the day. Question: internet issue or something broken?
+**Result:** Root-caused to **three independent network-layer causes — none of them the apps or hardware.** Containers had 9-day uptimes, 0 restarts, no OOM; host had 20 GB RAM free, disk 22%, 0% packet loss to 1.1.1.1.
+
+### 🔍 Root Causes
+1. **Cloudflare tunnel on QUIC dropping chronically.** Logs full of `failed to dial to edge with quic: timeout: no recent network activity` + `Failed to refresh DNS local resolver ... i/o timeout`. 9–25 drop events/day. Since every public service funnels through one tunnel → Caddy, a tunnel blip flaps *everything* at once.
+2. **Daily ~15:08 total outage = ISP/router forced WAN reconnect.** All services returned **530 together** for ~60–90s, then recovered together. No host cron/timer fires then. The drop time **drifts ~12–15s later each day** (06-12 15:08:01 → 06-16 15:08:51) — the fingerprint of a ~24h interval lease/PPPoE re-auth, not a wall-clock job. **102 of all tunnel-drop events fell in the 15:0x bucket** (next-biggest cluster: 22) — the single largest contributor.
+3. **Random single-service daytime drops** were only two services: **Mattermost** (transient 502s; container otherwise healthy — slow web-root responses) and **Daka Dragan** (a dead local container, exited 2026-05-28 on a bad `nginx.conf` bind-mount; obsolete since the site moved to Netlify — the Kuma monitor correctly tracks the Netlify site).
+
+### ✅ Solution Applied
+1. **Tunnel QUIC → HTTP/2:** added `protocol: http2` to `/home/goce/.cloudflared/config.yml` (live) and `cloudflare/config.yml` (repo); `docker compose restart cloudflared`. Stops the UDP-path drops this ISP/router mishandles.
+2. **Uptime-Kuma tolerance:** all active monitors set `maxretries=3`, `retry_interval=60` (was `maxretries=2`, and **Mattermost + Daka Dragan were `maxretries=0`** → alarmed on first failed probe). Gives ~3 min tolerance so the daily reconnect and transient blips no longer false-alarm. DB backed up first; Kuma restarted to load config.
+3. **Mattermost probe hardened:** Kuma monitor (id 15) URL changed from `https://mattermost.gmojsoski.com` (heavy web root) → `https://mattermost.gmojsoski.com/api/v4/system/ping` (fast JSON 200). No container healthcheck added — the image lacks `sh`/`curl`/`wget`, so any healthcheck would be unreliable; the external probe is the correct layer.
+4. **Removed dead `daka-dragan` container** (`docker rm daka-dragan`).
+
+### 🧪 Verification
+- After HTTP/2 switch: `Initial protocol http2`, 4 × `Registered tunnel connection protocol=http2`; `vault`/`immich` → 200, `jellyfin` → 302.
+- Kuma config persisted across restart (all 15 monitors `maxretries=3`); Mattermost probe green on `/api/v4/system/ping` (200).
+
+### 📝 Lessons Learned
+- **One tunnel = one shared point of failure.** When all services 530 *simultaneously*, look at the tunnel/WAN/DNS, not the apps. Isolated single-service drops point at that one app.
+- **QUIC vs ISP/router:** cloudflared defaults to QUIC (UDP/7844); some routers/ISPs throttle or time out long-lived UDP. `protocol: http2` is the standard fix and was decisive here.
+- **A daily time that drifts a few seconds/day is an interval timer (ISP/PPPoE lease), not a cron** (which fires on the exact wall-clock second).
+- **`maxretries=0` monitors cry wolf** on any transient blip — give every monitor retry tolerance.
+- The live cloudflared config (`~/.cloudflared/config.yml`) is **separate** from the repo copy — must edit both.
+
+### 📍 Files Involved
+- `/home/goce/.cloudflared/config.yml` (live) + `cloudflare/config.yml` (repo) — `protocol: http2`
+- Uptime-Kuma DB (`/mnt/ssd/docker-projects/uptime-kuma/data/kuma.db`) — monitor retry settings + Mattermost probe URL; backups: `kuma.db.bak-20260616-221655`, `kuma.db.bak-mm-*` (inside container)
+
+### 📌 Pending user actions (off-box / sudo)
+- **Real fix for the 15:08 drop:** reschedule the router's forced daily reconnect to off-hours (~04:00), or ask ISP to disable forced re-auth. User accepted the reconnect and chose to only make Kuma tolerant of it.
+- Broken safety net: root crontab has `*/5 * * * * root /usr/local/bin/healthcheck-watchdog.sh` but that script **does not exist** (fails silently every 5 min). Remove the line via `sudo crontab -e`. (Active auto-recovery is the hourly `enhanced-health-check.timer`, which runs on the hour and so misses the 15:08 window — no amplification.)
+
+**Status**: ✅ On-box fixes applied & verified; router reschedule + cron cleanup pending user.
+
+---
+
 ## [2026-05-09] daka-dragan.mk: Docker → Netlify; Cloudflare Tunnel hostname removed
 
 **Date:** 2026-05-09

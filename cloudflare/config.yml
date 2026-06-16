@@ -2,6 +2,10 @@ tunnel: portfolio
 credentials-file: /home/goce/.cloudflared/df638884-0d3e-4799-8a98-60e844fcd164.json
 origincert: /home/goce/.cloudflared/cert.pem
 
+# Use HTTP/2 instead of QUIC: this LAN/ISP path drops long-lived UDP,
+# which caused "no recent network activity" tunnel drops (flapping services).
+protocol: http2
+
 ingress:
   # Personal homepage apex + www (routed through Caddy)
   - hostname: gmojsoski.com
@@ -68,14 +72,6 @@ ingress:
 
   # FreshRSS (routed through Caddy)
   - hostname: rss.gmojsoski.com
-    service: http://localhost:8080
-
-  # Actual Budget (routed through Caddy)
-  - hostname: budget.gmojsoski.com
-    service: http://localhost:8080
-
-  # Centar Srbija Stil (routed through Caddy)
-  - hostname: css.gmojsoski.com
     service: http://localhost:8080
 
   # Catch-all (must be last)
