@@ -6,7 +6,9 @@ services:
     container_name: kiwix
     restart: unless-stopped
     volumes:
-      - /mnt/storage/kiwix-data:/data
+      # Repointed off the failed mergerfs pool (/mnt/storage, drives disk1/disk2 dead 2026-06)
+      # onto the healthy 1TB. Re-download .zim archives into this dir.
+      - /mnt/ssd_1tb/kiwix-data:/data
     ports:
       - "8089:8080"
     command: "-k *.zim"

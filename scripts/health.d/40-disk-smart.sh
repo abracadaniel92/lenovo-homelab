@@ -1,15 +1,17 @@
 #!/bin/bash
 # 40-disk-smart.sh: SMART health check for USB-attached HDDs (docking stations)
 # Requires: smartmontools (apt install smartmontools)
-# Detects disks from mount points /mnt/disk1, /mnt/disk2, /mnt/disk_old
+# Detects disks from mount point /mnt/ssd_1tb
+# NOTE: disk1/disk2/disk_old (USB HDDs) decommissioned 2026-06 — drives failed end-of-life
+# (disk2/sdb reached 4424 reallocated sectors then dropped to 0 bytes; disk1/disk_old offline).
 
 if ! command -v smartctl &>/dev/null; then
     log "SKIP: smartctl not found. Install with: sudo apt install smartmontools"
     return 0
 fi
 
-# Mount points: primary 1TB SATA SSD + USB HDDs (from homelab storage setup)
-USB_DISK_MOUNTS=( "/mnt/ssd_1tb" "/mnt/disk1" "/mnt/disk2" "/mnt/disk_old" )
+# Mount points: primary 1TB drive only (USB HDDs decommissioned 2026-06, see note above)
+USB_DISK_MOUNTS=( "/mnt/ssd_1tb" )
 
 # Get block device for a mount point (e.g. /mnt/disk1 -> /dev/sdb1), then parent disk (/dev/sdb)
 get_disk_for_mount() {

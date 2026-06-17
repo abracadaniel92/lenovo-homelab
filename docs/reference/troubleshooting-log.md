@@ -2,6 +2,45 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-06-17] Three USB HDDs failed (end-of-life) — decommissioned disk1/disk2/disk_old + mergerfs pool
+
+**Date:** 2026-06-17
+**Symptom:** Storage investigation found that of the external drives `fstab` expects, only `/mnt/ssd_1tb` was mounted. `/mnt/disk1`, `/mnt/disk2`, `/mnt/disk_old` and the mergerfs pool `/mnt/storage` were all unmounted; Kiwix was serving zero content.
+**Result:** Confirmed all three old USB HDDs have reached end-of-life and died. Repointed the one affected service (Kiwix) onto the healthy 1TB and decommissioned the dead mounts. No other service lost data.
+
+### 🔍 Root Cause (from `/var/log/hdd-health-check.log`)
+- **disk2 = /dev/sdb**: SMART pre-failure for days — `Reallocated_Sector_Count = 4424` (06-12 → 06-14), then **dropped to 0 bytes / unreadable on ~2026-06-15** (USB bridge RTL9201 still enumerates at USB 2.0, but the drive returns no capacity). Dead.
+- **disk1 / disk_old**: no longer electrically enumerated (nothing on the USB 3.0 bus) — physically disconnected/dead.
+- All three were old spinning USB drives; classic end-of-life (gradual sector remapping → hard failure). `nofail` in fstab meant the box kept booting normally, hiding the loss.
+
+### 📊 What survived vs lost
+- **Healthy:** `/dev/sda` 1TB WD (`WD10SPZX`) → `/mnt/ssd_1tb`, SMART PASSED, 127G/916G used. Holds **Immich library** + **stirling-pdf** data. (Internal drive is a ~477GB NVMe, not 1TB.)
+- **Immich:** already migrated off the dead mergerfs pool to `/mnt/ssd_1tb` previously — safe.
+- **Lost:** Kiwix `.zim` archives (on the dead pool — freely re-downloadable) and anything that lived only on disk1/disk_old (contents unknown; drives unreadable). User accepted the loss.
+
+### ✅ Solution Applied (on-box, no sudo)
+1. **Kiwix repointed** off the dead pool: `docker/kiwix/docker-compose.yml` volume `/mnt/storage/kiwix-data` → `/mnt/ssd_1tb/kiwix-data`; `docker compose up -d` recreated the container on the healthy drive. Serves content again once `.zim` files are re-added.
+2. **Repo health script** `scripts/health.d/40-disk-smart.sh`: `USB_DISK_MOUNTS` reduced to `( "/mnt/ssd_1tb" )` (dropped disk1/disk2/disk_old).
+
+### 📌 Pending user actions (need sudo)
+1. **Remove dead fstab entries** (backup first):
+   ```bash
+   sudo cp /etc/fstab /etc/fstab.bak-2026-06-17
+   sudo sed -i '\#/mnt/disk1#d; \#/mnt/disk2#d; \#/mnt/disk_old#d; \#/mnt/storage#d' /etc/fstab
+   sudo systemctl daemon-reload
+   ```
+   (Removes the 3 disk UUID mounts + the `fuse.mergerfs /mnt/storage` line; leaves `/mnt/ssd_1tb` intact.)
+2. **Optional cosmetic:** `sudo rmdir /mnt/disk1 /mnt/disk2 /mnt/disk_old /mnt/storage /mnt/old_ssd`
+3. **Deployed health script** `/usr/local/bin/hdd-health-check.sh` (root-owned) still lists the dead disks — it only logs harmless "not mounted — skipping" lines now; update it to match the repo when convenient.
+4. **Full SMART detail (read-only, safe):** `sudo smartctl -a /dev/sda` (confirm 1TB healthy); `/dev/sdb` is dead — don't write to it; image with `ddrescue` only if recovery is wanted.
+
+### 📍 Files Involved
+- `docker/kiwix/docker-compose.yml`, `scripts/health.d/40-disk-smart.sh`, `/etc/fstab` (user), `/usr/local/bin/hdd-health-check.sh` (user)
+
+**Status**: ✅ Service impact resolved (Kiwix healthy); fstab/health-script cleanup pending user sudo.
+
+---
+
 ## [2026-06-16] Decommissioned budget + css services; shut down shopping (KitchenOwl)
 
 **Date:** 2026-06-16
