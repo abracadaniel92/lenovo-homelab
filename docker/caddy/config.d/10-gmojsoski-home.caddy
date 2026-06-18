@@ -1,8 +1,23 @@
-# Personal homepage (apex + www): static files from /srv/site (synced via scripts/update-portfolio.sh).
-# Ivana's site previously lived at portfolio.gmojsoski.com (separate Docker app); that stack was removed.
+# Personal homepage (apex + www): Vite build output synced to /srv/site via scripts/update-portfolio.sh.
+# Source repo: portfolio_v2 (github.com/abracadaniel92/portfolio_v2)
 @gmojsoski host gmojsoski.com www.gmojsoski.com
 handle @gmojsoski {
-	header Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
 	root * /srv/site
+	encode zstd gzip
+	try_files {path} /index.html
 	file_server
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+		-Server
+	}
+
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	@html path /index.html
+	header @html Cache-Control "no-cache"
 }

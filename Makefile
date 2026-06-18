@@ -55,9 +55,9 @@ update:
 		containrrr/watchtower \
 		--run-once
 
-# Update portfolio website (pull from GitHub and sync to Caddy)
+# Update portfolio_v2 (pull, npm build, sync dist/ to Caddy)
 portfolio-update:
-	@echo "🔄 Updating portfolio from GitHub..."
+	@echo "🔄 Updating portfolio_v2 (build + deploy to gmojsoski.com)..."
 	@HERE="$(MAKEFILE_DIR)"; \
 	if [ -f "$$HERE/scripts/update-portfolio.sh" ]; then \
 		bash "$$HERE/scripts/update-portfolio.sh"; \
@@ -69,7 +69,9 @@ portfolio-update:
 		echo "   Tried: /usr/local/bin/update-portfolio.sh"; \
 		exit 1; \
 	fi
-	@echo "✅ Portfolio update complete. Check /var/log/portfolio-update.log for details."
+	@echo "✅ portfolio_v2 deploy complete. Check /var/log/portfolio-update.log for details."
+	@echo "   Reload Caddy if you changed docker/caddy/config.d/10-gmojsoski-home.caddy:"
+	@echo "   docker exec caddy caddy reload --config /etc/caddy/Caddyfile"
 
 # Update Centar Srbija Stil (css.gmojsoski.com): pull main and rebuild Docker
 css-update:
@@ -121,4 +123,3 @@ lab-mattermost-logs:
 lab-mattermost-status:
 	@echo "📊 Mattermost Service Status:"
 	@cd "$(MAKEFILE_DIR)/docker/mattermost" && docker compose ps
-

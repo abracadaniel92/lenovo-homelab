@@ -2,6 +2,45 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-06-18] gmojsoski.com migrated to portfolio_v2 (Vite + React build pipeline)
+
+**Date:** 2026-06-18
+**Action:** Replaced the legacy vanilla HTML portfolio with the brutalist rebuild from [portfolio_v2](https://github.com/abracadaniel92/portfolio_v2). Updated homelab deploy scripts and Caddy so production serves a Vite `dist/` build instead of a flat source tree.
+**Result:** `gmojsoski.com` live on commits `b788767` (initial cutover) and `fefd8c3` (lab section header). `make portfolio-update` pulls, builds, and rsyncs successfully.
+
+### ✅ Changes Made
+1. **`scripts/update-portfolio.sh`**
+   - Repo path: `portfolio/portfolio` → `portfolio_v2` (`/home/goce/Desktop/Cursor projects/portfolio_v2`)
+   - Flow: `git pull` → `npm ci` (falls back to `npm install`) → `npm run build` → `rsync -av --delete dist/` → `/mnt/ssd/docker-projects/caddy/site`
+   - Loads nvm if `node`/`npm` not on PATH; always rebuilds on each run (no early exit when git is up to date)
+2. **`Makefile` — `portfolio-update`**
+   - Messaging updated for build + deploy; reminds to reload Caddy when the site snippet changes
+3. **`docker/caddy/config.d/10-gmojsoski-home.caddy`**
+   - SPA fallback: `try_files {path} /index.html`
+   - Security headers (HSTS, CSP, Referrer-Policy, Permissions-Policy, `-Server`)
+   - Cache: long-lived `/assets/*`, `no-cache` for `index.html`; removed blanket `no-store` on all responses
+4. **`docker/caddy/site/README.md`** — documents new source repo and deploy flow
+
+### 📍 Deploy / rollback
+- **Deploy:** `make portfolio-update` (or `portfolio-update` wrapper if installed)
+- **Log:** `/var/log/portfolio-update.log`
+- **Rollback:** Point Caddy `root` at the old `portfolio/portfolio` tree and rsync that repo instead (legacy site still on GitHub at `abracadaniel92/portfolio`)
+
+### 📝 Notes
+- **Analytics:** GoatCounter (`analytics.gmojsoski.com`) intentionally omitted from v2; re-add requires CSP updates per `portfolio_v2/DEPLOY.md`
+- **Social preview:** OG image path changed from `/images/og-image.png` to `/og-image.png` (1200×630); re-scrape LinkedIn/Facebook after major hero changes
+- **Global script:** `/usr/local/bin/update-portfolio.sh` may still be the old version if copied previously — `make portfolio-update` uses the repo script under `Pi-version-control/scripts/`
+- **Caddy reload** (after snippet edits): `docker exec caddy caddy reload --config /etc/caddy/Caddyfile`
+
+### 📍 Files Involved
+- `scripts/update-portfolio.sh`, `Makefile`, `docker/caddy/config.d/10-gmojsoski-home.caddy`, `docker/caddy/site/README.md`
+- Source: `/home/goce/Desktop/Cursor projects/portfolio_v2` → GitHub `abracadaniel92/portfolio_v2`
+- Live: `/mnt/ssd/docker-projects/caddy/site` (container mount `/srv/site`)
+
+**Status**: ✅ Live — deploy pipeline verified 2026-06-18
+
+---
+
 ## [2026-06-17] Three USB HDDs failed (end-of-life) — decommissioned disk1/disk2/disk_old + mergerfs pool
 
 **Date:** 2026-06-17
