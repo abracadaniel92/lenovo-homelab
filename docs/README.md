@@ -21,6 +21,7 @@ Step-by-step tasks:
 - [mcp-knowledge-server.md](how-to-guides/mcp-knowledge-server.md) — private LAN knowledge MCP server (Cursor + Claude Code CLI)
 - [cloudflare-monitoring.md](how-to-guides/cloudflare-monitoring.md) — where & how to monitor the Cloudflare Tunnel
 - [setup-uptime-kuma-notifications.md](how-to-guides/setup-uptime-kuma-notifications.md) — Uptime Kuma alerts (ntfy.sh)
+- [add-monitoring-trio.md](how-to-guides/add-monitoring-trio.md) — deploy Scrutiny + ntfy + Beszel (prepared, not yet applied)
 - [kitchenowl-recipe-import.md](how-to-guides/kitchenowl-recipe-import.md) — import .docx recipes into KitchenOwl
 - [jellyfin-books-setup.md](how-to-guides/jellyfin-books-setup.md) — add a books library to Jellyfin
 - [external-access-investigation.md](how-to-guides/external-access-investigation.md) — troubleshooting external access
