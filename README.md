@@ -45,6 +45,7 @@ Reverse proxy is **Caddy** (`localhost:8080`), fronted by a **Cloudflare Tunnel*
 | FreshRSS | rss.gmojsoski.com | RSS aggregator |
 | Actual Budget | budget.gmojsoski.com | Personal finance |
 | GoatCounter | analytics.gmojsoski.com | Web analytics |
+| ntfy | ntfy.gmojsoski.com | Push notifications (self-hosted) |
 | Gokapi | files.gmojsoski.com | File sharing |
 | TravelSync | tickets.gmojsoski.com | Travel document processing |
 | Centar Srbija Stil | css.gmojsoski.com | Static site |
@@ -54,6 +55,8 @@ Reverse proxy is **Caddy** (`localhost:8080`), fronted by a **Cloudflare Tunnel*
 | Kiwix | local only (`:8089`) | Offline Wikipedia/library |
 | Android Emulator | local only (`:8233`) | ws-scrcpy browser control |
 | Uptime Kuma / Portainer / Homepage | local only | Monitoring / Docker UI / dashboard |
+| Scrutiny | local only (`:8084`) | SMART disk health history |
+| Beszel | local only (`:8086`) | CPU/RAM/disk/container metrics |
 | Watchtower | — | Auto-updates (daily 2 AM, with exclusions) |
 
 Systemd-managed: **Planning Poker** (poker.gmojsoski.com), **Bookmarks** (bookmarks.gmojsoski.com), **Gokapi**.

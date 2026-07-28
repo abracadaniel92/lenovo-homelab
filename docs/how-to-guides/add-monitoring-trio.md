@@ -5,9 +5,10 @@ Walkthrough for deploying three complementary monitoring services, following
 Compose files are already prepared in the repo under `docker/scrutiny/`,
 `docker/ntfy/`, and `docker/beszel/`.
 
-> **Status: repo-only prep.** Nothing below is live until executed **on
-> lemongrab**. Per the governance rules, apply on the server first, then
-> commit the mirror.
+> **Status: deployed on lemongrab (2026-07-28).** Remaining manual step:
+> add Beszel system in hub UI (`http://192.168.1.97:8086`) → paste token
+> into `docker/beszel/docker-compose.yml` → `docker compose up -d`.
+> Optional: wire Uptime Kuma monitors and ntfy notification topics.
 
 | Service | Host port | Exposure | What it adds |
 |---|---|---|---|
@@ -160,20 +161,20 @@ Phone must buzz with Wi-Fi off.
 
 ## 4. Bookkeeping (after everything verifies — append-only edits)
 
-- [ ] `docs/reference/port-map.md`: add `8084 Scrutiny (LAN only)`,
+- [x] `docs/reference/port-map.md`: add `8084 Scrutiny (LAN only)`,
       `8085 ntfy (ntfy.gmojsoski.com)`, `8086 Beszel hub (LAN only)`,
       `45876 Beszel agent (host network, LAN only)`.
-- [ ] `README.md` service table: add the three rows (ntfy in the external
+- [x] `README.md` service table: add the three rows (ntfy in the external
       table; Scrutiny + Beszel in the local-only list).
-- [ ] `scripts/verify-services.sh`: add `ntfy` to the SUBDOMAINS array
+- [x] `scripts/verify-services.sh`: add `ntfy` to the SUBDOMAINS array
       (public services only — not Scrutiny/Beszel).
-- [ ] `docs/reference/lan-and-vpn-service-urls.md`: add Scrutiny `:8084`
+- [x] `docs/reference/lan-and-vpn-service-urls.md`: add Scrutiny `:8084`
       and Beszel `:8086`.
-- [ ] Homepage dashboard: add tiles for the three UIs.
+- [x] Homepage dashboard: add tiles for the three UIs.
 - [ ] Uptime Kuma: add HTTP monitors for `localhost:8084` / `:8085` / `:8086`.
-- [ ] Commit the mirror: compose dirs + the appends above, branch
+- [x] Commit the mirror: compose dirs + the appends above, branch
       `feature/monitoring-trio` → `develop` → `main`.
-- [ ] Troubleshooting log: per the checklist FAQ, smooth additions don't
+- [x] Troubleshooting log: per the checklist FAQ, smooth additions don't
       need a log entry — only log if something non-standard was required.
 
 ## Watchtower note

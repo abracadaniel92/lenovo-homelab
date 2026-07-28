@@ -18,11 +18,7 @@ services:
       - ./influxdb:/opt/scrutiny/influxdb
     # IMPORTANT: pass through every physical disk on lemongrab.
     # Run `lsblk -d -o NAME,MODEL,SIZE` on the server and adjust this list
-    # before first start (expected: NVMe + 1TB SATA SSD + 1TB + 2TB mergerfs
-    # members + old 500GB).
+    # before first start.
     devices:
       - /dev/nvme0
       - /dev/sda
-      - /dev/sdb
-      - /dev/sdc
-      - /dev/sdd

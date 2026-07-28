@@ -26,5 +26,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       PORT: "45876"
-      # paste the public key shown by the hub UI when adding a system
-      KEY: "REPLACE_WITH_PUBLIC_KEY_FROM_HUB"
+      HUB_URL: http://192.168.1.97:8086
+      # Add system in hub UI → copy token here, then: docker compose up -d
+      TOKEN: "REPLACE_WITH_TOKEN_FROM_HUB_UI"
+      KEY: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL0jUfDiKystNBleS9H2nTuN4tBrzzq/a6oV4EB28cFP"
