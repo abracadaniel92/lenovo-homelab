@@ -40,9 +40,3 @@ handle @auth {
 		header_up X-Real-IP {remote_host}
 	}
 }
-
-@ntfy host ntfy.gmojsoski.com
-handle @ntfy {
-	# NO gzip — ntfy uses long-lived HTTP/WebSocket connections
-	reverse_proxy http://172.17.0.1:8085
-}

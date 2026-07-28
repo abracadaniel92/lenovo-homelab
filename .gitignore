@@ -28,11 +28,6 @@ gokapi/config.json
 **/db/
 **/goatcounter-data/
 **/gokapi-data/
-docker/beszel/beszel_data/
-docker/ntfy/cache/
-docker/ntfy/lib/
-docker/scrutiny/config/
-docker/scrutiny/influxdb/
 
 # Logs
 *.log
