@@ -2,6 +2,33 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-07-28] Rolled back monitoring trio trial (Scrutiny, self-hosted ntfy, Beszel)
+
+**Date:** 2026-07-28
+**Action:** Tore down a brief live trial of the prepared monitoring trio stacks. Notifications stay on **Uptime Kuma → ntfy app** (ntfy.sh), not a self-hosted ntfy instance.
+**Result:** All three stacks stopped; ingress and runtime data removed. Compose stubs remain in repo for optional future use.
+
+### 🔍 Background
+- Compose files were added 2026-07-06 (`1532215`, repo-only prep).
+- Stacks were started briefly on lemongrab 2026-07-28 during an agent session (~14:12–14:26), then reverted in git (`9aa39f3`).
+- User confirmed only Uptime Kuma mobile notifications are wanted — self-hosted ntfy not needed.
+
+### ✅ Live changes (lemongrab)
+1. `docker compose down` in `docker/scrutiny`, `docker/beszel`, `docker/ntfy` (profiles: `monitoring`).
+2. Removed `@ntfy` block from `docker/caddy/config.d/50-utilities.caddy`; removed `ntfy.gmojsoski.com` ingress from `~/.cloudflared/config.yml` and repo `cloudflare/config.yml`.
+3. Restarted **Caddy** and **cloudflared**.
+4. Deleted runtime data: `docker/ntfy/{cache,lib}`, `docker/scrutiny/{config,influxdb}`, `docker/beszel/beszel_data` (via ephemeral Alpine container — files were root-owned from Docker).
+
+### 🧪 Verification
+- No containers named `scrutiny`, `ntfy`, `beszel`, or `beszel-agent` ✅
+- Ports `8084`, `8085`, `8086`, `45876` free ✅
+- `https://ntfy.gmojsoski.com` → tunnel catch-all **404** (no backend) ✅
+- Bookmarks security fix (`6613b56`) unaffected ✅
+
+### 📝 Notes
+- **DNS:** `ntfy.gmojsoski.com` CNAME may still exist in Cloudflare from the trial; safe to delete manually if desired.
+- **Repo:** `docker/{scrutiny,ntfy,beszel}/` compose stubs and `docs/how-to-guides/add-monitoring-trio.md` kept as optional future reference.
+
 ## [2026-06-18] gmojsoski.com migrated to portfolio_v2 (Vite + React build pipeline)
 
 **Date:** 2026-06-18
