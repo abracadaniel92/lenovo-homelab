@@ -12,13 +12,6 @@ handle @bookmarks {
 	reverse_proxy http://172.17.0.1:5000
 }
 
-@shopping host shopping.gmojsoski.com
-handle @shopping {
-	encode gzip
-	header Cache-Control "no-cache, must-revalidate"
-	reverse_proxy http://172.17.0.1:8092
-}
-
 @linkwarden host linkwarden.gmojsoski.com
 handle @linkwarden {
 	encode gzip

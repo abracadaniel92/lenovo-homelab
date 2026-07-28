@@ -2,6 +2,42 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-07-28] Decommissioned Gokapi (files) + KitchenOwl (shopping) after usage audit
+
+**Date:** 2026-07-28
+**Action:** Retired two unneeded services identified in a service audit. Data volumes preserved (fully reversible).
+**Result:** `files.gmojsoski.com` and `shopping.gmojsoski.com` removed from public ingress (both now tunnel 404). All other services healthy.
+
+### 🔍 Background
+- Audit compared 35 running containers + 3 systemd apps against public routes and per-app DB activity.
+- User confirmed **Gokapi** (file sharing, systemd) and **KitchenOwl** (recipes/shopping, Docker) as no longer needed; all remaining services are used daily via iOS apps and were kept.
+- A prior entry ([2026-06-16]) shut down KitchenOwl once before; it had since been restarted. This is the final decommission.
+- Two earlier "0 usage" readings during the audit (GoatCounter, Gokapi file count) were **measurement artifacts** — GoatCounter prunes raw `hits` after aggregating, and `sudo`-based host reads failed silently once cached creds expired. Ground truth came from live URL curls + container DB queries.
+
+### ✅ Live changes (lemongrab, user-run with sudo)
+1. `sudo systemctl disable --now gokapi` — service stopped + disabled. `gokapi.sqlite` and `/mnt/ssd/apps/gokapi-data/` left on disk.
+2. `docker compose -f /mnt/ssd/docker-projects/kitchenowl/docker-compose.yml down` — container removed, data volume (`/mnt/ssd/docker-projects/kitchenowl/data`) kept.
+3. Removed `files.gmojsoski.com` + `shopping.gmojsoski.com` hostnames from `~/.cloudflared/config.yml`.
+4. Restarted **Caddy** and **cloudflared**.
+
+### 📝 Repo changes (VCS mirror)
+- Dropped KitchenOwl + Gokapi rows from `README.md` service table; removed Gokapi from the systemd-managed line.
+- Removed `files.gmojsoski.com` from `scripts/verify-services.sh` SUBDOMAINS (was reporting a permanent false failure).
+- Removed `@files` block from `docker/caddy/config.d/30-storage.caddy` and `@shopping` block from `docker/caddy/config.d/50-utilities.caddy`.
+
+### 🧪 Verification
+- `https://files.gmojsoski.com` → 404, `https://shopping.gmojsoski.com` → 404 ✅
+- Daily-driver services (Immich, Nextcloud, Paperless, Vaultwarden, Linkwarden, FreshRSS, Jellyfin, Mattermost, root site) all 200/302 ✅
+- `caddy validate` → Valid configuration ✅
+
+### 📝 Notes
+- **Live Caddy still contains the `@files`/`@shopping` handle blocks** (root-owned; user opted not to edit them live). Harmless — the tunnel no longer routes those hostnames. The **repo mirror has them removed**, so a future config redeploy will drop them.
+- Data volumes retained for both — re-enable the service / re-`compose up` to restore.
+- **DNS:** `files`/`shopping` CNAMEs may still exist in Cloudflare from before; safe to delete manually.
+- **Outline** (local-only wiki, stale Jan-2026 docs mirror) was reviewed in the same audit and left running by user choice.
+
+---
+
 ## [2026-07-28] Rolled back monitoring trio trial (Scrutiny, self-hosted ntfy, Beszel)
 
 **Date:** 2026-07-28

@@ -39,13 +39,11 @@ Reverse proxy is **Caddy** (`localhost:8080`), fronted by a **Cloudflare Tunnel*
 | Immich | immich.gmojsoski.com | Photo & video backup |
 | Vaultwarden | vault.gmojsoski.com | Password manager |
 | Paperless-ngx | paperless.gmojsoski.com | Document management |
-| KitchenOwl | shopping.gmojsoski.com | Recipes & shopping lists |
 | Mattermost | mattermost.gmojsoski.com | Team chat (+ Clawdbot AI, local Ollama) |
 | Linkwarden | linkwarden.gmojsoski.com | Bookmarks + web archiving |
 | FreshRSS | rss.gmojsoski.com | RSS aggregator |
 | Actual Budget | budget.gmojsoski.com | Personal finance |
 | GoatCounter | analytics.gmojsoski.com | Web analytics |
-| Gokapi | files.gmojsoski.com | File sharing |
 | TravelSync | tickets.gmojsoski.com | Travel document processing |
 | Centar Srbija Stil | css.gmojsoski.com | Static site |
 | Outline | local only | Wiki / knowledge base |
@@ -56,7 +54,7 @@ Reverse proxy is **Caddy** (`localhost:8080`), fronted by a **Cloudflare Tunnel*
 | Uptime Kuma / Portainer / Homepage | local only | Monitoring / Docker UI / dashboard |
 | Watchtower | — | Auto-updates (daily 2 AM, with exclusions) |
 
-Systemd-managed: **Planning Poker** (poker.gmojsoski.com), **Bookmarks** (bookmarks.gmojsoski.com), **Gokapi**.
+Systemd-managed: **Planning Poker** (poker.gmojsoski.com), **Bookmarks** (bookmarks.gmojsoski.com).
 
 > A private **MCP Knowledge** server (`knowledge-mcp`, host `:8001`, **LAN only**) is also deployed — see [docs/how-to-guides/mcp-knowledge-server.md](docs/how-to-guides/mcp-knowledge-server.md). Its code lives in the separate `mcp_server` project.
 
