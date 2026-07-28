@@ -168,8 +168,9 @@ def bookmark():
         )
         resp.raise_for_status()
         return jsonify({"status": "success"}), 200
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": str(e)}), 500
+    except requests.exceptions.RequestException:
+        app.logger.exception("Failed to post bookmark to Mattermost webhook")
+        return jsonify({"error": "Failed to post bookmark"}), 502
 
 
 @app.route("/health")
