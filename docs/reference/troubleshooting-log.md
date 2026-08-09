@@ -2,6 +2,109 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-08-09] gmojsoski.com blog URLs served the homepage (Caddy try_files), plus a real 404 page
+
+**Date:** 2026-08-09
+**Action:** Diagnosed four Google Search Console non-indexing reports. Fixed the
+Caddy `try_files` rule that made every blog URL serve the homepage, added a
+`www` to apex 301, and added a real 404 page with a real 404 status.
+**Result:** ⏳ **NOT LIVE YET. Repo-only prep, prepared on the Windows dev
+clone.** Verified locally against the real homelab `Caddyfile` and the real
+`dist/`. Apply on lemongrab per
+[the runbook](../how-to-guides/gmojsoski-404-and-canonical-fix.md).
+
+### 🔍 Root Cause
+
+The live `docker/caddy/config.d/10-gmojsoski-home.caddy` had
+`try_files {path} /index.html`, missing `{path}/index.html`. The portfolio
+prerenders `/blog` and each `/blog/<slug>` to its own `index.html`, so without
+that rule all of them fell through to the `/index.html` fallback and answered
+**200 with the homepage**. Confirmed against production:
+
+```
+/blog                                -> title "Goce Mojsoski · Product & Delivery", canonical /
+/blog/react-ssr-without-a-framework  -> title "Goce Mojsoski · Product & Delivery", canonical /
+/blog/<slug>/index.html              -> correct title and canonical
+```
+
+The build was healthy the whole time and the prerendered files were on disk.
+Only URL resolution was broken, so nothing in the portfolio repo looked wrong.
+All 11 sitemap URLs resolved to one page declaring `canonical: /`, which is what
+Search Console reported as "Duplicate without user-selected canonical" and
+"Duplicate, Google chose different canonical than user". Present since the blog
+launched on 2026-08-08.
+
+Also found: `www.gmojsoski.com` answered 200 instead of redirecting, and the
+`/index.html` catch-all meant no URL on the site ever returned 404, so every
+stale link was a soft 404. "Page with redirect" is just the `http` to `https`
+301 and is expected.
+
+### ✅ Changes Made (repo mirror; live still pending)
+
+1. **`docker/caddy/config.d/10-gmojsoski-home.caddy`**
+   - `try_files {path} {path}/index.html` (added the middle rule, **removed** the
+     `/index.html` fallback so a miss reaches the error handler)
+   - Split `www.gmojsoski.com` out of the host matcher into its own
+     `redir https://gmojsoski.com{uri} permanent` handler
+   - `@html` cache matcher widened from `/index.html` to `/ /index.html /blog /blog/*`
+2. **`docker/caddy/Caddyfile`** ⚠️ **global file.** Added a host-matched 404
+   branch inside the existing `handle_errors`, serving `/404.html` for
+   `gmojsoski.com` only; other hosts keep `respond "{err.status_code} ..."`.
+   It cannot live in the `config.d` snippet: `handle_errors` is a site-level
+   directive and Caddy rejects the config if it is nested inside `handle`.
+   Security headers are repeated inside it because an error route inherits none.
+3. **`portfolio_v2`** (separate repo, its own commit): new `NotFound.tsx`,
+   router returns `notfound` for unmatched paths, `prerender.mjs` emits
+   `dist/404.html` as `noindex` with no canonical, no JSON-LD and excluded from
+   `sitemap.xml`, `vite preview` mirrors the server for misses, and `DEPLOY.md`
+   no longer claims `try_files` is optional (that note is what let this ship).
+
+### 🧪 Verification (local, against the real config)
+
+Ran the actual homelab `Caddyfile` plus `config.d` locally against the real
+`dist/`, adapted only for host and port:
+
+```
+/                                      200  Goce Mojsoski · Product & Delivery
+/blog                                  200  Blog · Goce Mojsoski
+/blog/react-ssr-without-a-framework    200  Adding server-side rendering to a React portfolio...
+/blog/react-ssr-without-a-framework/   200  (same)
+/typo-page                             404  Page not found · Goce Mojsoski
+/css/old-style.css                     404  Page not found · Goce Mojsoski
+/blog/no-such-post                     404  Page not found · Goce Mojsoski
+/index.html                            200  Goce Mojsoski · Product & Delivery
+```
+
+- 404 response carries CSP, HSTS, X-Content-Type-Options, Referrer-Policy,
+  Permissions-Policy, and `Server` is still suppressed ✅
+- `www` host 301s preserving the path ✅
+- Another host's miss still returns plain-text `404 Not Found`, not the
+  portfolio page ✅
+- With `404.html` absent (old build + new config) a miss still returns a 404
+  status, no 500 ✅
+- `caddy validate` clean on the full adapted config ✅
+- Portfolio side: `npm run lint` and `npm run build` clean; `404.html` is
+  `noindex`, has no canonical or JSON-LD, and is not in `sitemap.xml` (11 URLs) ✅
+
+### 📍 Follow-up on the server
+
+1. `make portfolio-update` **first** (the build carries `404.html`), then edit the
+   live Caddy config, `caddy validate`, `caddy reload`.
+2. Re-run the verification commands in the runbook against production.
+3. Search Console: **Validate Fix** on both "Duplicate" reports. Export the URL
+   lists for "Not found (404)" and "Page with redirect" before acting; they are
+   most likely stale old-portfolio paths that now correctly answer 404.
+
+### ⚠️ Notes
+
+- **Two governance flags** raised in the runbook: the `Caddyfile` change is a
+  global-file change, and the `10-gmojsoski-home.caddy` change modifies existing
+  lines rather than appending. Both were unavoidable and both need sign-off.
+- The regression test for this class of bug is the **`<title>`/canonical** check,
+  not the status code. The broken state returned 200 for every URL.
+
+**Status**: ⏳ Prepared and locally verified. Pending apply on lemongrab.
+
 ## [2026-07-28] Decommissioned Gokapi (files) + KitchenOwl (shopping) after usage audit
 
 **Date:** 2026-07-28

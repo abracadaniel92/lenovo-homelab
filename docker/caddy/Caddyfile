@@ -8,7 +8,31 @@
 	# Prevent caching of error responses
 	handle_errors {
 		header Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
-		respond "{err.status_code} {err.status_text}"
+
+		# gmojsoski.com ships its own prerendered 404 page (dist/404.html), so a
+		# miss there gets the real site instead of plain text. Matched here rather
+		# than in config.d/10-gmojsoski-home.caddy because handle_errors is a
+		# site-level directive: Caddy rejects it inside a handle block.
+		@gmojsoski_404 expression {err.status_code} == 404 && {host} == "gmojsoski.com"
+		handle @gmojsoski_404 {
+			root * /srv/site
+			rewrite * /404.html
+			# Repeated from the site handler: an error route is a separate route,
+			# so it does not inherit that block's headers.
+			header {
+				Strict-Transport-Security "max-age=31536000; includeSubDomains"
+				X-Content-Type-Options "nosniff"
+				Referrer-Policy "strict-origin-when-cross-origin"
+				Permissions-Policy "camera=(), microphone=(), geolocation=()"
+				Content-Security-Policy "default-src 'self'; script-src 'self' https://analytics.gmojsoski.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://analytics.gmojsoski.com; connect-src 'self' https://analytics.gmojsoski.com; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+				-Server
+			}
+			file_server
+		}
+
+		handle {
+			respond "{err.status_code} {err.status_text}"
+		}
 	}
 
 	# Import service-specific configurations

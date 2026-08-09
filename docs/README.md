@@ -26,6 +26,7 @@ Step-by-step tasks:
 - [jellyfin-books-setup.md](how-to-guides/jellyfin-books-setup.md) — add a books library to Jellyfin
 - [external-access-investigation.md](how-to-guides/external-access-investigation.md) — troubleshooting external access
 - [test-docker-profiles.md](how-to-guides/test-docker-profiles.md) — verifying Docker Compose profiles
+- [gmojsoski-404-and-canonical-fix.md](how-to-guides/gmojsoski-404-and-canonical-fix.md) — fix blog URLs serving the homepage, add a real 404 (prepared, not yet applied)
 
 ## Reference (`reference/`)
 

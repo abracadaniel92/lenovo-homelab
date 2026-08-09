@@ -1,10 +1,28 @@
-# Personal homepage (apex + www): Vite build output synced to /srv/site via scripts/update-portfolio.sh.
+# Personal homepage: Vite build output synced to /srv/site via scripts/update-portfolio.sh.
 # Source repo: portfolio_v2 (github.com/abracadaniel92/portfolio_v2)
-@gmojsoski host gmojsoski.com www.gmojsoski.com
+
+# www serves the identical build, so it has to 301 to the apex rather than answer
+# 200. Two hosts returning the same bytes is what Search Console reports as a
+# duplicate, and rel=canonical alone does not stop Google picking the wrong host.
+@gmojsoski_www host www.gmojsoski.com
+handle @gmojsoski_www {
+	redir https://gmojsoski.com{uri} permanent
+}
+
+@gmojsoski host gmojsoski.com
 handle @gmojsoski {
 	root * /srv/site
 	encode zstd gzip
-	try_files {path} /index.html
+	# {path}/index.html is load-bearing, not an optimisation: the build prerenders
+	# /blog and every /blog/<slug> to its own index.html. Without this line those
+	# URLs fall through and serve the homepage at 200, so every post looks like a
+	# duplicate of / to a crawler.
+	#
+	# Deliberately NO `/index.html` fallback at the end. With one, every unknown
+	# URL answered 200 with the homepage, which Google reads as a soft 404. Now a
+	# miss stays a miss and the 404 handler in ../Caddyfile serves dist/404.html
+	# with a real 404 status.
+	try_files {path} {path}/index.html
 	file_server
 
 	header {
@@ -20,6 +38,8 @@ handle @gmojsoski {
 
 	@assets path /assets/*
 	header @assets Cache-Control "public, max-age=31536000, immutable"
-	@html path /index.html
+	# Matches the request path, which header sees before try_files rewrites it, so
+	# the blog entries have to be listed explicitly.
+	@html path / /index.html /blog /blog/*
 	header @html Cache-Control "no-cache"
 }
