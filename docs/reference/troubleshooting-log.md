@@ -2,6 +2,559 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-25] A space in the repo path silently killed health checks, backups and auto-recovery for 8 months
+
+**Date:** 2026-09-25
+**Action:** Repaired the automation layer via `scripts/repair-silent-failures.sh`,
+introduced a space-free `/opt/homelab` path, and moved failure alerting
+out-of-band so the next silent death is loud.
+**Result:** ✅ **LIVE.** Health check running hourly again, all 5 backups
+verified fresh, auto-recovery re-armed (it restarted `gokapi` on its first run).
+
+### 🔍 Symptom
+
+No symptom. That is the finding. Nothing alerted, nothing appeared broken, and
+`systemctl list-timers` showed a recent `LAST` timestamp for
+`enhanced-health-check.timer`, which read as healthy. The unit was firing on
+schedule and failing instantly every time.
+
+Discovered incidentally while verifying a Vaultwarden backup (entry below): the
+"latest" archive was dated 2026-01-28.
+
+### 🔍 Root cause
+
+The repo lives at `/home/goce/Desktop/Cursor projects/Pi-version-control`.
+**That path contains a space.** Every unquoted reference to it stopped
+resolving, and because several callers were written at different times against
+the same unquoted path, they all died within days of each other:
+
+| System | Failure | Dead since |
+|---|---|---|
+| `enhanced-health-check.service` (+ Caddy/cloudflared auto-recovery) | `203/EXEC` hourly | 2026-01-28 |
+| Backup cron, all 5 services | never executed | 2026-01-17 |
+| `healthcheck-watchdog.sh` (5-min root cron) | file does not exist | unknown |
+| Watchtower, all 36 containers | panics nightly, cannot reach docker daemon | 2026-03-27 |
+| `docker-containers-start.service` | `203/EXEC` | 2026-09-07 |
+| `slack-goatcounter-weekly.service` | exit 3 | 2026-09-20 |
+
+Smoking gun: a **zero-byte file `/home/goce/Desktop/Cursor` dated 2026-01-17**.
+Cron split the backup line on the space, so the `>>` redirect target became the
+bare word `/home/goce/Desktop/Cursor` and cron created it.
+
+**The design flaw that hid it for 8 months:** every alert in this homelab was
+emitted *by* `health-check-engine.sh`. When that script stopped executing, the
+component responsible for reporting outages was itself the outage. A monitor
+that can only report failures it survives is not a monitor.
+
+### 🔧 Changes
+
+Live and repo, via `sudo bash scripts/repair-silent-failures.sh` (idempotent):
+
+1. **`/opt/homelab` → symlink to the repo.** Space-free path; everything now
+   points through it so this bug class cannot recur.
+2. **`notify-failure@.service`** installed, attached via `OnFailure=` drop-ins to
+   `enhanced-health-check`, `hdd-health-check`, `slack-goatcounter-weekly`,
+   `portfolio-update`. systemd fires `OnFailure=` even when `ExecStart` never
+   got off the ground, which is precisely the failure mode that hid this one.
+3. **Health check `ExecStart` fixed via drop-in**, resetting `ExecStart=` first
+   so systemd replaces rather than appends. The original unit file was not
+   edited (`systemd/` is read-only core per CLAUDE.md).
+4. **`/etc/crontab` backed up and rewritten** through `/opt/homelab`; dead
+   `healthcheck-watchdog.sh` line removed.
+5. **`scripts/health.d/50-backup-freshness.sh`** (new): alarms when any service's
+   newest backup exceeds `MAX_AGE_HOURS`. Self-check:
+   `scripts/test-backup-freshness.sh`, 6/6 pass.
+6. **`scripts/backup-all-critical.sh`**: dropped `set -e`, which had been
+   aborting the run after the *first* service, so 4 of 5 were skipped even when
+   cron did fire. Now collects failures and exits non-zero so `OnFailure=` fires.
+7. **`scripts/sync-backups-to-b2.sh`**: added `--backup-dir`. Offsite was a
+   mirror, so any local deletion or truncation propagated to B2 within 24 hours
+   and destroyed the only offsite copy. It is now an archive.
+8. **Nextcloud config backup fixed.** `config.php` is `640 www-data:www-data`
+   and backups run as `goce`, so the host-side `tar` failed every night, was
+   swallowed by `2>/dev/null`, and shipped a 45-byte empty archive with exit 0.
+   The engine now reads it through the container (`CONFIG_CONTAINER`) and
+   **hard-fails if the archive does not contain the file**. Without
+   `passwordsalt`/`secret`/`instanceid` a restored instance cannot decrypt
+   anything, so an empty config archive is a failed backup, not a warning.
+
+### ✅ Verification
+
+```bash
+systemctl show -p Result --value enhanced-health-check.service   # success
+systemctl list-timers enhanced-health-check.timer                # next fire scheduled
+grep backup-all-critical /etc/crontab                            # routed via /opt/homelab
+tail -20 /var/log/enhanced-health-check.log                      # all 6 modules executed
+```
+
+- First run executed all 6 modules and **auto-recovered `gokapi`**, which had
+  been down with nobody watching.
+- Freshness alarm fired on first run naming exactly the 4 stale services, and
+  correctly omitted Vaultwarden (backed up earlier the same day). It went quiet
+  after all 5 were re-run.
+- Nextcloud config archive: 906 bytes, contains `config.php`, all three of
+  `instanceid` / `passwordsalt` / `secret` present.
+- KitchenOwl now takes an online SQLite snapshot instead of a live `cp`.
+
+### 📌 Open items
+
+1. **Watchtower removed** 2026-09-25, repo and server. See below. ✅ Closed.
+2. `docker-containers-start.service` (`203/EXEC`) and the missing
+   `healthcheck-watchdog.sh` still need real diagnosis. Deliberately not
+   bundled into the repair script.
+3. `/mnt/ssd/backups/freshrss/` has archives but **no `backup.d/*.conf`**, so it
+   is outside both the backup run and the freshness alarm. Newest is 2026-08-16.
+4. The freshness alarm checks **mtime only**. A backup that runs and produces
+   garbage still reads as fresh. Upgrade path: a `.ok` sidecar written after a
+   content assertion. The Nextcloud fix in change 8 is the pattern to follow.
+
+### 🗑️ Watchtower removed
+
+Third instance of the same theme in one day: `docker ps` reported Watchtower as
+**`Up 2 weeks (healthy)`**. The healthcheck only proves the process is alive.
+The scheduled update job panicked inside a goroutine that `robfig/cron` recovers,
+so the container stayed up and green while doing nothing. Last completed run:
+`Session done Failed=0 Scanned=32 Updated=1` on **2026-03-27**.
+
+`containrrr/watchtower` 1.7.1 is unmaintained and predates Docker Engine 29.8.1
+(API 1.56). Rather than pin an API version to keep an abandoned image talking to
+a modern daemon, it was removed. It held a **root docker socket on the host
+running the password manager**, which is a poor trade for an updater that had
+not updated anything in six months.
+
+Replacement: **Renovate** (already configured) opens PRs for image bumps, and
+tags get pinned so updates are reviewed rather than applied silently at 2 AM.
+Nothing regressed, because nothing had been updating.
+
+Repo side: `docker/watchtower/` deleted, README service-table row removed (with
+explicit user approval, that table is append-only), `make update` converted to a
+signpost. `com.centurylinklabs.watchtower.*` labels left in place on other
+services: they are inert with no Watchtower running, and removing them would
+touch several unrelated services' compose files for no behavioural gain.
+
+**Server side: done 2026-09-25.**
+
+```bash
+cd /mnt/ssd/docker-projects/watchtower && docker compose down
+rm -rf /mnt/ssd/docker-projects/watchtower /home/docker-projects/watchtower
+```
+
+(The two live dirs held only a `docker-compose.yml`, no data. The copy under
+`/home/docker-projects/` was a stale duplicate.)
+
+Verified after teardown: container and both dirs gone, 35 containers running
+(36 minus Watchtower), no service disrupted. The
+`com.centurylinklabs.watchtower.*` labels left on other services are inert.
+
+## [2026-09-25] Vaultwarden 1.35.1 → 1.37.3: iOS autofill save crash, and a silently truncating backup
+
+**Date:** 2026-09-25
+**Action:** Updated Vaultwarden from 1.35.1 (Dec 2025) to 1.37.3 after the iOS
+client began crashing on every password save. Discovered mid-update that
+`scripts/backup-engine.sh` had been producing incomplete Vaultwarden archives.
+**Result:** ✅ **LIVE.** 1.37.3 / web-vault 2026.7.0, 603 ciphers intact,
+`vault.gmojsoski.com` 200 internal and external. Backup defect logged as open.
+
+### 🔍 Symptom
+
+Bitwarden iOS autofill extension 2026.9.0 (SDK 3.0.0) threw on saving a login:
+
+```
+DecodingError.typeMismatch: Expected value of type String.
+Path: data. Debug description: Expected to decode String but found a dictionary instead.
+```
+
+Crash timestamp `2026-09-25T14:57:59+02:00`. The user read this as "the save
+failed". It had not.
+
+### 🔍 Root cause
+
+Client/server API skew. Server logs put the crash **two seconds after a
+successful write**:
+
+```
+14:57:49  POST /identity/connect/token  => 200
+14:57:57  POST /api/ciphers             => 200 OK    <- save succeeded
+14:57:59  (client crash)
+14:58:04  POST /api/ciphers             => 200 OK    <- user retry, also succeeded
+```
+
+The client crashed decoding the *response* to a write that had already
+committed. Confirmed in the DB: two rows, both 550 bytes, 7 seconds apart. Each
+failed save left a **duplicate vault entry**. A similar cluster on 2026-09-19
+(three saves in 26s) shows this had been happening for at least a week.
+
+The running build was 1.35.1 / web-vault 2025.12.1, roughly 9 months and 6
+releases behind. Upstream release notes are explicit:
+
+- **1.37.0** "required for support with clients with version 2026.7.0+"
+- **1.37.2** "required for support with clients with version 2026.8.0+"
+
+Client was 2026.9.0. The container never auto-updated because its compose
+carries `com.centurylinklabs.watchtower.enable=false`; the tag was `:latest`
+but the image had not been re-pulled. 1.35.4 through 1.37.0 also carry roughly
+15 security advisories (SSRF, cross-org access, policy bypass, CSRF, cipher
+access, collection permissions).
+
+### ⚠️ Discovered mid-update: backup-engine.sh silently truncates WAL-mode SQLite
+
+The mandatory pre-update backup produced an archive that was **missing seven
+weeks of data**:
+
+| | ciphers | newest entry |
+|---|---|---|
+| Live DB | 603 | 2026-09-25 12:58 |
+| `vaultwarden-20260925-171212.tar.gz` | 598 | 2026-08-03 06:46 |
+
+`backup-engine.sh` `DOCKER_TAR` stops the container, then tars `db.sqlite3`
+with `EXCLUDES="*.sqlite3-shm *.sqlite3-wal"`. This assumes SQLite's shutdown
+checkpoint has folded the WAL into the main file before `tar` reads it. **It
+races.** The whole stop/tar/start sequence logged inside a single second and
+`tar` captured the pre-checkpoint file (mtime `Sep 7`, 1048576 bytes) while the
+424 KB WAL holding the recent writes was excluded by pattern. The checkpoint
+landed afterwards.
+
+This affects every WAL-mode SQLite service using `DOCKER_TAR`. Not fixed in
+this session (surgical-isolation rule). The fix is to drop the container-stop
+dance in favour of SQLite's online backup API, which reads through the WAL:
+
+```python
+sqlite3.connect('file:db.sqlite3?mode=ro', uri=True).backup(sqlite3.connect(dest))
+```
+
+Also noted: backups had not run since **2026-01-28**, and today's run then
+pruned two of the three surviving archives under a retention policy that
+assumes regular runs. The backup timer/cron needs checking.
+
+### 📍 Changes
+
+- **Live** `/home/docker-projects/vaultwarden/docker-compose.yml`: image pinned
+  `vaultwarden/server:latest` → `vaultwarden/server:1.37.3`. Pinned rather than
+  left floating so the version is reproducible and an update is a deliberate act.
+- **Repo** `docker/vaultwarden/docker-compose.yml`: same pin mirrored.
+- No env var changes, no manual migrations. Upstream documents none for this range.
+
+### 🖥️ Commands
+
+```bash
+# verified pre-upgrade snapshot (NOT backup-engine.sh, see above)
+cd /home/docker-projects/vaultwarden/data
+python3 -c "import sqlite3; s=sqlite3.connect('file:db.sqlite3?mode=ro',uri=True); \
+  d=sqlite3.connect('/mnt/ssd/backups/vaultwarden/preupgrade-db.sqlite3'); s.backup(d); d.close()"
+# bundled with rsa_key.pem -> vaultwarden-preupgrade-1.35.1-20260925.tar.gz
+
+cd /home/docker-projects/vaultwarden
+sed -i 's|vaultwarden/server:latest|vaultwarden/server:1.37.3|' docker-compose.yml
+docker compose pull && docker compose up -d
+```
+
+### 🧪 Verification
+
+- `docker exec vaultwarden /vaultwarden --version` → `1.37.3` / Web-Vault `2026.7.0` ✅
+- Startup log clean, `Rocket has launched`, no migration errors ✅
+- Container healthcheck → `healthy` ✅
+- Data intact post-upgrade: 603 ciphers, 1 user, newest `2026-09-25 12:58` ✅
+- `curl localhost:8082/` → 200, `/api/config` returns correct environment URLs ✅
+- `curl https://vault.gmojsoski.com/` → 200 ✅
+- `./scripts/verify-services.sh` → 10 green; the 2 reds are the known
+  decommissioned `budget` and `css` ✅
+
+### 📝 Notes / open items
+
+- **Duplicate vault entries** exist from the failed-looking saves (at minimum the
+  2026-09-25 pair, likely more from 2026-09-19). Needs a manual pass in the vault.
+- **`backup-engine.sh` WAL race** (above) is unfixed and affects other services.
+- **Backups not running since 2026-01-28**; timer/cron unverified.
+- **`ADMIN_TOKEN` is plain text.** 1.37.3 now warns about this on every start:
+  `You are using a plain text ADMIN_TOKEN which is insecure.` Fix is
+  `vaultwarden hash` to generate an Argon2 PHC string.
+- **Repo compose drift:** `docker/vaultwarden/docker-compose.yml` carries an
+  `SSO_ENABLED: "true"` OIDC block that is **not** present on the live container,
+  plus placeholder secrets. The repo file is aspirational for SSO. Left alone
+  deliberately; reconciling it is separate work.
+
+## [2026-09-25] Cal follow-up: Google Calendar + Meet, public privacy policy, Koalendar cutover
+
+**Date:** 2026-09-25
+**Action:** Connected Google Calendar and Google Meet to Cal, published a
+privacy policy at `gmojsoski.com/privacy`, repointed the portfolio's
+"Book a call" links from Koalendar to Cal, and corrected four docs that
+prescribed a destructive tunnel-config copy.
+**Result:** ✅ **LIVE.** Three Google accounts connected, Meet links generating,
+`verify-services.sh` now 10 green (the 2 reds remain the known decommissioned
+`budget` and `css`).
+
+> **Supersedes** a note in the entry below ("Added Cal (scheduling)..."), which
+> recorded that `cal.gmojsoski.com` was deliberately left out of
+> `verify-services.sh`. It has since been added, with the status check widened
+> to accept 307. See "verify-services.sh" under Changes.
+
+### 🔍 Why
+
+The base install from the previous entry had no calendar connected, so Cal could
+not see existing busy times and would happily double-book. Three discoveries
+shaped the work.
+
+**1. Google Meet is driven by an env var, not the admin UI.** Cal's admin app
+screen (`/settings/admin/apps/calendar`) writes OAuth keys straight to the DB,
+which is enough for Google Calendar but NOT for Meet. `scripts/seed-app-store.ts`
+seeds **both** apps from `process.env.GOOGLE_API_CREDENTIALS`:
+
+```js
+const { client_secret, client_id, redirect_uris } = JSON.parse(process.env.GOOGLE_API_CREDENTIALS).web;
+await createApp("google-calendar", ...);
+await createApp("google-meet", ...);   // same credentials, both seeded together
+```
+
+Setting the credentials only through the admin UI leaves `google-meet` absent
+with no error explaining why. The env var is the correct route; the seeder runs
+on every container start, so the apps are re-seeded automatically.
+
+**2. Meet links come from the Google Calendar adapter, so the destination
+calendar must be Google.** `googlecalendar/lib/CalendarService.ts:228` attaches
+`conferenceData` only when the event is created through that adapter. The
+destination calendar was initially iCloud (`apple_calendar`), which would have
+produced bookings labelled "Google Meet" with no link and no error. Switched to
+`contact@gmojsoski.com`. Conflict checking is unaffected by this: all 8 selected
+calendars, iCloud included, still block availability. Only the calendar that
+*receives* bookings must be Google, and it also becomes the Meet host.
+
+**3. Publishing the OAuth app is not optional.** Google expires refresh tokens
+after **7 days** for External apps left in "Testing", and the failure is silent:
+calendar sync just stops. Publishing requires a reachable privacy policy, which
+is why the page below exists. Publishing does **not** retroactively extend
+already-issued tokens, so all three connections were disconnected and
+reconnected after publishing (credential ids went 3/4/5 → 8/9/10, confirming
+fresh grants).
+
+### 📍 Changes
+
+| File | Change |
+|---|---|
+| `docker/calcom/.env` (gitignored) | Added `GOOGLE_API_CREDENTIALS` (single-line JSON, `web` wrapper) |
+| `docker/calcom/.env.example` | Documented the variable and the admin-UI trap |
+| `docker/caddy/config.d/05-legal.caddy` | **New.** Serves `gmojsoski.com/privacy` inline |
+| `scripts/verify-services.sh` | Appended `cal.gmojsoski.com`; widened status check to accept 307 |
+| `.cursor/skills/add-homelab-service/SKILL.md`, `SERVICE_ADDITION_CHECKLIST.md`, `docs/how-to-guides/setup.md`, `docker/freshrss/README.md` | Removed the `cp cloudflare/config.yml ~/.cloudflared/config.yml` instruction |
+| `portfolio_v2` (separate repo, commit `6e62086`) | Koalendar → `cal.gmojsoski.com/gmojsoski` in Hero, Footer, Rails |
+
+**Why the privacy policy is NOT in the site build:** `scripts/update-portfolio.sh`
+syncs with `rsync -av --delete`, so any file placed in `/srv/site` is destroyed
+at the next `make portfolio-update`. Serving it from `config.d/` makes it
+independent of the portfolio_v2 build. The snippet is numbered `05-` because
+`config.d/*.caddy` is imported in glob order and `handle` blocks are
+first-match-wins: it must sort before `10-gmojsoski-home`, whose `try_files`
+would otherwise 404 the path. Verified surviving a real deploy.
+
+**Cloudflare mangled the contact email.** Cloudflare's Email Address Obfuscation
+rewrote the page's `mailto:` into a `/cdn-cgi/l/email-protection` stub that only
+resolves once its injected script runs, and the page's CSP (`default-src 'none'`)
+blocks that script, so the address rendered blank. Fixed by writing the `@` as
+the HTML entity `&#64;`, which slips past the obfuscator and needs no JavaScript.
+
+### 🧪 Verification
+
+```bash
+docker exec calcom-postgres psql -U calcom -d calcom -tAc \
+  "select slug from \"App\" where slug like 'google%';"       # google-calendar, google-meet
+docker exec calcom-postgres psql -U calcom -d calcom -tAc \
+  "select integration, \"externalId\" from \"DestinationCalendar\";"  # google_calendar -> contact@
+curl -sL -o /dev/null -w "%{http_code}\n" https://gmojsoski.com/privacy        # 200
+curl -s https://gmojsoski.com/ | grep -c koalendar                            # 0
+./scripts/verify-services.sh                                                  # cal -> 307 ✅
+```
+
+Portfolio rebuild after `npm audit fix` produced **byte-identical** output
+(`index-CsZvMiw-.css`, `index-CX9H2fW9.js` unchanged), proving the dependency
+bumps altered nothing shipped, so no redeploy was required.
+
+### 💡 Lessons
+
+- **Cal's admin apps UI and `GOOGLE_API_CREDENTIALS` are not equivalent.** Use
+  the env var. The UI silently gives you Calendar without Meet.
+- **A published-but-unverified Google app is the correct end state** for a
+  personal instance. The "Google hasn't verified this app" screen is permanent
+  and harmless; formal verification wants a demo video and weeks of review, and
+  buys nothing under 100 users. Token lifetime depends on *published vs testing*,
+  **not** on *verified vs unverified*.
+- **Do not upload an OAuth app logo.** Uploading one forces mandatory
+  verification. The consent screen works fine without it.
+- **Anything served from `gmojsoski.com` that is not part of portfolio_v2 must
+  live outside `/srv/site`**, or `rsync --delete` will silently eat it.
+- Cal answers **307 on every path**, so any health check expecting a bare 200 or
+  302 will report it down while it is perfectly healthy.
+
+### 📁 Files Involved
+
+- `docker/calcom/.env` (gitignored), `docker/calcom/.env.example`
+- `docker/caddy/config.d/05-legal.caddy` (new)
+- `scripts/verify-services.sh`
+- `.cursor/skills/add-homelab-service/SKILL.md`, `SERVICE_ADDITION_CHECKLIST.md`,
+  `docs/how-to-guides/setup.md`, `docker/freshrss/README.md`
+- `portfolio_v2`: `src/components/{Hero,Footer,Rails}.tsx`, `package-lock.json`
+
+## [2026-09-25] Added Cal (scheduling) at cal.gmojsoski.com, and found repo/live tunnel config drift
+
+**Date:** 2026-09-25
+**Action:** New Docker stack (`calcom` + `calcom-postgres`) on port 8101, Caddy
+route, Cloudflare tunnel ingress. Networking change, so `verify-services.sh` was
+run.
+**Result:** ✅ **LIVE.** `https://cal.gmojsoski.com` resolves to the first-run
+setup wizard (HTTP 200 after redirects). No regressions: the 2 reds in
+`verify-services.sh` are the pre-existing decommissioned `budget` and `css`.
+
+### 🔍 Why
+
+User asked to self-host `github.com/calcom/cal.diy`. Two findings changed the
+plan before any config was written:
+
+1. **`cal.diy` is the renamed `cal.com` repo**, not a new project (same repo id,
+   created 2021-03-22, 48k stars). It is the rebrand to fully-MIT with the
+   enterprise code stripped.
+2. **Docker Hub `calcom/cal.diy` has zero tags**, even though upstream's own
+   `docker-compose.yml` points at `calcom.docker.scarf.sh/calcom/cal.diy`.
+   The published image is `calcom/cal.com`, whose newest tag `v6.2.0`
+   (2026-03-01) is also the newest GitHub release. So the prebuilt image costs
+   nothing in freshness. Building from source instead would have been a Turbo
+   monorepo build needing a 6 GB Node heap on 4 cores, for the same version.
+
+The prebuilt image is safe behind a custom domain because the Dockerfile bakes
+`http://NEXT_PUBLIC_WEBAPP_URL_PLACEHOLDER` and `scripts/start.sh` rewrites it
+from the runtime env on every boot.
+
+### 📍 Changes
+
+Upstream's compose was trimmed: **Redis**, the **v2 API** and **Prisma Studio**
+were all dropped. None are needed for personal scheduling, and upstream's own
+comment notes Prisma Studio is an unauthenticated DB browser that should not be
+exposed in production.
+
+| File | Change |
+|---|---|
+| `docker/calcom/docker-compose.yml` | New. Web on 8101, Postgres container-internal (no host port) |
+| `docker/calcom/.env` | New, gitignored. Secrets + Gmail SMTP |
+| `docker/calcom/.env.example` | New. Committed template, no secrets |
+| `docker/caddy/config.d/50-utilities.caddy` | Appended `@cal` handle block |
+| `cloudflare/config.yml` + `~/.cloudflared/config.yml` | Appended ingress, **edited separately, not copied** (see Notes) |
+| `README.md`, `docs/reference/port-map.md` | Appended service row / port 8101 |
+
+Postgres data bind-mounts to `/home/docker-projects/calcom/postgres` (NVMe,
+161 GB free), matching where the other stacks live. Note that
+`/mnt/ssd/docker-projects` is a **symlink** to `/home/docker-projects`, so the
+two paths in older docs are the same filesystem, and neither is on root.
+
+```bash
+docker pull calcom/cal.com:v6.2.0            # 8.05 GB unpacked
+cd docker/calcom && docker compose up -d      # first boot: prisma migrate deploy + seed-app-store
+docker exec caddy caddy validate --config /etc/caddy/Caddyfile
+cd docker/caddy && docker compose restart caddy
+cd docker/cloudflared && docker compose restart
+```
+
+### 🧪 Verification
+
+```bash
+curl -I http://localhost:8101                                  # 307 -> /auth/login
+curl -H "Host: cal.gmojsoski.com" http://localhost:8080        # 307, Caddy routing OK
+curl -sL https://cal.gmojsoski.com                             # 200, <title>Setup | Cal.com</title>
+./scripts/verify-services.sh                                   # 9 green, 2 known reds
+```
+
+Both containers report `healthy`. After the SMTP values were filled in and the
+container recreated, the `EMAIL_FROM environment variable is not set` warning
+stopped appearing in the logs.
+
+### ⚠️ Notes
+
+- **Repo and live tunnel configs have drifted. Do NOT run the
+  `cp cloudflare/config.yml ~/.cloudflared/config.yml` step that
+  `.cursor/skills/add-homelab-service/SKILL.md` (step 6) and
+  `SERVICE_ADDITION_CHECKLIST.md` both prescribe.** As of today the live file
+  has `portfolio.gmojsoski.com`, `daka-dragan.mk` and `www.daka-dragan.mk`
+  which the repo copy lacks, while the repo still lists the decommissioned
+  `files.` and `shopping.` hosts. That copy would have removed three working
+  production hostnames. The ingress block was inserted into each file
+  independently instead, above the `# Catch-all (must be last)` line. Backup
+  kept at `~/.cloudflared/config.yml.bak-pre-cal`. All three at-risk hostnames
+  were re-checked afterwards and still answer (200 / 301 / 200). **The skill
+  and the checklist still need correcting.**
+- **`cal.gmojsoski.com` was deliberately NOT added to `verify-services.sh`.**
+  The script accepts only 200 or 302 (line 15), and Cal answers 307 on every
+  path from a Next.js locale redirect, resolving to 200 only when followed.
+  Adding it as-is would produce a permanent false red. Widening the check to
+  accept 307 edits existing logic in an append-only-protected file, so it was
+  left for the user to decide.
+- DNS needed no work: `cal.gmojsoski.com` already resolved via an existing
+  wildcard record.
+- Benign startup log noise, safe to ignore: `Missing VAPID keys` (web push is
+  off, optional) and `getDeploymentKey ... Signature token not found` (an
+  enterprise licence probe with nothing behind it on the MIT build).
+
+## [2026-08-16] FreshRSS subscriptions reset to jobs + cybersecurity only
+
+**Date:** 2026-08-16
+**Action:** Deleted 8 of 9 feeds and imported a curated 15-feed OPML, on
+lemongrab (live). No networking change — no Caddy, tunnel, port or DNS edit,
+so `verify-services.sh` was not required.
+**Result:** ✅ **LIVE.** 16 feeds, 0 in error state, container healthy,
+`https://rss.gmojsoski.com` → 302 (normal login redirect).
+
+### 🔍 Why
+
+FreshRSS replaces running `career-ops`' job scanner as a scheduled homelab
+service. That evaluation (`career-ops/docs/gig-scanning/README.md`, separate
+repo) measured 8 relevant postings in 14 days — too thin to justify a new
+container, a CV on the server and a nightly local-LLM batch, when an already
+deployed aggregator with a cron and a UI covers the same need.
+
+### 📍 Changes
+
+Backup taken first, to `/mnt/ssd/backups/freshrss/20260816-105412/`:
+
+| Artifact | Purpose |
+|---|---|
+| `subscriptions-before.opml` | Native FreshRSS export — 9 feeds, the rollback artifact |
+| `db.sqlite` | Raw copy — `PRAGMA integrity_check` = ok, 9 feeds / 2044 entries |
+
+Removed (all except The Hacker News): FreshRSS releases, TIME.mk, TLDR,
+BBC News, Al Jazeera, Seeking Alpha, Yahoo Finance, MarketWatch — 1844 entries
+and the now-empty `Finance`, `News`, `Tech` categories. Category `id=1`
+(`Uncategorized`, the FreshRSS default) was kept even though it emptied.
+
+Added from `docker/freshrss/feeds.opml` via `cli/import-for-user.php`:
+6 job boards, 5 `hnrss.org` gig-thread feeds, and 4 cybersecurity feeds into
+the existing `Cybersecurity` category.
+
+```bash
+# backup
+docker exec freshrss php /var/www/FreshRSS/cli/export-opml-for-user.php --user gmojsoski > subscriptions-before.opml
+docker cp freshrss:/var/www/FreshRSS/data/users/gmojsoski/db.sqlite ./db.sqlite
+# import (deletion was a PDO transaction — no delete-feed CLI exists in 1.29.1)
+docker cp docker/freshrss/feeds.opml freshrss:/tmp/feeds.opml
+docker exec freshrss php /var/www/FreshRSS/cli/import-for-user.php --user=gmojsoski --filename=/tmp/feeds.opml
+docker exec freshrss php /var/www/FreshRSS/cli/actualize-user.php --user=gmojsoski
+```
+
+### 🧪 Verification
+
+`actualize-user.php` fetched 15 feeds / 397 new articles, 0 errors. Per-feed
+entry counts matched `docker/freshrss/check-feeds.py`, which had measured every
+feed independently beforehand — so the counts were confirmed by two paths.
+
+### ⚠️ Notes
+
+- `cli/db-backup.php` takes **no** `--user` flag (unlike the other CLI scripts);
+  the raw `docker cp` of `db.sqlite` is the reliable backup.
+- FreshRSS 1.29.1 has no delete-feed CLI. Deletion was raw SQL in one
+  transaction. `entry` has `ON DELETE CASCADE` on `id_feed`, but SQLite needs
+  `PRAGMA foreign_keys=ON` per connection — the deletes were issued explicitly
+  rather than relying on it.
+- Job boards retire RSS without warning (RemoteOK now returns 410), and FreshRSS
+  renders a dead feed exactly like a quiet one. Run
+  `python3 docker/freshrss/check-feeds.py` when the Jobs category looks calm.
+- "The Hacker News" here is `thehackernews.com`, an infosec outlet — **not**
+  news.ycombinator.com. The `Jobs — HN` feeds are the latter.
+
 ## [2026-08-09] gmojsoski.com blog URLs served the homepage (Caddy try_files), plus a real 404 page
 
 **Date:** 2026-08-09

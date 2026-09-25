@@ -29,13 +29,23 @@ Follow this checklist whenever adding a new service to the homelab. This ensures
 - [ ] **Validation**: Run `docker exec caddy caddy validate --config /etc/caddy/Caddyfile` BEFORE restarting.
 
 ## 3. Cloudflare Tunnel Configuration (`~/.cloudflared/config.yml`)
+- [ ] **⚠️ NEVER copy one config over the other.** The repo `cloudflare/config.yml`
+      and the live `~/.cloudflared/config.yml` have drifted and are NOT
+      interchangeable. Copying either direction silently deletes working
+      hostnames. Edit each file separately. Diff them first to see what differs:
+    ```bash
+    diff ~/.cloudflared/config.yml cloudflare/config.yml
+    ```
+- [ ] **Backup the live file first**: `cp ~/.cloudflared/config.yml ~/.cloudflared/config.yml.bak-$(date +%F)`
 - [ ] **Localhost Binding**: ALWAYS use `localhost:8080` for the service URL, NOT `127.0.0.1`.
     ```yaml
     - hostname: service.gmojsoski.com
       service: http://localhost:8080
     ```
-- [ ] **Ingress Rule**: Add the new hostname to the ingress list.
-- [ ] **Integrity**: Ensure no other rules have been modified.
+- [ ] **Ingress Rule**: Insert the new hostname into BOTH files, immediately
+      above the `# Catch-all (must be last)` line. The catch-all must stay last.
+- [ ] **Integrity**: Diff the live file against your backup and confirm the only
+      change is your added lines. Ensure no other rules were modified.
 
 ## 4. Verification (The "Triple Check")
 - [ ] **Internal Check**: `curl -I http://localhost:PORT` (from the host).
@@ -51,7 +61,9 @@ Follow this checklist whenever adding a new service to the homelab. This ensures
 
 ### 1. Restart Sequence (required for new routes to work)
 **After editing Caddy or Cloudflare config, you must apply and restart:**
-1.  **Copy tunnel config** (if you added a hostname): `cp cloudflare/config.yml ~/.cloudflared/config.yml`
+1.  **Confirm the live tunnel config already has your hostname** (you edited it
+    directly in step 3, never by copying the repo copy over it):
+    `grep your-service ~/.cloudflared/config.yml`
 2.  **Restart Caddy**: `cd docker/caddy && docker compose restart caddy` (loads new internal routing).
 3.  **Restart Tunnel**: `cd docker/cloudflared && docker compose restart` (registers new ingress rule).
 *Why?* Caddy and cloudflared only read config at startup. Without restart, the new service URL stays 404.

@@ -68,6 +68,7 @@ services:
 
       # Plugins
       MM_PLUGINSETTINGS_ENABLEUPLOADS: "true"
+      MM_PLUGINSETTINGS_PLUGINSTATES: '{"rssfeed":{"Enable":false}}'
 
     volumes:
       - mattermost-data:/mattermost/data

@@ -74,7 +74,7 @@ Per-service setup lives next to each stack and in the docs tree:
 - **Jellyfin books library**: [jellyfin-books-setup.md](jellyfin-books-setup.md)
 - **Monitoring & auto-recovery**: [../concepts/monitoring-and-recovery.md](../concepts/monitoring-and-recovery.md)
 
-**Adding a new service:** follow [SERVICE_ADDITION_CHECKLIST.md](../../SERVICE_ADDITION_CHECKLIST.md). After editing Caddy or Cloudflare config, copy `cloudflare/config.yml` to `~/.cloudflared/config.yml`, restart Caddy and cloudflared, then run `./scripts/verify-services.sh`.
+**Adding a new service:** follow [SERVICE_ADDITION_CHECKLIST.md](../../SERVICE_ADDITION_CHECKLIST.md). After editing Caddy or Cloudflare config, restart Caddy and cloudflared, then run `./scripts/verify-services.sh`. **Never copy `cloudflare/config.yml` over `~/.cloudflared/config.yml`** (or the reverse): the two have drifted and a copy silently deletes live hostnames. Edit each file separately, as described in the checklist.
 
 ## 6. Docker Profiles & Service Dependencies
 

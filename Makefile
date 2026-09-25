@@ -47,13 +47,14 @@ status:
 	@echo "📊 Docker Container Status:"
 	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
-# Update system and Docker containers (via Watchtower manually)
+# Watchtower was removed on 2026-09-25 (dead since 2026-03-27, upstream
+# unmaintained). Kept as a signpost rather than deleted so `make update` tells
+# you the new flow instead of failing with "No rule to make target".
 update:
-	@echo "🔄 Checking for updates..."
-	@docker run --rm \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		containrrr/watchtower \
-		--run-once
+	@echo "Image updates are handled by Renovate, which opens PRs against this repo."
+	@echo "To update one service by hand:"
+	@echo "  cd /mnt/ssd/docker-projects/<service> && docker compose pull && docker compose up -d"
+	@echo "Pin the tag in docker-compose.yml so the change is reviewable, not silent."
 
 # Update portfolio_v2 (pull, npm build, sync dist/ to Caddy)
 portfolio-update:

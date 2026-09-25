@@ -16,7 +16,7 @@ Copy this checklist and track progress as you go:
 - [ ] 2. Port allocation: check `sudo ss -tulpn` for conflicts (avoid 5000, 9000)
 - [ ] 3. Create docker/<service>/docker-compose.yml with bridge network + restart: unless-stopped
 - [ ] 4. Add @service block to docker/caddy/Caddyfile (append-only, standard template)
-- [ ] 5. Add ingress rule to cloudflare/config.yml AND ~/.cloudflared/config.yml
+- [ ] 5. Add ingress rule to cloudflare/config.yml AND ~/.cloudflared/config.yml (edit each separately, NEVER cp one over the other)
 - [ ] 6. Restart Caddy then cloudflared (in that order)
 - [ ] 7. Triple-check verification (internal, proxy, external)
 - [ ] 8. Append the new domain to scripts/verify-services.sh SUBDOMAINS array
@@ -73,11 +73,33 @@ docker exec caddy caddy validate --config /etc/caddy/Caddyfile
 
 ## 5. Cloudflare Tunnel ingress
 
-Add the new ingress rule to BOTH `cloudflare/config.yml` (repo) and `~/.cloudflared/config.yml`. The `service` URL must ALWAYS be `http://localhost:8080` — NEVER `127.0.0.1:8080`.
+> **⚠️ NEVER `cp` one config over the other.** The repo `cloudflare/config.yml`
+> and the live `~/.cloudflared/config.yml` have drifted and are NOT
+> interchangeable. As of 2026-09-25 the live file carried three hostnames the
+> repo lacked (`portfolio.gmojsoski.com`, `daka-dragan.mk`,
+> `www.daka-dragan.mk`) while the repo still listed two decommissioned ones.
+> A copy in either direction silently deletes working production routes.
+
+Back up the live file, then diff the two so you know what the drift is today:
+
+```bash
+cp ~/.cloudflared/config.yml ~/.cloudflared/config.yml.bak-$(date +%F)
+diff ~/.cloudflared/config.yml cloudflare/config.yml
+```
+
+Insert the ingress rule **separately into each file**, immediately above the
+`# Catch-all (must be last)` line (the catch-all must stay last). The `service`
+URL must ALWAYS be `http://localhost:8080`, NEVER `127.0.0.1:8080`.
 
 ```yaml
 - hostname: service.gmojsoski.com
   service: http://localhost:8080
+```
+
+Then confirm your edit was purely additive before restarting anything:
+
+```bash
+diff ~/.cloudflared/config.yml.bak-$(date +%F) ~/.cloudflared/config.yml   # expect only your added lines
 ```
 
 Do NOT change the `tunnel` ID or credentials file. Do NOT modify existing rules.
@@ -87,7 +109,7 @@ Do NOT change the `tunnel` ID or credentials file. Do NOT modify existing rules.
 Required — Caddy and cloudflared only read config at startup:
 
 ```bash
-cp cloudflare/config.yml ~/.cloudflared/config.yml
+grep <service> ~/.cloudflared/config.yml   # confirm step 5 landed; do NOT cp the repo copy over it
 cd docker/caddy && docker compose restart caddy
 cd ../cloudflared && docker compose restart
 ```

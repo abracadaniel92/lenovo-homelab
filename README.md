@@ -46,15 +46,20 @@ Reverse proxy is **Caddy** (`localhost:8080`), fronted by a **Cloudflare Tunnel*
 | GoatCounter | analytics.gmojsoski.com | Web analytics |
 | TravelSync | tickets.gmojsoski.com | Travel document processing |
 | Centar Srbija Stil | css.gmojsoski.com | Static site |
+| Cal | cal.gmojsoski.com | Scheduling / booking pages |
 | Outline | local only | Wiki / knowledge base |
 | Home Assistant | local only | Home automation |
 | Stirling PDF | local only (`:8095`) | PDF toolkit |
 | Kiwix | local only (`:8089`) | Offline Wikipedia/library |
 | Android Emulator | local only (`:8233`) | ws-scrcpy browser control |
 | Uptime Kuma / Portainer / Homepage | local only | Monitoring / Docker UI / dashboard |
-| Watchtower | — | Auto-updates (daily 2 AM, with exclusions) |
 
 Systemd-managed: **Planning Poker** (poker.gmojsoski.com), **Bookmarks** (bookmarks.gmojsoski.com).
+
+Container image updates are handled by **Renovate** (pull requests against this
+repo), not by an in-cluster updater. Watchtower was removed on 2026-09-25: it had
+not completed a run since 2026-03-27 and `containrrr/watchtower` is unmaintained.
+See `docs/reference/troubleshooting-log.md`.
 
 > A private **MCP Knowledge** server (`knowledge-mcp`, host `:8001`, **LAN only**) is also deployed — see [docs/how-to-guides/mcp-knowledge-server.md](docs/how-to-guides/mcp-knowledge-server.md). Its code lives in the separate `mcp_server` project.
 
