@@ -46,6 +46,7 @@ Reverse proxy is **Caddy** (`localhost:8080`), fronted by a **Cloudflare Tunnel*
 | GoatCounter | analytics.gmojsoski.com | Web analytics |
 | TravelSync | tickets.gmojsoski.com | Travel document processing |
 | Centar Srbija Stil | css.gmojsoski.com | Static site |
+| Cal | cal.gmojsoski.com | Scheduling / booking pages |
 | Outline | local only | Wiki / knowledge base |
 | Home Assistant | local only | Home automation |
 | Stirling PDF | local only (`:8095`) | PDF toolkit |

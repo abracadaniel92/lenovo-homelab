@@ -1,0 +1,43 @@
+services:
+  calcom:
+    # Upstream renamed the repo to cal.diy, but Docker Hub calcom/cal.diy has no
+    # tags yet — calcom/cal.com:v6.2.0 is the same code and the latest release.
+    # Recheck calcom/cal.diy when bumping; the repo may switch names.
+    image: calcom/cal.com:v6.2.0
+    container_name: calcom
+    restart: unless-stopped
+    ports:
+      - "8101:3000"
+    env_file: .env
+    environment:
+      # start.sh waits on host:port form, so keep the port on DATABASE_HOST.
+      DATABASE_HOST: calcom-postgres:5432
+      DATABASE_URL: postgresql://calcom:${POSTGRES_PASSWORD}@calcom-postgres:5432/calcom
+      DATABASE_DIRECT_URL: postgresql://calcom:${POSTGRES_PASSWORD}@calcom-postgres:5432/calcom
+    depends_on:
+      calcom-postgres:
+        condition: service_healthy
+    networks:
+      - calcom-net
+
+  calcom-postgres:
+    image: postgres:16-alpine
+    container_name: calcom-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: calcom
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: calcom
+    volumes:
+      - /home/docker-projects/calcom/postgres:/var/lib/postgresql/data
+    networks:
+      - calcom-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calcom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  calcom-net:
+    driver: bridge

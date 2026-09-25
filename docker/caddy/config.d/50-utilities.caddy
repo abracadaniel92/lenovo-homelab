@@ -33,3 +33,9 @@ handle @auth {
 		header_up X-Real-IP {remote_host}
 	}
 }
+
+@cal host cal.gmojsoski.com
+handle @cal {
+	# No gzip: Next.js already compresses its own responses.
+	reverse_proxy http://172.17.0.1:8101
+}

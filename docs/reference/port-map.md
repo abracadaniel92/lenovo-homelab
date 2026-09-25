@@ -25,7 +25,8 @@ Single source of truth for which service uses which host port. Check this (and r
 | 8097  | Paperless         | paperless.gmojsoski.com           |
 | 8098  | Outline           | (wiki, local only)                |
 | 8099  | FreshRSS          | rss.gmojsoski.com                 |
-| 8100+ | —                 | available                         |
+| 8101  | Cal               | cal.gmojsoski.com (Postgres container-internal) |
+| 8102+ | —                 | available                         |
 | 8233  | ws-scrcpy         | device-ip:8233 (Android emulator UI, local only) |
 | 5555  | ADB (emulator)    | 127.0.0.1 only                    |
 | 9091  | Authentik         | auth.gmojsoski.com                |
