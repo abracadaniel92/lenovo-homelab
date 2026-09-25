@@ -1,0 +1,14 @@
+[Unit]
+# Templated failure notifier. Attach to any unit with a drop-in containing:
+#   [Unit]
+#   OnFailure=notify-failure@%n.service
+# The %n expands to the failing unit's full name and arrives here as %i.
+Description=Notify Mattermost that %i failed
+
+[Service]
+Type=oneshot
+User=root
+# Path goes through the /opt/homelab symlink on purpose. The real repo lives at
+# "/home/goce/Desktop/Cursor projects/Pi-version-control" and that space broke
+# three separate unquoted-path callers (troubleshooting-log 2026-09-25).
+ExecStart=/opt/homelab/scripts/notify-unit-failure.sh %i

@@ -1,6 +1,6 @@
 services:
   vaultwarden:
-    image: vaultwarden/server:latest
+    image: vaultwarden/server:1.37.3
     container_name: vaultwarden
     restart: always
     labels:
@@ -29,7 +29,7 @@ services:
       # ROCKET_ADDRESS
       ROCKET_ADDRESS: "0.0.0.0"
       ROCKET_PORT: "80"
-      
+
       # SSO Configuration (Native OIDC)
       SSO_ENABLED: "true"
       SSO_TYPE: "openidconnect"
@@ -38,6 +38,6 @@ services:
       SSO_OIDC_ISSUER: "https://auth.gmojsoski.com"
       SSO_OIDC_REDIRECT_URL: "https://vault.gmojsoski.com/identity/connect/oidc/callback"
       SSO_OIDC_SCOPES: "openid,profile,email"
-      
+
     volumes:
       - ./data:/data

@@ -2,6 +2,274 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-25] A space in the repo path silently killed health checks, backups and auto-recovery for 8 months
+
+**Date:** 2026-09-25
+**Action:** Repaired the automation layer via `scripts/repair-silent-failures.sh`,
+introduced a space-free `/opt/homelab` path, and moved failure alerting
+out-of-band so the next silent death is loud.
+**Result:** ✅ **LIVE.** Health check running hourly again, all 5 backups
+verified fresh, auto-recovery re-armed (it restarted `gokapi` on its first run).
+
+### 🔍 Symptom
+
+No symptom. That is the finding. Nothing alerted, nothing appeared broken, and
+`systemctl list-timers` showed a recent `LAST` timestamp for
+`enhanced-health-check.timer`, which read as healthy. The unit was firing on
+schedule and failing instantly every time.
+
+Discovered incidentally while verifying a Vaultwarden backup (entry below): the
+"latest" archive was dated 2026-01-28.
+
+### 🔍 Root cause
+
+The repo lives at `/home/goce/Desktop/Cursor projects/Pi-version-control`.
+**That path contains a space.** Every unquoted reference to it stopped
+resolving, and because several callers were written at different times against
+the same unquoted path, they all died within days of each other:
+
+| System | Failure | Dead since |
+|---|---|---|
+| `enhanced-health-check.service` (+ Caddy/cloudflared auto-recovery) | `203/EXEC` hourly | 2026-01-28 |
+| Backup cron, all 5 services | never executed | 2026-01-17 |
+| `healthcheck-watchdog.sh` (5-min root cron) | file does not exist | unknown |
+| Watchtower, all 36 containers | panics nightly, cannot reach docker daemon | 2026-03-27 |
+| `docker-containers-start.service` | `203/EXEC` | 2026-09-07 |
+| `slack-goatcounter-weekly.service` | exit 3 | 2026-09-20 |
+
+Smoking gun: a **zero-byte file `/home/goce/Desktop/Cursor` dated 2026-01-17**.
+Cron split the backup line on the space, so the `>>` redirect target became the
+bare word `/home/goce/Desktop/Cursor` and cron created it.
+
+**The design flaw that hid it for 8 months:** every alert in this homelab was
+emitted *by* `health-check-engine.sh`. When that script stopped executing, the
+component responsible for reporting outages was itself the outage. A monitor
+that can only report failures it survives is not a monitor.
+
+### 🔧 Changes
+
+Live and repo, via `sudo bash scripts/repair-silent-failures.sh` (idempotent):
+
+1. **`/opt/homelab` → symlink to the repo.** Space-free path; everything now
+   points through it so this bug class cannot recur.
+2. **`notify-failure@.service`** installed, attached via `OnFailure=` drop-ins to
+   `enhanced-health-check`, `hdd-health-check`, `slack-goatcounter-weekly`,
+   `portfolio-update`. systemd fires `OnFailure=` even when `ExecStart` never
+   got off the ground, which is precisely the failure mode that hid this one.
+3. **Health check `ExecStart` fixed via drop-in**, resetting `ExecStart=` first
+   so systemd replaces rather than appends. The original unit file was not
+   edited (`systemd/` is read-only core per CLAUDE.md).
+4. **`/etc/crontab` backed up and rewritten** through `/opt/homelab`; dead
+   `healthcheck-watchdog.sh` line removed.
+5. **`scripts/health.d/50-backup-freshness.sh`** (new): alarms when any service's
+   newest backup exceeds `MAX_AGE_HOURS`. Self-check:
+   `scripts/test-backup-freshness.sh`, 6/6 pass.
+6. **`scripts/backup-all-critical.sh`**: dropped `set -e`, which had been
+   aborting the run after the *first* service, so 4 of 5 were skipped even when
+   cron did fire. Now collects failures and exits non-zero so `OnFailure=` fires.
+7. **`scripts/sync-backups-to-b2.sh`**: added `--backup-dir`. Offsite was a
+   mirror, so any local deletion or truncation propagated to B2 within 24 hours
+   and destroyed the only offsite copy. It is now an archive.
+8. **Nextcloud config backup fixed.** `config.php` is `640 www-data:www-data`
+   and backups run as `goce`, so the host-side `tar` failed every night, was
+   swallowed by `2>/dev/null`, and shipped a 45-byte empty archive with exit 0.
+   The engine now reads it through the container (`CONFIG_CONTAINER`) and
+   **hard-fails if the archive does not contain the file**. Without
+   `passwordsalt`/`secret`/`instanceid` a restored instance cannot decrypt
+   anything, so an empty config archive is a failed backup, not a warning.
+
+### ✅ Verification
+
+```bash
+systemctl show -p Result --value enhanced-health-check.service   # success
+systemctl list-timers enhanced-health-check.timer                # next fire scheduled
+grep backup-all-critical /etc/crontab                            # routed via /opt/homelab
+tail -20 /var/log/enhanced-health-check.log                      # all 6 modules executed
+```
+
+- First run executed all 6 modules and **auto-recovered `gokapi`**, which had
+  been down with nobody watching.
+- Freshness alarm fired on first run naming exactly the 4 stale services, and
+  correctly omitted Vaultwarden (backed up earlier the same day). It went quiet
+  after all 5 were re-run.
+- Nextcloud config archive: 906 bytes, contains `config.php`, all three of
+  `instanceid` / `passwordsalt` / `secret` present.
+- KitchenOwl now takes an online SQLite snapshot instead of a live `cp`.
+
+### 📌 Open items
+
+1. **Watchtower removed** (decided 2026-09-25, see below). Container teardown
+   still pending on the server; repo references are already gone.
+2. `docker-containers-start.service` (`203/EXEC`) and the missing
+   `healthcheck-watchdog.sh` still need real diagnosis. Deliberately not
+   bundled into the repair script.
+3. `/mnt/ssd/backups/freshrss/` has archives but **no `backup.d/*.conf`**, so it
+   is outside both the backup run and the freshness alarm. Newest is 2026-08-16.
+4. The freshness alarm checks **mtime only**. A backup that runs and produces
+   garbage still reads as fresh. Upgrade path: a `.ok` sidecar written after a
+   content assertion. The Nextcloud fix in change 8 is the pattern to follow.
+
+### 🗑️ Watchtower removed
+
+Third instance of the same theme in one day: `docker ps` reported Watchtower as
+**`Up 2 weeks (healthy)`**. The healthcheck only proves the process is alive.
+The scheduled update job panicked inside a goroutine that `robfig/cron` recovers,
+so the container stayed up and green while doing nothing. Last completed run:
+`Session done Failed=0 Scanned=32 Updated=1` on **2026-03-27**.
+
+`containrrr/watchtower` 1.7.1 is unmaintained and predates Docker Engine 29.8.1
+(API 1.56). Rather than pin an API version to keep an abandoned image talking to
+a modern daemon, it was removed. It held a **root docker socket on the host
+running the password manager**, which is a poor trade for an updater that had
+not updated anything in six months.
+
+Replacement: **Renovate** (already configured) opens PRs for image bumps, and
+tags get pinned so updates are reviewed rather than applied silently at 2 AM.
+Nothing regressed, because nothing had been updating.
+
+Repo side: `docker/watchtower/` deleted, README service-table row removed (with
+explicit user approval, that table is append-only), `make update` converted to a
+signpost. `com.centurylinklabs.watchtower.*` labels left in place on other
+services: they are inert with no Watchtower running, and removing them would
+touch several unrelated services' compose files for no behavioural gain.
+
+**Server side, still pending:**
+
+```bash
+cd /mnt/ssd/docker-projects/watchtower && docker compose down
+rm -rf /mnt/ssd/docker-projects/watchtower /home/docker-projects/watchtower
+```
+
+(The two live dirs hold only a `docker-compose.yml`, no data. The identical copy
+under `/home/docker-projects/` is a stale duplicate.)
+
+## [2026-09-25] Vaultwarden 1.35.1 → 1.37.3: iOS autofill save crash, and a silently truncating backup
+
+**Date:** 2026-09-25
+**Action:** Updated Vaultwarden from 1.35.1 (Dec 2025) to 1.37.3 after the iOS
+client began crashing on every password save. Discovered mid-update that
+`scripts/backup-engine.sh` had been producing incomplete Vaultwarden archives.
+**Result:** ✅ **LIVE.** 1.37.3 / web-vault 2026.7.0, 603 ciphers intact,
+`vault.gmojsoski.com` 200 internal and external. Backup defect logged as open.
+
+### 🔍 Symptom
+
+Bitwarden iOS autofill extension 2026.9.0 (SDK 3.0.0) threw on saving a login:
+
+```
+DecodingError.typeMismatch: Expected value of type String.
+Path: data. Debug description: Expected to decode String but found a dictionary instead.
+```
+
+Crash timestamp `2026-09-25T14:57:59+02:00`. The user read this as "the save
+failed". It had not.
+
+### 🔍 Root cause
+
+Client/server API skew. Server logs put the crash **two seconds after a
+successful write**:
+
+```
+14:57:49  POST /identity/connect/token  => 200
+14:57:57  POST /api/ciphers             => 200 OK    <- save succeeded
+14:57:59  (client crash)
+14:58:04  POST /api/ciphers             => 200 OK    <- user retry, also succeeded
+```
+
+The client crashed decoding the *response* to a write that had already
+committed. Confirmed in the DB: two rows, both 550 bytes, 7 seconds apart. Each
+failed save left a **duplicate vault entry**. A similar cluster on 2026-09-19
+(three saves in 26s) shows this had been happening for at least a week.
+
+The running build was 1.35.1 / web-vault 2025.12.1, roughly 9 months and 6
+releases behind. Upstream release notes are explicit:
+
+- **1.37.0** "required for support with clients with version 2026.7.0+"
+- **1.37.2** "required for support with clients with version 2026.8.0+"
+
+Client was 2026.9.0. The container never auto-updated because its compose
+carries `com.centurylinklabs.watchtower.enable=false`; the tag was `:latest`
+but the image had not been re-pulled. 1.35.4 through 1.37.0 also carry roughly
+15 security advisories (SSRF, cross-org access, policy bypass, CSRF, cipher
+access, collection permissions).
+
+### ⚠️ Discovered mid-update: backup-engine.sh silently truncates WAL-mode SQLite
+
+The mandatory pre-update backup produced an archive that was **missing seven
+weeks of data**:
+
+| | ciphers | newest entry |
+|---|---|---|
+| Live DB | 603 | 2026-09-25 12:58 |
+| `vaultwarden-20260925-171212.tar.gz` | 598 | 2026-08-03 06:46 |
+
+`backup-engine.sh` `DOCKER_TAR` stops the container, then tars `db.sqlite3`
+with `EXCLUDES="*.sqlite3-shm *.sqlite3-wal"`. This assumes SQLite's shutdown
+checkpoint has folded the WAL into the main file before `tar` reads it. **It
+races.** The whole stop/tar/start sequence logged inside a single second and
+`tar` captured the pre-checkpoint file (mtime `Sep 7`, 1048576 bytes) while the
+424 KB WAL holding the recent writes was excluded by pattern. The checkpoint
+landed afterwards.
+
+This affects every WAL-mode SQLite service using `DOCKER_TAR`. Not fixed in
+this session (surgical-isolation rule). The fix is to drop the container-stop
+dance in favour of SQLite's online backup API, which reads through the WAL:
+
+```python
+sqlite3.connect('file:db.sqlite3?mode=ro', uri=True).backup(sqlite3.connect(dest))
+```
+
+Also noted: backups had not run since **2026-01-28**, and today's run then
+pruned two of the three surviving archives under a retention policy that
+assumes regular runs. The backup timer/cron needs checking.
+
+### 📍 Changes
+
+- **Live** `/home/docker-projects/vaultwarden/docker-compose.yml`: image pinned
+  `vaultwarden/server:latest` → `vaultwarden/server:1.37.3`. Pinned rather than
+  left floating so the version is reproducible and an update is a deliberate act.
+- **Repo** `docker/vaultwarden/docker-compose.yml`: same pin mirrored.
+- No env var changes, no manual migrations. Upstream documents none for this range.
+
+### 🖥️ Commands
+
+```bash
+# verified pre-upgrade snapshot (NOT backup-engine.sh, see above)
+cd /home/docker-projects/vaultwarden/data
+python3 -c "import sqlite3; s=sqlite3.connect('file:db.sqlite3?mode=ro',uri=True); \
+  d=sqlite3.connect('/mnt/ssd/backups/vaultwarden/preupgrade-db.sqlite3'); s.backup(d); d.close()"
+# bundled with rsa_key.pem -> vaultwarden-preupgrade-1.35.1-20260925.tar.gz
+
+cd /home/docker-projects/vaultwarden
+sed -i 's|vaultwarden/server:latest|vaultwarden/server:1.37.3|' docker-compose.yml
+docker compose pull && docker compose up -d
+```
+
+### 🧪 Verification
+
+- `docker exec vaultwarden /vaultwarden --version` → `1.37.3` / Web-Vault `2026.7.0` ✅
+- Startup log clean, `Rocket has launched`, no migration errors ✅
+- Container healthcheck → `healthy` ✅
+- Data intact post-upgrade: 603 ciphers, 1 user, newest `2026-09-25 12:58` ✅
+- `curl localhost:8082/` → 200, `/api/config` returns correct environment URLs ✅
+- `curl https://vault.gmojsoski.com/` → 200 ✅
+- `./scripts/verify-services.sh` → 10 green; the 2 reds are the known
+  decommissioned `budget` and `css` ✅
+
+### 📝 Notes / open items
+
+- **Duplicate vault entries** exist from the failed-looking saves (at minimum the
+  2026-09-25 pair, likely more from 2026-09-19). Needs a manual pass in the vault.
+- **`backup-engine.sh` WAL race** (above) is unfixed and affects other services.
+- **Backups not running since 2026-01-28**; timer/cron unverified.
+- **`ADMIN_TOKEN` is plain text.** 1.37.3 now warns about this on every start:
+  `You are using a plain text ADMIN_TOKEN which is insecure.` Fix is
+  `vaultwarden hash` to generate an Argon2 PHC string.
+- **Repo compose drift:** `docker/vaultwarden/docker-compose.yml` carries an
+  `SSO_ENABLED: "true"` OIDC block that is **not** present on the live container,
+  plus placeholder secrets. The repo file is aspirational for SSO. Left alone
+  deliberately; reconciling it is separate work.
+
 ## [2026-09-25] Cal follow-up: Google Calendar + Meet, public privacy policy, Koalendar cutover
 
 **Date:** 2026-09-25
