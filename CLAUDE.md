@@ -11,16 +11,45 @@ drifted since the constitution was written, and gives you the map.
 This repo is cloned in two places, and the rules differ:
 
 - **On `lemongrab` (the Lenovo server, Debian-based Linux):** this machine IS
-  production. ~30 containers serve real users at `*.gmojsoski.com`. Repo edits
-  do NOT change live behavior — runtime reads live paths
-  (`~/.cloudflared/config.yml`, `/mnt/ssd/docker-projects/...`,
+  production. ~30 containers serve real users at `*.gmojsoski.com`. For
+  containers and configs, repo edits do NOT change live behavior — runtime
+  reads live paths (`~/.cloudflared/config.yml`, `/mnt/ssd/docker-projects/...`,
   `/usr/local/bin/...`). A live fix means: change the live path, restart the
   service, verify, THEN mirror into the repo. See the constitution's
   "production vs version control" section.
+  **Exception since 2026-09-25: `scripts/` IS live.** See the next section.
 - **On the Windows dev machine (`C:\Users\Admin\Desktop\Cursor\lenovo-homelab`):**
   everything you do is **repo/VCS-only by definition**. You cannot restart
   services, run `verify-services.sh`, or touch live configs from here. Say so
   explicitly when a change needs a follow-up step on the server to take effect.
+
+## ⚠️ On lemongrab, `git checkout` and `git pull` are DEPLOYS
+
+`/opt/homelab` is a **symlink to this working tree**. The systemd health check,
+its `health.d/` modules, the backup cron and the failure notifier all execute
+through it. So on the server:
+
+- **The checked-out branch is production code.** Checking out an older branch
+  silently reverts the live health check and backup scripts. This happened on
+  2026-09-25: a `git checkout develop` (21 commits behind) reverted the
+  freshly-repaired `backup-engine.sh` while the hourly timer was armed.
+- **`git pull` deploys instantly**, with no restart and no confirmation step.
+- **Keep the server tree on `main`.** To promote work, prefer
+  `git push origin develop:main` or a GitHub PR merge over checking `main` out
+  locally, so the live tree is never momentarily stale.
+- **Verify after any branch operation:**
+  `grep -c SQLITE_TAR /opt/homelab/scripts/backup-engine.sh` (expect 1).
+
+The symlink exists because the repo path contains a space
+(`/home/goce/Desktop/Cursor projects/...`), which broke every unquoted caller at
+once and killed health checks, backups and auto-recovery for eight months. Never
+reintroduce a space-containing path into a unit file, cron line or script.
+See `docs/reference/troubleshooting-log.md` entry 2026-09-25.
+
+**Still copied, not symlinked** (these DO drift, mirror them by hand):
+`/usr/local/bin/enhanced-health-check.sh`, `hdd-health-check.sh`,
+`sync-backups-to-b2.sh`, `update-portfolio.sh`. Deploy with
+`sudo install -m 0755 scripts/<name>.sh /usr/local/bin/<name>.sh`.
 
 ## Skills that already exist (use them, don't improvise)
 
