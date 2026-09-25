@@ -98,8 +98,7 @@ tail -20 /var/log/enhanced-health-check.log                      # all 6 modules
 
 ### 📌 Open items
 
-1. **Watchtower removed** (decided 2026-09-25, see below). Container teardown
-   still pending on the server; repo references are already gone.
+1. **Watchtower removed** 2026-09-25, repo and server. See below. ✅ Closed.
 2. `docker-containers-start.service` (`203/EXEC`) and the missing
    `healthcheck-watchdog.sh` still need real diagnosis. Deliberately not
    bundled into the repair script.
@@ -133,15 +132,19 @@ signpost. `com.centurylinklabs.watchtower.*` labels left in place on other
 services: they are inert with no Watchtower running, and removing them would
 touch several unrelated services' compose files for no behavioural gain.
 
-**Server side, still pending:**
+**Server side: done 2026-09-25.**
 
 ```bash
 cd /mnt/ssd/docker-projects/watchtower && docker compose down
 rm -rf /mnt/ssd/docker-projects/watchtower /home/docker-projects/watchtower
 ```
 
-(The two live dirs hold only a `docker-compose.yml`, no data. The identical copy
-under `/home/docker-projects/` is a stale duplicate.)
+(The two live dirs held only a `docker-compose.yml`, no data. The copy under
+`/home/docker-projects/` was a stale duplicate.)
+
+Verified after teardown: container and both dirs gone, 35 containers running
+(36 minus Watchtower), no service disrupted. The
+`com.centurylinklabs.watchtower.*` labels left on other services are inert.
 
 ## [2026-09-25] Vaultwarden 1.35.1 → 1.37.3: iOS autofill save crash, and a silently truncating backup
 
