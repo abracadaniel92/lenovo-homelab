@@ -2,6 +2,891 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-25] A space in the repo path silently killed health checks, backups and auto-recovery for 8 months
+
+**Date:** 2026-09-25
+**Action:** Repaired the automation layer via `scripts/repair-silent-failures.sh`,
+introduced a space-free `/opt/homelab` path, and moved failure alerting
+out-of-band so the next silent death is loud.
+**Result:** ✅ **LIVE.** Health check running hourly again, all 5 backups
+verified fresh, auto-recovery re-armed (it restarted `gokapi` on its first run).
+
+### 🔍 Symptom
+
+No symptom. That is the finding. Nothing alerted, nothing appeared broken, and
+`systemctl list-timers` showed a recent `LAST` timestamp for
+`enhanced-health-check.timer`, which read as healthy. The unit was firing on
+schedule and failing instantly every time.
+
+Discovered incidentally while verifying a Vaultwarden backup (entry below): the
+"latest" archive was dated 2026-01-28.
+
+### 🔍 Root cause
+
+The repo lives at `/home/goce/Desktop/Cursor projects/Pi-version-control`.
+**That path contains a space.** Every unquoted reference to it stopped
+resolving, and because several callers were written at different times against
+the same unquoted path, they all died within days of each other:
+
+| System | Failure | Dead since |
+|---|---|---|
+| `enhanced-health-check.service` (+ Caddy/cloudflared auto-recovery) | `203/EXEC` hourly | 2026-01-28 |
+| Backup cron, all 5 services | never executed | 2026-01-17 |
+| `healthcheck-watchdog.sh` (5-min root cron) | file does not exist | unknown |
+| Watchtower, all 36 containers | panics nightly, cannot reach docker daemon | 2026-03-27 |
+| `docker-containers-start.service` | `203/EXEC` | 2026-09-07 |
+| `slack-goatcounter-weekly.service` | exit 3 | 2026-09-20 |
+
+Smoking gun: a **zero-byte file `/home/goce/Desktop/Cursor` dated 2026-01-17**.
+Cron split the backup line on the space, so the `>>` redirect target became the
+bare word `/home/goce/Desktop/Cursor` and cron created it.
+
+**The design flaw that hid it for 8 months:** every alert in this homelab was
+emitted *by* `health-check-engine.sh`. When that script stopped executing, the
+component responsible for reporting outages was itself the outage. A monitor
+that can only report failures it survives is not a monitor.
+
+### 🔧 Changes
+
+Live and repo, via `sudo bash scripts/repair-silent-failures.sh` (idempotent):
+
+1. **`/opt/homelab` → symlink to the repo.** Space-free path; everything now
+   points through it so this bug class cannot recur.
+2. **`notify-failure@.service`** installed, attached via `OnFailure=` drop-ins to
+   `enhanced-health-check`, `hdd-health-check`, `slack-goatcounter-weekly`,
+   `portfolio-update`. systemd fires `OnFailure=` even when `ExecStart` never
+   got off the ground, which is precisely the failure mode that hid this one.
+3. **Health check `ExecStart` fixed via drop-in**, resetting `ExecStart=` first
+   so systemd replaces rather than appends. The original unit file was not
+   edited (`systemd/` is read-only core per CLAUDE.md).
+4. **`/etc/crontab` backed up and rewritten** through `/opt/homelab`; dead
+   `healthcheck-watchdog.sh` line removed.
+5. **`scripts/health.d/50-backup-freshness.sh`** (new): alarms when any service's
+   newest backup exceeds `MAX_AGE_HOURS`. Self-check:
+   `scripts/test-backup-freshness.sh`, 6/6 pass.
+6. **`scripts/backup-all-critical.sh`**: dropped `set -e`, which had been
+   aborting the run after the *first* service, so 4 of 5 were skipped even when
+   cron did fire. Now collects failures and exits non-zero so `OnFailure=` fires.
+7. **`scripts/sync-backups-to-b2.sh`**: added `--backup-dir`. Offsite was a
+   mirror, so any local deletion or truncation propagated to B2 within 24 hours
+   and destroyed the only offsite copy. It is now an archive.
+8. **Nextcloud config backup fixed.** `config.php` is `640 www-data:www-data`
+   and backups run as `goce`, so the host-side `tar` failed every night, was
+   swallowed by `2>/dev/null`, and shipped a 45-byte empty archive with exit 0.
+   The engine now reads it through the container (`CONFIG_CONTAINER`) and
+   **hard-fails if the archive does not contain the file**. Without
+   `passwordsalt`/`secret`/`instanceid` a restored instance cannot decrypt
+   anything, so an empty config archive is a failed backup, not a warning.
+
+### ✅ Verification
+
+```bash
+systemctl show -p Result --value enhanced-health-check.service   # success
+systemctl list-timers enhanced-health-check.timer                # next fire scheduled
+grep backup-all-critical /etc/crontab                            # routed via /opt/homelab
+tail -20 /var/log/enhanced-health-check.log                      # all 6 modules executed
+```
+
+- First run executed all 6 modules and **auto-recovered `gokapi`**, which had
+  been down with nobody watching.
+- Freshness alarm fired on first run naming exactly the 4 stale services, and
+  correctly omitted Vaultwarden (backed up earlier the same day). It went quiet
+  after all 5 were re-run.
+- Nextcloud config archive: 906 bytes, contains `config.php`, all three of
+  `instanceid` / `passwordsalt` / `secret` present.
+- KitchenOwl now takes an online SQLite snapshot instead of a live `cp`.
+
+### 📌 Open items
+
+1. **Watchtower removed** (decided 2026-09-25, see below). Container teardown
+   still pending on the server; repo references are already gone.
+2. `docker-containers-start.service` (`203/EXEC`) and the missing
+   `healthcheck-watchdog.sh` still need real diagnosis. Deliberately not
+   bundled into the repair script.
+3. `/mnt/ssd/backups/freshrss/` has archives but **no `backup.d/*.conf`**, so it
+   is outside both the backup run and the freshness alarm. Newest is 2026-08-16.
+4. The freshness alarm checks **mtime only**. A backup that runs and produces
+   garbage still reads as fresh. Upgrade path: a `.ok` sidecar written after a
+   content assertion. The Nextcloud fix in change 8 is the pattern to follow.
+
+### 🗑️ Watchtower removed
+
+Third instance of the same theme in one day: `docker ps` reported Watchtower as
+**`Up 2 weeks (healthy)`**. The healthcheck only proves the process is alive.
+The scheduled update job panicked inside a goroutine that `robfig/cron` recovers,
+so the container stayed up and green while doing nothing. Last completed run:
+`Session done Failed=0 Scanned=32 Updated=1` on **2026-03-27**.
+
+`containrrr/watchtower` 1.7.1 is unmaintained and predates Docker Engine 29.8.1
+(API 1.56). Rather than pin an API version to keep an abandoned image talking to
+a modern daemon, it was removed. It held a **root docker socket on the host
+running the password manager**, which is a poor trade for an updater that had
+not updated anything in six months.
+
+Replacement: **Renovate** (already configured) opens PRs for image bumps, and
+tags get pinned so updates are reviewed rather than applied silently at 2 AM.
+Nothing regressed, because nothing had been updating.
+
+Repo side: `docker/watchtower/` deleted, README service-table row removed (with
+explicit user approval, that table is append-only), `make update` converted to a
+signpost. `com.centurylinklabs.watchtower.*` labels left in place on other
+services: they are inert with no Watchtower running, and removing them would
+touch several unrelated services' compose files for no behavioural gain.
+
+**Server side, still pending:**
+
+```bash
+cd /mnt/ssd/docker-projects/watchtower && docker compose down
+rm -rf /mnt/ssd/docker-projects/watchtower /home/docker-projects/watchtower
+```
+
+(The two live dirs hold only a `docker-compose.yml`, no data. The identical copy
+under `/home/docker-projects/` is a stale duplicate.)
+
+## [2026-09-25] Vaultwarden 1.35.1 → 1.37.3: iOS autofill save crash, and a silently truncating backup
+
+**Date:** 2026-09-25
+**Action:** Updated Vaultwarden from 1.35.1 (Dec 2025) to 1.37.3 after the iOS
+client began crashing on every password save. Discovered mid-update that
+`scripts/backup-engine.sh` had been producing incomplete Vaultwarden archives.
+**Result:** ✅ **LIVE.** 1.37.3 / web-vault 2026.7.0, 603 ciphers intact,
+`vault.gmojsoski.com` 200 internal and external. Backup defect logged as open.
+
+### 🔍 Symptom
+
+Bitwarden iOS autofill extension 2026.9.0 (SDK 3.0.0) threw on saving a login:
+
+```
+DecodingError.typeMismatch: Expected value of type String.
+Path: data. Debug description: Expected to decode String but found a dictionary instead.
+```
+
+Crash timestamp `2026-09-25T14:57:59+02:00`. The user read this as "the save
+failed". It had not.
+
+### 🔍 Root cause
+
+Client/server API skew. Server logs put the crash **two seconds after a
+successful write**:
+
+```
+14:57:49  POST /identity/connect/token  => 200
+14:57:57  POST /api/ciphers             => 200 OK    <- save succeeded
+14:57:59  (client crash)
+14:58:04  POST /api/ciphers             => 200 OK    <- user retry, also succeeded
+```
+
+The client crashed decoding the *response* to a write that had already
+committed. Confirmed in the DB: two rows, both 550 bytes, 7 seconds apart. Each
+failed save left a **duplicate vault entry**. A similar cluster on 2026-09-19
+(three saves in 26s) shows this had been happening for at least a week.
+
+The running build was 1.35.1 / web-vault 2025.12.1, roughly 9 months and 6
+releases behind. Upstream release notes are explicit:
+
+- **1.37.0** "required for support with clients with version 2026.7.0+"
+- **1.37.2** "required for support with clients with version 2026.8.0+"
+
+Client was 2026.9.0. The container never auto-updated because its compose
+carries `com.centurylinklabs.watchtower.enable=false`; the tag was `:latest`
+but the image had not been re-pulled. 1.35.4 through 1.37.0 also carry roughly
+15 security advisories (SSRF, cross-org access, policy bypass, CSRF, cipher
+access, collection permissions).
+
+### ⚠️ Discovered mid-update: backup-engine.sh silently truncates WAL-mode SQLite
+
+The mandatory pre-update backup produced an archive that was **missing seven
+weeks of data**:
+
+| | ciphers | newest entry |
+|---|---|---|
+| Live DB | 603 | 2026-09-25 12:58 |
+| `vaultwarden-20260925-171212.tar.gz` | 598 | 2026-08-03 06:46 |
+
+`backup-engine.sh` `DOCKER_TAR` stops the container, then tars `db.sqlite3`
+with `EXCLUDES="*.sqlite3-shm *.sqlite3-wal"`. This assumes SQLite's shutdown
+checkpoint has folded the WAL into the main file before `tar` reads it. **It
+races.** The whole stop/tar/start sequence logged inside a single second and
+`tar` captured the pre-checkpoint file (mtime `Sep 7`, 1048576 bytes) while the
+424 KB WAL holding the recent writes was excluded by pattern. The checkpoint
+landed afterwards.
+
+This affects every WAL-mode SQLite service using `DOCKER_TAR`. Not fixed in
+this session (surgical-isolation rule). The fix is to drop the container-stop
+dance in favour of SQLite's online backup API, which reads through the WAL:
+
+```python
+sqlite3.connect('file:db.sqlite3?mode=ro', uri=True).backup(sqlite3.connect(dest))
+```
+
+Also noted: backups had not run since **2026-01-28**, and today's run then
+pruned two of the three surviving archives under a retention policy that
+assumes regular runs. The backup timer/cron needs checking.
+
+### 📍 Changes
+
+- **Live** `/home/docker-projects/vaultwarden/docker-compose.yml`: image pinned
+  `vaultwarden/server:latest` → `vaultwarden/server:1.37.3`. Pinned rather than
+  left floating so the version is reproducible and an update is a deliberate act.
+- **Repo** `docker/vaultwarden/docker-compose.yml`: same pin mirrored.
+- No env var changes, no manual migrations. Upstream documents none for this range.
+
+### 🖥️ Commands
+
+```bash
+# verified pre-upgrade snapshot (NOT backup-engine.sh, see above)
+cd /home/docker-projects/vaultwarden/data
+python3 -c "import sqlite3; s=sqlite3.connect('file:db.sqlite3?mode=ro',uri=True); \
+  d=sqlite3.connect('/mnt/ssd/backups/vaultwarden/preupgrade-db.sqlite3'); s.backup(d); d.close()"
+# bundled with rsa_key.pem -> vaultwarden-preupgrade-1.35.1-20260925.tar.gz
+
+cd /home/docker-projects/vaultwarden
+sed -i 's|vaultwarden/server:latest|vaultwarden/server:1.37.3|' docker-compose.yml
+docker compose pull && docker compose up -d
+```
+
+### 🧪 Verification
+
+- `docker exec vaultwarden /vaultwarden --version` → `1.37.3` / Web-Vault `2026.7.0` ✅
+- Startup log clean, `Rocket has launched`, no migration errors ✅
+- Container healthcheck → `healthy` ✅
+- Data intact post-upgrade: 603 ciphers, 1 user, newest `2026-09-25 12:58` ✅
+- `curl localhost:8082/` → 200, `/api/config` returns correct environment URLs ✅
+- `curl https://vault.gmojsoski.com/` → 200 ✅
+- `./scripts/verify-services.sh` → 10 green; the 2 reds are the known
+  decommissioned `budget` and `css` ✅
+
+### 📝 Notes / open items
+
+- **Duplicate vault entries** exist from the failed-looking saves (at minimum the
+  2026-09-25 pair, likely more from 2026-09-19). Needs a manual pass in the vault.
+- **`backup-engine.sh` WAL race** (above) is unfixed and affects other services.
+- **Backups not running since 2026-01-28**; timer/cron unverified.
+- **`ADMIN_TOKEN` is plain text.** 1.37.3 now warns about this on every start:
+  `You are using a plain text ADMIN_TOKEN which is insecure.` Fix is
+  `vaultwarden hash` to generate an Argon2 PHC string.
+- **Repo compose drift:** `docker/vaultwarden/docker-compose.yml` carries an
+  `SSO_ENABLED: "true"` OIDC block that is **not** present on the live container,
+  plus placeholder secrets. The repo file is aspirational for SSO. Left alone
+  deliberately; reconciling it is separate work.
+
+## [2026-09-25] Cal follow-up: Google Calendar + Meet, public privacy policy, Koalendar cutover
+
+**Date:** 2026-09-25
+**Action:** Connected Google Calendar and Google Meet to Cal, published a
+privacy policy at `gmojsoski.com/privacy`, repointed the portfolio's
+"Book a call" links from Koalendar to Cal, and corrected four docs that
+prescribed a destructive tunnel-config copy.
+**Result:** ✅ **LIVE.** Three Google accounts connected, Meet links generating,
+`verify-services.sh` now 10 green (the 2 reds remain the known decommissioned
+`budget` and `css`).
+
+> **Supersedes** a note in the entry below ("Added Cal (scheduling)..."), which
+> recorded that `cal.gmojsoski.com` was deliberately left out of
+> `verify-services.sh`. It has since been added, with the status check widened
+> to accept 307. See "verify-services.sh" under Changes.
+
+### 🔍 Why
+
+The base install from the previous entry had no calendar connected, so Cal could
+not see existing busy times and would happily double-book. Three discoveries
+shaped the work.
+
+**1. Google Meet is driven by an env var, not the admin UI.** Cal's admin app
+screen (`/settings/admin/apps/calendar`) writes OAuth keys straight to the DB,
+which is enough for Google Calendar but NOT for Meet. `scripts/seed-app-store.ts`
+seeds **both** apps from `process.env.GOOGLE_API_CREDENTIALS`:
+
+```js
+const { client_secret, client_id, redirect_uris } = JSON.parse(process.env.GOOGLE_API_CREDENTIALS).web;
+await createApp("google-calendar", ...);
+await createApp("google-meet", ...);   // same credentials, both seeded together
+```
+
+Setting the credentials only through the admin UI leaves `google-meet` absent
+with no error explaining why. The env var is the correct route; the seeder runs
+on every container start, so the apps are re-seeded automatically.
+
+**2. Meet links come from the Google Calendar adapter, so the destination
+calendar must be Google.** `googlecalendar/lib/CalendarService.ts:228` attaches
+`conferenceData` only when the event is created through that adapter. The
+destination calendar was initially iCloud (`apple_calendar`), which would have
+produced bookings labelled "Google Meet" with no link and no error. Switched to
+`contact@gmojsoski.com`. Conflict checking is unaffected by this: all 8 selected
+calendars, iCloud included, still block availability. Only the calendar that
+*receives* bookings must be Google, and it also becomes the Meet host.
+
+**3. Publishing the OAuth app is not optional.** Google expires refresh tokens
+after **7 days** for External apps left in "Testing", and the failure is silent:
+calendar sync just stops. Publishing requires a reachable privacy policy, which
+is why the page below exists. Publishing does **not** retroactively extend
+already-issued tokens, so all three connections were disconnected and
+reconnected after publishing (credential ids went 3/4/5 → 8/9/10, confirming
+fresh grants).
+
+### 📍 Changes
+
+| File | Change |
+|---|---|
+| `docker/calcom/.env` (gitignored) | Added `GOOGLE_API_CREDENTIALS` (single-line JSON, `web` wrapper) |
+| `docker/calcom/.env.example` | Documented the variable and the admin-UI trap |
+| `docker/caddy/config.d/05-legal.caddy` | **New.** Serves `gmojsoski.com/privacy` inline |
+| `scripts/verify-services.sh` | Appended `cal.gmojsoski.com`; widened status check to accept 307 |
+| `.cursor/skills/add-homelab-service/SKILL.md`, `SERVICE_ADDITION_CHECKLIST.md`, `docs/how-to-guides/setup.md`, `docker/freshrss/README.md` | Removed the `cp cloudflare/config.yml ~/.cloudflared/config.yml` instruction |
+| `portfolio_v2` (separate repo, commit `6e62086`) | Koalendar → `cal.gmojsoski.com/gmojsoski` in Hero, Footer, Rails |
+
+**Why the privacy policy is NOT in the site build:** `scripts/update-portfolio.sh`
+syncs with `rsync -av --delete`, so any file placed in `/srv/site` is destroyed
+at the next `make portfolio-update`. Serving it from `config.d/` makes it
+independent of the portfolio_v2 build. The snippet is numbered `05-` because
+`config.d/*.caddy` is imported in glob order and `handle` blocks are
+first-match-wins: it must sort before `10-gmojsoski-home`, whose `try_files`
+would otherwise 404 the path. Verified surviving a real deploy.
+
+**Cloudflare mangled the contact email.** Cloudflare's Email Address Obfuscation
+rewrote the page's `mailto:` into a `/cdn-cgi/l/email-protection` stub that only
+resolves once its injected script runs, and the page's CSP (`default-src 'none'`)
+blocks that script, so the address rendered blank. Fixed by writing the `@` as
+the HTML entity `&#64;`, which slips past the obfuscator and needs no JavaScript.
+
+### 🧪 Verification
+
+```bash
+docker exec calcom-postgres psql -U calcom -d calcom -tAc \
+  "select slug from \"App\" where slug like 'google%';"       # google-calendar, google-meet
+docker exec calcom-postgres psql -U calcom -d calcom -tAc \
+  "select integration, \"externalId\" from \"DestinationCalendar\";"  # google_calendar -> contact@
+curl -sL -o /dev/null -w "%{http_code}\n" https://gmojsoski.com/privacy        # 200
+curl -s https://gmojsoski.com/ | grep -c koalendar                            # 0
+./scripts/verify-services.sh                                                  # cal -> 307 ✅
+```
+
+Portfolio rebuild after `npm audit fix` produced **byte-identical** output
+(`index-CsZvMiw-.css`, `index-CX9H2fW9.js` unchanged), proving the dependency
+bumps altered nothing shipped, so no redeploy was required.
+
+### 💡 Lessons
+
+- **Cal's admin apps UI and `GOOGLE_API_CREDENTIALS` are not equivalent.** Use
+  the env var. The UI silently gives you Calendar without Meet.
+- **A published-but-unverified Google app is the correct end state** for a
+  personal instance. The "Google hasn't verified this app" screen is permanent
+  and harmless; formal verification wants a demo video and weeks of review, and
+  buys nothing under 100 users. Token lifetime depends on *published vs testing*,
+  **not** on *verified vs unverified*.
+- **Do not upload an OAuth app logo.** Uploading one forces mandatory
+  verification. The consent screen works fine without it.
+- **Anything served from `gmojsoski.com` that is not part of portfolio_v2 must
+  live outside `/srv/site`**, or `rsync --delete` will silently eat it.
+- Cal answers **307 on every path**, so any health check expecting a bare 200 or
+  302 will report it down while it is perfectly healthy.
+
+### 📁 Files Involved
+
+- `docker/calcom/.env` (gitignored), `docker/calcom/.env.example`
+- `docker/caddy/config.d/05-legal.caddy` (new)
+- `scripts/verify-services.sh`
+- `.cursor/skills/add-homelab-service/SKILL.md`, `SERVICE_ADDITION_CHECKLIST.md`,
+  `docs/how-to-guides/setup.md`, `docker/freshrss/README.md`
+- `portfolio_v2`: `src/components/{Hero,Footer,Rails}.tsx`, `package-lock.json`
+
+## [2026-09-25] Added Cal (scheduling) at cal.gmojsoski.com, and found repo/live tunnel config drift
+
+**Date:** 2026-09-25
+**Action:** New Docker stack (`calcom` + `calcom-postgres`) on port 8101, Caddy
+route, Cloudflare tunnel ingress. Networking change, so `verify-services.sh` was
+run.
+**Result:** ✅ **LIVE.** `https://cal.gmojsoski.com` resolves to the first-run
+setup wizard (HTTP 200 after redirects). No regressions: the 2 reds in
+`verify-services.sh` are the pre-existing decommissioned `budget` and `css`.
+
+### 🔍 Why
+
+User asked to self-host `github.com/calcom/cal.diy`. Two findings changed the
+plan before any config was written:
+
+1. **`cal.diy` is the renamed `cal.com` repo**, not a new project (same repo id,
+   created 2021-03-22, 48k stars). It is the rebrand to fully-MIT with the
+   enterprise code stripped.
+2. **Docker Hub `calcom/cal.diy` has zero tags**, even though upstream's own
+   `docker-compose.yml` points at `calcom.docker.scarf.sh/calcom/cal.diy`.
+   The published image is `calcom/cal.com`, whose newest tag `v6.2.0`
+   (2026-03-01) is also the newest GitHub release. So the prebuilt image costs
+   nothing in freshness. Building from source instead would have been a Turbo
+   monorepo build needing a 6 GB Node heap on 4 cores, for the same version.
+
+The prebuilt image is safe behind a custom domain because the Dockerfile bakes
+`http://NEXT_PUBLIC_WEBAPP_URL_PLACEHOLDER` and `scripts/start.sh` rewrites it
+from the runtime env on every boot.
+
+### 📍 Changes
+
+Upstream's compose was trimmed: **Redis**, the **v2 API** and **Prisma Studio**
+were all dropped. None are needed for personal scheduling, and upstream's own
+comment notes Prisma Studio is an unauthenticated DB browser that should not be
+exposed in production.
+
+| File | Change |
+|---|---|
+| `docker/calcom/docker-compose.yml` | New. Web on 8101, Postgres container-internal (no host port) |
+| `docker/calcom/.env` | New, gitignored. Secrets + Gmail SMTP |
+| `docker/calcom/.env.example` | New. Committed template, no secrets |
+| `docker/caddy/config.d/50-utilities.caddy` | Appended `@cal` handle block |
+| `cloudflare/config.yml` + `~/.cloudflared/config.yml` | Appended ingress, **edited separately, not copied** (see Notes) |
+| `README.md`, `docs/reference/port-map.md` | Appended service row / port 8101 |
+
+Postgres data bind-mounts to `/home/docker-projects/calcom/postgres` (NVMe,
+161 GB free), matching where the other stacks live. Note that
+`/mnt/ssd/docker-projects` is a **symlink** to `/home/docker-projects`, so the
+two paths in older docs are the same filesystem, and neither is on root.
+
+```bash
+docker pull calcom/cal.com:v6.2.0            # 8.05 GB unpacked
+cd docker/calcom && docker compose up -d      # first boot: prisma migrate deploy + seed-app-store
+docker exec caddy caddy validate --config /etc/caddy/Caddyfile
+cd docker/caddy && docker compose restart caddy
+cd docker/cloudflared && docker compose restart
+```
+
+### 🧪 Verification
+
+```bash
+curl -I http://localhost:8101                                  # 307 -> /auth/login
+curl -H "Host: cal.gmojsoski.com" http://localhost:8080        # 307, Caddy routing OK
+curl -sL https://cal.gmojsoski.com                             # 200, <title>Setup | Cal.com</title>
+./scripts/verify-services.sh                                   # 9 green, 2 known reds
+```
+
+Both containers report `healthy`. After the SMTP values were filled in and the
+container recreated, the `EMAIL_FROM environment variable is not set` warning
+stopped appearing in the logs.
+
+### ⚠️ Notes
+
+- **Repo and live tunnel configs have drifted. Do NOT run the
+  `cp cloudflare/config.yml ~/.cloudflared/config.yml` step that
+  `.cursor/skills/add-homelab-service/SKILL.md` (step 6) and
+  `SERVICE_ADDITION_CHECKLIST.md` both prescribe.** As of today the live file
+  has `portfolio.gmojsoski.com`, `daka-dragan.mk` and `www.daka-dragan.mk`
+  which the repo copy lacks, while the repo still lists the decommissioned
+  `files.` and `shopping.` hosts. That copy would have removed three working
+  production hostnames. The ingress block was inserted into each file
+  independently instead, above the `# Catch-all (must be last)` line. Backup
+  kept at `~/.cloudflared/config.yml.bak-pre-cal`. All three at-risk hostnames
+  were re-checked afterwards and still answer (200 / 301 / 200). **The skill
+  and the checklist still need correcting.**
+- **`cal.gmojsoski.com` was deliberately NOT added to `verify-services.sh`.**
+  The script accepts only 200 or 302 (line 15), and Cal answers 307 on every
+  path from a Next.js locale redirect, resolving to 200 only when followed.
+  Adding it as-is would produce a permanent false red. Widening the check to
+  accept 307 edits existing logic in an append-only-protected file, so it was
+  left for the user to decide.
+- DNS needed no work: `cal.gmojsoski.com` already resolved via an existing
+  wildcard record.
+- Benign startup log noise, safe to ignore: `Missing VAPID keys` (web push is
+  off, optional) and `getDeploymentKey ... Signature token not found` (an
+  enterprise licence probe with nothing behind it on the MIT build).
+
+## [2026-08-16] FreshRSS subscriptions reset to jobs + cybersecurity only
+
+**Date:** 2026-08-16
+**Action:** Deleted 8 of 9 feeds and imported a curated 15-feed OPML, on
+lemongrab (live). No networking change — no Caddy, tunnel, port or DNS edit,
+so `verify-services.sh` was not required.
+**Result:** ✅ **LIVE.** 16 feeds, 0 in error state, container healthy,
+`https://rss.gmojsoski.com` → 302 (normal login redirect).
+
+### 🔍 Why
+
+FreshRSS replaces running `career-ops`' job scanner as a scheduled homelab
+service. That evaluation (`career-ops/docs/gig-scanning/README.md`, separate
+repo) measured 8 relevant postings in 14 days — too thin to justify a new
+container, a CV on the server and a nightly local-LLM batch, when an already
+deployed aggregator with a cron and a UI covers the same need.
+
+### 📍 Changes
+
+Backup taken first, to `/mnt/ssd/backups/freshrss/20260816-105412/`:
+
+| Artifact | Purpose |
+|---|---|
+| `subscriptions-before.opml` | Native FreshRSS export — 9 feeds, the rollback artifact |
+| `db.sqlite` | Raw copy — `PRAGMA integrity_check` = ok, 9 feeds / 2044 entries |
+
+Removed (all except The Hacker News): FreshRSS releases, TIME.mk, TLDR,
+BBC News, Al Jazeera, Seeking Alpha, Yahoo Finance, MarketWatch — 1844 entries
+and the now-empty `Finance`, `News`, `Tech` categories. Category `id=1`
+(`Uncategorized`, the FreshRSS default) was kept even though it emptied.
+
+Added from `docker/freshrss/feeds.opml` via `cli/import-for-user.php`:
+6 job boards, 5 `hnrss.org` gig-thread feeds, and 4 cybersecurity feeds into
+the existing `Cybersecurity` category.
+
+```bash
+# backup
+docker exec freshrss php /var/www/FreshRSS/cli/export-opml-for-user.php --user gmojsoski > subscriptions-before.opml
+docker cp freshrss:/var/www/FreshRSS/data/users/gmojsoski/db.sqlite ./db.sqlite
+# import (deletion was a PDO transaction — no delete-feed CLI exists in 1.29.1)
+docker cp docker/freshrss/feeds.opml freshrss:/tmp/feeds.opml
+docker exec freshrss php /var/www/FreshRSS/cli/import-for-user.php --user=gmojsoski --filename=/tmp/feeds.opml
+docker exec freshrss php /var/www/FreshRSS/cli/actualize-user.php --user=gmojsoski
+```
+
+### 🧪 Verification
+
+`actualize-user.php` fetched 15 feeds / 397 new articles, 0 errors. Per-feed
+entry counts matched `docker/freshrss/check-feeds.py`, which had measured every
+feed independently beforehand — so the counts were confirmed by two paths.
+
+### ⚠️ Notes
+
+- `cli/db-backup.php` takes **no** `--user` flag (unlike the other CLI scripts);
+  the raw `docker cp` of `db.sqlite` is the reliable backup.
+- FreshRSS 1.29.1 has no delete-feed CLI. Deletion was raw SQL in one
+  transaction. `entry` has `ON DELETE CASCADE` on `id_feed`, but SQLite needs
+  `PRAGMA foreign_keys=ON` per connection — the deletes were issued explicitly
+  rather than relying on it.
+- Job boards retire RSS without warning (RemoteOK now returns 410), and FreshRSS
+  renders a dead feed exactly like a quiet one. Run
+  `python3 docker/freshrss/check-feeds.py` when the Jobs category looks calm.
+- "The Hacker News" here is `thehackernews.com`, an infosec outlet — **not**
+  news.ycombinator.com. The `Jobs — HN` feeds are the latter.
+
+## [2026-08-09] gmojsoski.com blog URLs served the homepage (Caddy try_files), plus a real 404 page
+
+**Date:** 2026-08-09
+**Action:** Diagnosed four Google Search Console non-indexing reports. Fixed the
+Caddy `try_files` rule that made every blog URL serve the homepage, added a
+`www` to apex 301, and added a real 404 page with a real 404 status.
+**Result:** ⏳ **NOT LIVE YET. Repo-only prep, prepared on the Windows dev
+clone.** Verified locally against the real homelab `Caddyfile` and the real
+`dist/`. Apply on lemongrab per
+[the runbook](../how-to-guides/gmojsoski-404-and-canonical-fix.md).
+
+### 🔍 Root Cause
+
+The live `docker/caddy/config.d/10-gmojsoski-home.caddy` had
+`try_files {path} /index.html`, missing `{path}/index.html`. The portfolio
+prerenders `/blog` and each `/blog/<slug>` to its own `index.html`, so without
+that rule all of them fell through to the `/index.html` fallback and answered
+**200 with the homepage**. Confirmed against production:
+
+```
+/blog                                -> title "Goce Mojsoski · Product & Delivery", canonical /
+/blog/react-ssr-without-a-framework  -> title "Goce Mojsoski · Product & Delivery", canonical /
+/blog/<slug>/index.html              -> correct title and canonical
+```
+
+The build was healthy the whole time and the prerendered files were on disk.
+Only URL resolution was broken, so nothing in the portfolio repo looked wrong.
+All 11 sitemap URLs resolved to one page declaring `canonical: /`, which is what
+Search Console reported as "Duplicate without user-selected canonical" and
+"Duplicate, Google chose different canonical than user". Present since the blog
+launched on 2026-08-08.
+
+Also found: `www.gmojsoski.com` answered 200 instead of redirecting, and the
+`/index.html` catch-all meant no URL on the site ever returned 404, so every
+stale link was a soft 404. "Page with redirect" is just the `http` to `https`
+301 and is expected.
+
+### ✅ Changes Made (repo mirror; live still pending)
+
+1. **`docker/caddy/config.d/10-gmojsoski-home.caddy`**
+   - `try_files {path} {path}/index.html` (added the middle rule, **removed** the
+     `/index.html` fallback so a miss reaches the error handler)
+   - Split `www.gmojsoski.com` out of the host matcher into its own
+     `redir https://gmojsoski.com{uri} permanent` handler
+   - `@html` cache matcher widened from `/index.html` to `/ /index.html /blog /blog/*`
+2. **`docker/caddy/Caddyfile`** ⚠️ **global file.** Added a host-matched 404
+   branch inside the existing `handle_errors`, serving `/404.html` for
+   `gmojsoski.com` only; other hosts keep `respond "{err.status_code} ..."`.
+   It cannot live in the `config.d` snippet: `handle_errors` is a site-level
+   directive and Caddy rejects the config if it is nested inside `handle`.
+   Security headers are repeated inside it because an error route inherits none.
+3. **`portfolio_v2`** (separate repo, its own commit): new `NotFound.tsx`,
+   router returns `notfound` for unmatched paths, `prerender.mjs` emits
+   `dist/404.html` as `noindex` with no canonical, no JSON-LD and excluded from
+   `sitemap.xml`, `vite preview` mirrors the server for misses, and `DEPLOY.md`
+   no longer claims `try_files` is optional (that note is what let this ship).
+
+### 🧪 Verification (local, against the real config)
+
+Ran the actual homelab `Caddyfile` plus `config.d` locally against the real
+`dist/`, adapted only for host and port:
+
+```
+/                                      200  Goce Mojsoski · Product & Delivery
+/blog                                  200  Blog · Goce Mojsoski
+/blog/react-ssr-without-a-framework    200  Adding server-side rendering to a React portfolio...
+/blog/react-ssr-without-a-framework/   200  (same)
+/typo-page                             404  Page not found · Goce Mojsoski
+/css/old-style.css                     404  Page not found · Goce Mojsoski
+/blog/no-such-post                     404  Page not found · Goce Mojsoski
+/index.html                            200  Goce Mojsoski · Product & Delivery
+```
+
+- 404 response carries CSP, HSTS, X-Content-Type-Options, Referrer-Policy,
+  Permissions-Policy, and `Server` is still suppressed ✅
+- `www` host 301s preserving the path ✅
+- Another host's miss still returns plain-text `404 Not Found`, not the
+  portfolio page ✅
+- With `404.html` absent (old build + new config) a miss still returns a 404
+  status, no 500 ✅
+- `caddy validate` clean on the full adapted config ✅
+- Portfolio side: `npm run lint` and `npm run build` clean; `404.html` is
+  `noindex`, has no canonical or JSON-LD, and is not in `sitemap.xml` (11 URLs) ✅
+
+### 📍 Follow-up on the server
+
+1. `make portfolio-update` **first** (the build carries `404.html`), then edit the
+   live Caddy config, `caddy validate`, `caddy reload`.
+2. Re-run the verification commands in the runbook against production.
+3. Search Console: **Validate Fix** on both "Duplicate" reports. Export the URL
+   lists for "Not found (404)" and "Page with redirect" before acting; they are
+   most likely stale old-portfolio paths that now correctly answer 404.
+
+### ⚠️ Notes
+
+- **Two governance flags** raised in the runbook: the `Caddyfile` change is a
+  global-file change, and the `10-gmojsoski-home.caddy` change modifies existing
+  lines rather than appending. Both were unavoidable and both need sign-off.
+- The regression test for this class of bug is the **`<title>`/canonical** check,
+  not the status code. The broken state returned 200 for every URL.
+
+**Status**: ⏳ Prepared and locally verified. Pending apply on lemongrab.
+
+## [2026-07-28] Decommissioned Gokapi (files) + KitchenOwl (shopping) after usage audit
+
+**Date:** 2026-07-28
+**Action:** Retired two unneeded services identified in a service audit. Data volumes preserved (fully reversible).
+**Result:** `files.gmojsoski.com` and `shopping.gmojsoski.com` removed from public ingress (both now tunnel 404). All other services healthy.
+
+### 🔍 Background
+- Audit compared 35 running containers + 3 systemd apps against public routes and per-app DB activity.
+- User confirmed **Gokapi** (file sharing, systemd) and **KitchenOwl** (recipes/shopping, Docker) as no longer needed; all remaining services are used daily via iOS apps and were kept.
+- A prior entry ([2026-06-16]) shut down KitchenOwl once before; it had since been restarted. This is the final decommission.
+- Two earlier "0 usage" readings during the audit (GoatCounter, Gokapi file count) were **measurement artifacts** — GoatCounter prunes raw `hits` after aggregating, and `sudo`-based host reads failed silently once cached creds expired. Ground truth came from live URL curls + container DB queries.
+
+### ✅ Live changes (lemongrab, user-run with sudo)
+1. `sudo systemctl disable --now gokapi` — service stopped + disabled. `gokapi.sqlite` and `/mnt/ssd/apps/gokapi-data/` left on disk.
+2. `docker compose -f /mnt/ssd/docker-projects/kitchenowl/docker-compose.yml down` — container removed, data volume (`/mnt/ssd/docker-projects/kitchenowl/data`) kept.
+3. Removed `files.gmojsoski.com` + `shopping.gmojsoski.com` hostnames from `~/.cloudflared/config.yml`.
+4. Restarted **Caddy** and **cloudflared**.
+
+### 📝 Repo changes (VCS mirror)
+- Dropped KitchenOwl + Gokapi rows from `README.md` service table; removed Gokapi from the systemd-managed line.
+- Removed `files.gmojsoski.com` from `scripts/verify-services.sh` SUBDOMAINS (was reporting a permanent false failure).
+- Removed `@files` block from `docker/caddy/config.d/30-storage.caddy` and `@shopping` block from `docker/caddy/config.d/50-utilities.caddy`.
+
+### 🧪 Verification
+- `https://files.gmojsoski.com` → 404, `https://shopping.gmojsoski.com` → 404 ✅
+- Daily-driver services (Immich, Nextcloud, Paperless, Vaultwarden, Linkwarden, FreshRSS, Jellyfin, Mattermost, root site) all 200/302 ✅
+- `caddy validate` → Valid configuration ✅
+
+### 📝 Notes
+- **Live Caddy still contains the `@files`/`@shopping` handle blocks** (root-owned; user opted not to edit them live). Harmless — the tunnel no longer routes those hostnames. The **repo mirror has them removed**, so a future config redeploy will drop them.
+- Data volumes retained for both — re-enable the service / re-`compose up` to restore.
+- **DNS:** `files`/`shopping` CNAMEs may still exist in Cloudflare from before; safe to delete manually.
+- **Outline** (local-only wiki, stale Jan-2026 docs mirror) was reviewed in the same audit and left running by user choice.
+
+---
+
+## [2026-07-28] Rolled back monitoring trio trial (Scrutiny, self-hosted ntfy, Beszel)
+
+**Date:** 2026-07-28
+**Action:** Tore down a brief live trial of the prepared monitoring trio stacks. Notifications stay on **Uptime Kuma → ntfy app** (ntfy.sh), not a self-hosted ntfy instance.
+**Result:** All three stacks stopped; ingress and runtime data removed. Compose stubs remain in repo for optional future use.
+
+### 🔍 Background
+- Compose files were added 2026-07-06 (`1532215`, repo-only prep).
+- Stacks were started briefly on lemongrab 2026-07-28 during an agent session (~14:12–14:26), then reverted in git (`9aa39f3`).
+- User confirmed only Uptime Kuma mobile notifications are wanted — self-hosted ntfy not needed.
+
+### ✅ Live changes (lemongrab)
+1. `docker compose down` in `docker/scrutiny`, `docker/beszel`, `docker/ntfy` (profiles: `monitoring`).
+2. Removed `@ntfy` block from `docker/caddy/config.d/50-utilities.caddy`; removed `ntfy.gmojsoski.com` ingress from `~/.cloudflared/config.yml` and repo `cloudflare/config.yml`.
+3. Restarted **Caddy** and **cloudflared**.
+4. Deleted runtime data: `docker/ntfy/{cache,lib}`, `docker/scrutiny/{config,influxdb}`, `docker/beszel/beszel_data` (via ephemeral Alpine container — files were root-owned from Docker).
+
+### 🧪 Verification
+- No containers named `scrutiny`, `ntfy`, `beszel`, or `beszel-agent` ✅
+- Ports `8084`, `8085`, `8086`, `45876` free ✅
+- `https://ntfy.gmojsoski.com` → tunnel catch-all **404** (no backend) ✅
+- Bookmarks security fix (`6613b56`) unaffected ✅
+
+### 📝 Notes
+- **DNS:** `ntfy.gmojsoski.com` CNAME may still exist in Cloudflare from the trial; safe to delete manually if desired.
+- **Repo:** `docker/{scrutiny,ntfy,beszel}/` compose stubs and `docs/how-to-guides/add-monitoring-trio.md` kept as optional future reference.
+
+## [2026-06-18] gmojsoski.com migrated to portfolio_v2 (Vite + React build pipeline)
+
+**Date:** 2026-06-18
+**Action:** Replaced the legacy vanilla HTML portfolio with the brutalist rebuild from [portfolio_v2](https://github.com/abracadaniel92/portfolio_v2). Updated homelab deploy scripts and Caddy so production serves a Vite `dist/` build instead of a flat source tree.
+**Result:** `gmojsoski.com` live on commits `b788767` (initial cutover) and `fefd8c3` (lab section header). `make portfolio-update` pulls, builds, and rsyncs successfully.
+
+### ✅ Changes Made
+1. **`scripts/update-portfolio.sh`**
+   - Repo path: `portfolio/portfolio` → `portfolio_v2` (`/home/goce/Desktop/Cursor projects/portfolio_v2`)
+   - Flow: `git pull` → `npm ci` (falls back to `npm install`) → `npm run build` → `rsync -av --delete dist/` → `/mnt/ssd/docker-projects/caddy/site`
+   - Loads nvm if `node`/`npm` not on PATH; always rebuilds on each run (no early exit when git is up to date)
+2. **`Makefile` — `portfolio-update`**
+   - Messaging updated for build + deploy; reminds to reload Caddy when the site snippet changes
+3. **`docker/caddy/config.d/10-gmojsoski-home.caddy`**
+   - SPA fallback: `try_files {path} /index.html`
+   - Security headers (HSTS, CSP, Referrer-Policy, Permissions-Policy, `-Server`)
+   - Cache: long-lived `/assets/*`, `no-cache` for `index.html`; removed blanket `no-store` on all responses
+4. **`docker/caddy/site/README.md`** — documents new source repo and deploy flow
+
+### 📍 Deploy / rollback
+- **Deploy:** `make portfolio-update` (or `portfolio-update` wrapper if installed)
+- **Log:** `/var/log/portfolio-update.log`
+- **Rollback:** Point Caddy `root` at the old `portfolio/portfolio` tree and rsync that repo instead (legacy site still on GitHub at `abracadaniel92/portfolio`)
+
+### 📝 Notes
+- **Analytics:** GoatCounter (`analytics.gmojsoski.com`) intentionally omitted from v2; re-add requires CSP updates per `portfolio_v2/DEPLOY.md`
+- **Social preview:** OG image path changed from `/images/og-image.png` to `/og-image.png` (1200×630); re-scrape LinkedIn/Facebook after major hero changes
+- **Global script:** `/usr/local/bin/update-portfolio.sh` may still be the old version if copied previously — `make portfolio-update` uses the repo script under `Pi-version-control/scripts/`
+- **Caddy reload** (after snippet edits): `docker exec caddy caddy reload --config /etc/caddy/Caddyfile`
+
+### 📍 Files Involved
+- `scripts/update-portfolio.sh`, `Makefile`, `docker/caddy/config.d/10-gmojsoski-home.caddy`, `docker/caddy/site/README.md`
+- Source: `/home/goce/Desktop/Cursor projects/portfolio_v2` → GitHub `abracadaniel92/portfolio_v2`
+- Live: `/mnt/ssd/docker-projects/caddy/site` (container mount `/srv/site`)
+
+**Status**: ✅ Live — deploy pipeline verified 2026-06-18
+
+---
+
+## [2026-06-17] Three USB HDDs failed (end-of-life) — decommissioned disk1/disk2/disk_old + mergerfs pool
+
+**Date:** 2026-06-17
+**Symptom:** Storage investigation found that of the external drives `fstab` expects, only `/mnt/ssd_1tb` was mounted. `/mnt/disk1`, `/mnt/disk2`, `/mnt/disk_old` and the mergerfs pool `/mnt/storage` were all unmounted; Kiwix was serving zero content.
+**Result:** Confirmed all three old USB HDDs have reached end-of-life and died. Repointed the one affected service (Kiwix) onto the healthy 1TB and decommissioned the dead mounts. No other service lost data.
+
+### 🔍 Root Cause (from `/var/log/hdd-health-check.log`)
+- **disk2 = /dev/sdb**: SMART pre-failure for days — `Reallocated_Sector_Count = 4424` (06-12 → 06-14), then **dropped to 0 bytes / unreadable on ~2026-06-15** (USB bridge RTL9201 still enumerates at USB 2.0, but the drive returns no capacity). Dead.
+- **disk1 / disk_old**: no longer electrically enumerated (nothing on the USB 3.0 bus) — physically disconnected/dead.
+- All three were old spinning USB drives; classic end-of-life (gradual sector remapping → hard failure). `nofail` in fstab meant the box kept booting normally, hiding the loss.
+
+### 📊 What survived vs lost
+- **Healthy:** `/dev/sda` 1TB WD (`WD10SPZX`) → `/mnt/ssd_1tb`, SMART PASSED, 127G/916G used. Holds **Immich library** + **stirling-pdf** data. (Internal drive is a ~477GB NVMe, not 1TB.)
+- **Immich:** already migrated off the dead mergerfs pool to `/mnt/ssd_1tb` previously — safe.
+- **Lost:** Kiwix `.zim` archives (on the dead pool — freely re-downloadable) and anything that lived only on disk1/disk_old (contents unknown; drives unreadable). User accepted the loss.
+
+### ✅ Solution Applied (on-box, no sudo)
+1. **Kiwix repointed** off the dead pool: `docker/kiwix/docker-compose.yml` volume `/mnt/storage/kiwix-data` → `/mnt/ssd_1tb/kiwix-data`; `docker compose up -d` recreated the container on the healthy drive. Serves content again once `.zim` files are re-added.
+2. **Repo health script** `scripts/health.d/40-disk-smart.sh`: `USB_DISK_MOUNTS` reduced to `( "/mnt/ssd_1tb" )` (dropped disk1/disk2/disk_old).
+
+### 📌 Pending user actions (need sudo)
+1. **Remove dead fstab entries** (backup first):
+   ```bash
+   sudo cp /etc/fstab /etc/fstab.bak-2026-06-17
+   sudo sed -i '\#/mnt/disk1#d; \#/mnt/disk2#d; \#/mnt/disk_old#d; \#/mnt/storage#d' /etc/fstab
+   sudo systemctl daemon-reload
+   ```
+   (Removes the 3 disk UUID mounts + the `fuse.mergerfs /mnt/storage` line; leaves `/mnt/ssd_1tb` intact.)
+2. **Optional cosmetic:** `sudo rmdir /mnt/disk1 /mnt/disk2 /mnt/disk_old /mnt/storage /mnt/old_ssd`
+3. **Deployed health script** `/usr/local/bin/hdd-health-check.sh` (root-owned) still lists the dead disks — it only logs harmless "not mounted — skipping" lines now; update it to match the repo when convenient.
+4. **Full SMART detail (read-only, safe):** `sudo smartctl -a /dev/sda` (confirm 1TB healthy); `/dev/sdb` is dead — don't write to it; image with `ddrescue` only if recovery is wanted.
+
+### 📍 Files Involved
+- `docker/kiwix/docker-compose.yml`, `scripts/health.d/40-disk-smart.sh`, `/etc/fstab` (user), `/usr/local/bin/hdd-health-check.sh` (user)
+
+**Status**: ✅ Service impact resolved (Kiwix healthy); fstab/health-script cleanup pending user sudo.
+
+---
+
+## [2026-06-16] Decommissioned budget + css services; shut down shopping (KitchenOwl)
+
+**Date:** 2026-06-16
+**Action:** Retired two services completely and powered down a third for possible future use.
+**Result:** `budget`/`css` → HTTP 404 externally (fully removed); `shopping` → 502 (intentionally stopped, ready to revive). No collateral impact — `vault`/`immich` etc. still 200, tunnel re-registered all 4 connections.
+
+### ✅ Implementation
+**budget.gmojsoski.com — Actual Budget — REMOVED COMPLETELY**
+1. `docker stop actual-budget && docker rm actual-budget`; `docker rmi actualbudget/actual-server:latest`
+2. Removed `@budget` block from `docker/caddy/config.d/50-utilities.caddy` (was → `172.17.0.1:5006`)
+3. Removed ingress entry from **both** `cloudflare/config.yml` (repo) and `/home/goce/.cloudflared/config.yml` (live)
+4. Deleted compose dir `docker/actual-budget/`
+5. **Data backed up** before removal: `/home/goce/actual-budget-data-backup-20260616-222617.tar.gz` (28K, from `/home/actual-budget`)
+
+**css.gmojsoski.com — Centar Srbija Stil — REMOVED COMPLETELY**
+1. `docker stop centar-srbija-stil && docker rm centar-srbija-stil`; `docker rmi centar-srbija-stil-centar-srbija-stil`
+2. Deleted `docker/caddy/config.d/15-centar-srbija-stil.caddy` (was → `172.17.0.1:8084`); removed ingress from both cloudflared configs
+3. Deleted compose dir `docker/centar-srbija-stil/`. Stateless (no data volume) — nothing to back up.
+
+**shopping.gmojsoski.com — KitchenOwl — SHUT DOWN ONLY (preserve for future)**
+1. `docker stop kitchenowl` — data (`/mnt/ssd/docker-projects/kitchenowl`), compose, Caddy block, and tunnel route all **left intact**.
+2. Disabled its Uptime-Kuma monitor (id 10, `active=0`) so it doesn't alert while intentionally off.
+3. **Revive with:** `docker start kitchenowl` then re-enable Kuma monitor id 10 (`active=1`).
+
+### 🧪 Verification
+- `budget.gmojsoski.com` → 404, `css.gmojsoski.com` → 404, `shopping.gmojsoski.com` → 502 (expected), `vault`/`immich` → 200.
+- `actual-budget` & `centar-srbija-stil` containers gone; `kitchenowl` exited; cloudflared 4 connections registered on new config.
+
+### 📝 Pending user actions (sudo / dashboard)
+- Delete root-owned data dir: `sudo rm -rf /home/actual-budget` (then remove the backup tarball once confident).
+- Delete the public DNS CNAME records for `budget` and `css` in the **Cloudflare dashboard** (they currently 404 via the tunnel catch-all).
+
+### 📍 Files Involved
+- `cloudflare/config.yml` + `/home/goce/.cloudflared/config.yml` (live), `docker/caddy/config.d/50-utilities.caddy`, deleted: `docker/caddy/config.d/15-centar-srbija-stil.caddy`, `docker/actual-budget/`, `docker/centar-srbija-stil/`
+
+**Status**: ✅ Done on-box; data dir deletion + dashboard DNS pending user.
+
+---
+
+## [2026-06-16] Services "going up and down" — root-caused to tunnel + ISP reconnect (not the apps)
+
+**Date:** 2026-06-16
+**Symptom:** Multiple public services appeared to drop and recover throughout the day. Question: internet issue or something broken?
+**Result:** Root-caused to **three independent network-layer causes — none of them the apps or hardware.** Containers had 9-day uptimes, 0 restarts, no OOM; host had 20 GB RAM free, disk 22%, 0% packet loss to 1.1.1.1.
+
+### 🔍 Root Causes
+1. **Cloudflare tunnel on QUIC dropping chronically.** Logs full of `failed to dial to edge with quic: timeout: no recent network activity` + `Failed to refresh DNS local resolver ... i/o timeout`. 9–25 drop events/day. Since every public service funnels through one tunnel → Caddy, a tunnel blip flaps *everything* at once.
+2. **Daily ~15:08 total outage = ISP/router forced WAN reconnect.** All services returned **530 together** for ~60–90s, then recovered together. No host cron/timer fires then. The drop time **drifts ~12–15s later each day** (06-12 15:08:01 → 06-16 15:08:51) — the fingerprint of a ~24h interval lease/PPPoE re-auth, not a wall-clock job. **102 of all tunnel-drop events fell in the 15:0x bucket** (next-biggest cluster: 22) — the single largest contributor.
+3. **Random single-service daytime drops** were only two services: **Mattermost** (transient 502s; container otherwise healthy — slow web-root responses) and **Daka Dragan** (a dead local container, exited 2026-05-28 on a bad `nginx.conf` bind-mount; obsolete since the site moved to Netlify — the Kuma monitor correctly tracks the Netlify site).
+
+### ✅ Solution Applied
+1. **Tunnel QUIC → HTTP/2:** added `protocol: http2` to `/home/goce/.cloudflared/config.yml` (live) and `cloudflare/config.yml` (repo); `docker compose restart cloudflared`. Stops the UDP-path drops this ISP/router mishandles.
+2. **Uptime-Kuma tolerance:** all active monitors set `maxretries=3`, `retry_interval=60` (was `maxretries=2`, and **Mattermost + Daka Dragan were `maxretries=0`** → alarmed on first failed probe). Gives ~3 min tolerance so the daily reconnect and transient blips no longer false-alarm. DB backed up first; Kuma restarted to load config.
+3. **Mattermost probe hardened:** Kuma monitor (id 15) URL changed from `https://mattermost.gmojsoski.com` (heavy web root) → `https://mattermost.gmojsoski.com/api/v4/system/ping` (fast JSON 200). No container healthcheck added — the image lacks `sh`/`curl`/`wget`, so any healthcheck would be unreliable; the external probe is the correct layer.
+4. **Removed dead `daka-dragan` container** (`docker rm daka-dragan`).
+
+### 🧪 Verification
+- After HTTP/2 switch: `Initial protocol http2`, 4 × `Registered tunnel connection protocol=http2`; `vault`/`immich` → 200, `jellyfin` → 302.
+- Kuma config persisted across restart (all 15 monitors `maxretries=3`); Mattermost probe green on `/api/v4/system/ping` (200).
+
+### 📝 Lessons Learned
+- **One tunnel = one shared point of failure.** When all services 530 *simultaneously*, look at the tunnel/WAN/DNS, not the apps. Isolated single-service drops point at that one app.
+- **QUIC vs ISP/router:** cloudflared defaults to QUIC (UDP/7844); some routers/ISPs throttle or time out long-lived UDP. `protocol: http2` is the standard fix and was decisive here.
+- **A daily time that drifts a few seconds/day is an interval timer (ISP/PPPoE lease), not a cron** (which fires on the exact wall-clock second).
+- **`maxretries=0` monitors cry wolf** on any transient blip — give every monitor retry tolerance.
+- The live cloudflared config (`~/.cloudflared/config.yml`) is **separate** from the repo copy — must edit both.
+
+### 📍 Files Involved
+- `/home/goce/.cloudflared/config.yml` (live) + `cloudflare/config.yml` (repo) — `protocol: http2`
+- Uptime-Kuma DB (`/mnt/ssd/docker-projects/uptime-kuma/data/kuma.db`) — monitor retry settings + Mattermost probe URL; backups: `kuma.db.bak-20260616-221655`, `kuma.db.bak-mm-*` (inside container)
+
+### 📌 Pending user actions (off-box / sudo)
+- **Real fix for the 15:08 drop:** reschedule the router's forced daily reconnect to off-hours (~04:00), or ask ISP to disable forced re-auth. User accepted the reconnect and chose to only make Kuma tolerant of it.
+- Broken safety net: root crontab has `*/5 * * * * root /usr/local/bin/healthcheck-watchdog.sh` but that script **does not exist** (fails silently every 5 min). Remove the line via `sudo crontab -e`. (Active auto-recovery is the hourly `enhanced-health-check.timer`, which runs on the hour and so misses the 15:08 window — no amplification.)
+
+**Status**: ✅ On-box fixes applied & verified; router reschedule + cron cleanup pending user.
+
+---
+
+## [2026-06-08] Knowledge-MCP weekly refresh disabled (index frozen on current data)
+
+**Date:** 2026-06-08
+**Context:** The `knowledge-mcp` index no longer needs weekly re-pulls; decision to freeze it on the current data.
+**Action (live):** `sudo systemctl disable --now knowledge-mcp-weekly-refresh.timer` on lemongrab — removed the `timers.target.wants` symlink; timer now `disabled` + `inactive`. No cron backup existed.
+**Repo:** Removed `systemd/knowledge-mcp-weekly-refresh.{service,timer}` and `scripts/deploy-knowledge-mcp-weekly-refresh.sh`; updated `docs/how-to-guides/mcp-knowledge-server.md` to manual-only refresh.
+**Result:** `knowledge-mcp` keeps serving the current data unchanged (`/sse` → 200). Manual refresh still available via `mcp_server/scripts/weekly-knowledge-refresh.sh`.
+**Optional cleanup:** the now-disabled unit files remain installed — `sudo rm /etc/systemd/system/knowledge-mcp-weekly-refresh.{service,timer} && sudo systemctl daemon-reload`.
+
+
+---
+
 ## [2026-05-09] daka-dragan.mk: Docker → Netlify; Cloudflare Tunnel hostname removed
 
 **Date:** 2026-05-09

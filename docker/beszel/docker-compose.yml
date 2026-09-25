@@ -1,0 +1,30 @@
+services:
+  beszel:
+    image: henrygd/beszel:latest
+    container_name: beszel
+    restart: always
+    profiles:
+      - utilities
+      - monitoring
+      - all
+    ports:
+      - "8086:8090"   # hub web UI — LAN only, no Caddy/tunnel route
+    volumes:
+      - ./beszel_data:/beszel_data
+
+  beszel-agent:
+    image: henrygd/beszel-agent:latest
+    container_name: beszel-agent
+    restart: always
+    profiles:
+      - utilities
+      - monitoring
+      - all
+    # host network so the agent sees real interfaces/temps; listens on 45876
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      PORT: "45876"
+      # paste the public key shown by the hub UI when adding a system
+      KEY: "REPLACE_WITH_PUBLIC_KEY_FROM_HUB"

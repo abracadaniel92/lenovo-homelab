@@ -12,13 +12,6 @@ handle @bookmarks {
 	reverse_proxy http://172.17.0.1:5000
 }
 
-@shopping host shopping.gmojsoski.com
-handle @shopping {
-	encode gzip
-	header Cache-Control "no-cache, must-revalidate"
-	reverse_proxy http://172.17.0.1:8092
-}
-
 @linkwarden host linkwarden.gmojsoski.com
 handle @linkwarden {
 	encode gzip
@@ -31,12 +24,6 @@ handle @rss {
 	reverse_proxy http://172.17.0.1:8099
 }
 
-@budget host budget.gmojsoski.com
-handle @budget {
-	encode gzip
-	reverse_proxy http://172.17.0.1:5006
-}
-
 @auth host auth.gmojsoski.com
 handle @auth {
 	# NO gzip - can cause issues with authentication flows
@@ -47,6 +34,8 @@ handle @auth {
 	}
 }
 
-
-
-
+@cal host cal.gmojsoski.com
+handle @cal {
+	# No gzip: Next.js already compresses its own responses.
+	reverse_proxy http://172.17.0.1:8101
+}

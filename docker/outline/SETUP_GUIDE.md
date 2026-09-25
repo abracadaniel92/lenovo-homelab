@@ -71,7 +71,7 @@ This document defines the strict operating rules for the homelab infrastructure.
 
 ### Governance
 - **NEVER** modify existing, working Caddyfile blocks while troubleshooting a new service
-- **ALWAYS** check `useful-files/TROUBLESHOOTING_LOG.md` before suggesting a fix
+- **ALWAYS** check `docs/reference/troubleshooting-log.md` before suggesting a fix
 - **ALWAYS** run `scripts/verify-services.sh` after any network change
 
 ### Service Addition Protocol

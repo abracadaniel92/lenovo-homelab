@@ -9,7 +9,7 @@ Single source of truth for which service uses which host port. Check this (and r
 | 3001  | Uptime Kuma       | internal only                     |
 | 5000  | Bookmarks         | bookmarks.gmojsoski.com (systemd) |
 | 8000  | TravelSync / documents-to-calendar | tickets.gmojsoski.com; API `/api/health` |
-| 8001  | MCP Knowledge (`knowledge-mcp`) | **LAN only** — Cursor SSE `http://<host>:8001/sse`; see [MCP_KNOWLEDGE_SERVER.md](../../useful-files/MCP_KNOWLEDGE_SERVER.md) |
+| 8001  | MCP Knowledge (`knowledge-mcp`) | **LAN only** — Cursor SSE `http://<host>:8001/sse`; see [mcp-knowledge-server.md](../how-to-guides/mcp-knowledge-server.md) |
 | 8066  | Mattermost        | mattermost.gmojsoski.com          |
 | 8080  | Caddy             | reverse proxy (tunnel → 8080)     |
 | 8081  | Nextcloud         | cloud.gmojsoski.com               |
@@ -25,7 +25,8 @@ Single source of truth for which service uses which host port. Check this (and r
 | 8097  | Paperless         | paperless.gmojsoski.com           |
 | 8098  | Outline           | (wiki, local only)                |
 | 8099  | FreshRSS          | rss.gmojsoski.com                 |
-| 8100+ | —                 | available                         |
+| 8101  | Cal               | cal.gmojsoski.com (Postgres container-internal) |
+| 8102+ | —                 | available                         |
 | 8233  | ws-scrcpy         | device-ip:8233 (Android emulator UI, local only) |
 | 5555  | ADB (emulator)    | 127.0.0.1 only                    |
 | 9091  | Authentik         | auth.gmojsoski.com                |

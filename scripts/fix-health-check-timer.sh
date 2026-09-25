@@ -3,7 +3,7 @@
 # Fix Health Check Timer - Updates timer to 1-hour interval
 #
 # Status: ONE-SHOT, ALREADY APPLIED — the 3min -> 1h timer migration has been
-# completed in production (see useful-files/TROUBLESHOOTING_LOG.md). Retained
+# completed in production (see docs/reference/troubleshooting-log.md). Retained
 # for reference only; do NOT re-run unless the timer has been reset to 3 min.
 ###############################################################################
 

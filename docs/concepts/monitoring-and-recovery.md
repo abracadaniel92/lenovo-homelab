@@ -106,16 +106,12 @@ This comprehensive script:
 - ✅ Tests connectivity
 - ✅ Shows status
 
-### Emergency Fix (Faster)
+### External Access Down (502/404)
+
+When services work locally but Cloudflare/Caddy external access is broken:
 
 ```bash
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/emergency-fix.sh"
-```
-
-### Subdomain Fix (502/404 Errors)
-
-```bash
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-subdomains-down.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-external-access.sh"
 ```
 
 ## Startup Order
@@ -188,7 +184,7 @@ Caddy (localhost:8080)
     ├─► jellyfin.gmojsoski.com → 172.17.0.1:8096 (Jellyfin)
     ├─► poker.gmojsoski.com → 172.17.0.1:3000 (Planning Poker)
     ├─► tickets.gmojsoski.com → 172.17.0.1:8000 (TravelSync)
-    ├─► vault.gmojsoski.com → 172.17.0.1:8082 (Vaultwarden)
+    ├─► vault.gmojsoski.com → 172.17.0.1:8083 (Vaultwarden via Nginx)
     └─► ...more services
 ```
 

@@ -27,16 +27,19 @@ docker compose restart knowledge-mcp
 ./ingest_all.sh && docker compose restart knowledge-mcp
 ```
 
-### Weekly auto-refresh (Sunday 03:00)
+### Data refresh (manual — auto-refresh disabled)
 
-- **Script:** `mcp_server/scripts/weekly-knowledge-refresh.sh` — Jira API export → CSV → full ingest → restart container.
+> The weekly auto-refresh (systemd `knowledge-mcp-weekly-refresh.timer`, Sundays 03:00) was **disabled on 2026-06-08** — the index is intentionally frozen on its current data. The timer/service units and the deploy script were removed from this repo.
+
+To refresh the index on demand (Jira API export → CSV → full ingest → restart container):
+
+```bash
+bash "/home/goce/Desktop/Cursor projects/mcp_server/scripts/weekly-knowledge-refresh.sh"
+```
+
 - **Log:** `mcp_server/data/weekly-refresh.log`
 - **Jira ingest uses CSV** (full descriptions, no Excel cell limit).
-- **Install timer (once):**
-  ```bash
-  sudo bash "/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/deploy-knowledge-mcp-weekly-refresh.sh"
-  ```
-- **Manual run:** `bash .../mcp_server/scripts/weekly-knowledge-refresh.sh`
+- **Re-enable automation:** recreate a systemd timer that runs the script above (or restore the removed units from git history).
 
 ### Confirm ports
 

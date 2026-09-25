@@ -1,0 +1,28 @@
+services:
+  scrutiny:
+    image: ghcr.io/analogj/scrutiny:master-omnibus
+    container_name: scrutiny
+    restart: always
+    profiles:
+      - utilities
+      - monitoring
+      - all
+    cap_add:
+      - SYS_RAWIO
+      - SYS_ADMIN   # required for NVMe smartctl access
+    ports:
+      - "8084:8080"   # web UI — LAN only, no Caddy/tunnel route
+    volumes:
+      - /run/udev:/run/udev:ro
+      - ./config:/opt/scrutiny/config
+      - ./influxdb:/opt/scrutiny/influxdb
+    # IMPORTANT: pass through every physical disk on lemongrab.
+    # Run `lsblk -d -o NAME,MODEL,SIZE` on the server and adjust this list
+    # before first start (expected: NVMe + 1TB SATA SSD + 1TB + 2TB mergerfs
+    # members + old 500GB).
+    devices:
+      - /dev/nvme0
+      - /dev/sda
+      - /dev/sdb
+      - /dev/sdc
+      - /dev/sdd

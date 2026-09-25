@@ -38,4 +38,4 @@ Docs: https://immich.app/docs/install/docker-compose
 
 ## Troubleshooting
 
-- **Crash on start (encoded-video/.immich ENOENT):** Empty library lacks subdirs. Use `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` in `.env`, or run `sudo docker/immich/create-library-dirs.sh /mnt/ssd_1tb/immich-library`. See `useful-files/TROUBLESHOOTING_LOG.md`.
+- **Crash on start (encoded-video/.immich ENOENT):** Empty library lacks subdirs. Use `IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true` in `.env`, or run `sudo docker/immich/create-library-dirs.sh /mnt/ssd_1tb/immich-library`. See `docs/reference/troubleshooting-log.md`.

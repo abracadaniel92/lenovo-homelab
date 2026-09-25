@@ -151,5 +151,5 @@ Routine updates that just worked don't need a log entry. Use the `log-troublesho
 
 - Backup workflow: `homelab-backup-restore` skill
 - Post-update troubleshooting: `troubleshoot-service-down` skill
-- Recovery system overview: [MONITORING_AND_RECOVERY.md](../../../useful-files/MONITORING_AND_RECOVERY.md)
+- Recovery system overview: [MONITORING_AND_RECOVERY.md](../../../docs/concepts/monitoring-and-recovery.md)
 - Service-specific notes: `docker/<service>/README.md` (where present)

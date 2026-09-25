@@ -20,6 +20,31 @@ usage() {
     exit 1
 }
 
+is_sqlite() {
+    [ -f "$1" ] && [ "$(head -c 15 "$1" 2>/dev/null)" = "SQLite format 3" ]
+}
+
+# Consistent copy of a live SQLite database via the online backup API, which
+# reads THROUGH the -wal file. Replaces the old stop-container-then-tar dance,
+# which raced SQLite's shutdown checkpoint and silently shipped archives missing
+# every write still sitting in the WAL. See troubleshooting-log 2026-09-25:
+# a Vaultwarden backup came out 7 weeks stale that way. Verifies the result
+# before returning, so a corrupt snapshot fails the backup instead of quietly
+# replacing a good one.
+sqlite_snapshot() {
+    python3 - "$1" "$2" <<'PY'
+import sqlite3, sys
+src = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+dst = sqlite3.connect(sys.argv[2])
+with dst:
+    src.backup(dst)
+ok = dst.execute("PRAGMA integrity_check").fetchone()[0]
+dst.close(); src.close()
+if ok != "ok":
+    sys.exit(f"integrity_check on snapshot returned: {ok}")
+PY
+}
+
 if [ -z "$1" ]; then
     usage
 fi
@@ -31,7 +56,9 @@ if [ ! -f "$CONF_FILE" ]; then
     exit 1
 fi
 
-# Load configuration
+# Load configuration. Path is built from $1 at runtime, so shellcheck cannot
+# follow it; every variable used below comes from here.
+# shellcheck source=/dev/null
 source "$CONF_FILE"
 
 # Prepare paths
@@ -44,7 +71,7 @@ case "$TYPE" in
     "DOCKER_TAR")
         log "   Stopping container: $CONTAINER..."
         cd "$DOCKER_DIR" && docker compose stop "$CONTAINER"
-        
+
         log "   Creating archive..."
         tar_args=("-czf" "$BACKUP_FILE")
         for exc in $EXCLUDES; do
@@ -55,7 +82,7 @@ case "$TYPE" in
             docker compose start "$CONTAINER"
             exit 1
         }
-        
+
         log "   Starting container: $CONTAINER..."
         docker compose start "$CONTAINER"
         ;;
@@ -67,11 +94,29 @@ case "$TYPE" in
             log "❌ Database dump failed!"
             exit 1
         }
-        
+
         log "   Backing up configuration..."
         CONF_TEMP="/tmp/${FILENAME_PREFIX}-config-${TIMESTAMP}.tar.gz"
-        tar -czf "$CONF_TEMP" -C "$CONFIG_SRC" "$CONFIG_FILE" 2>/dev/null || log "⚠️  Config backup skipped"
-        
+        # Nextcloud's config.php is mode 640 www-data:www-data while backups run as
+        # goce, so the host-side tar below failed every night, was swallowed by
+        # 2>/dev/null, and shipped a 45-byte empty archive with exit 0. Read it
+        # through the container instead when CONFIG_CONTAINER is set: the container
+        # owns the file, and goce is in the docker group.
+        if [ -n "${CONFIG_CONTAINER:-}" ]; then
+            # shellcheck disable=SC2153  # CONFIG_FILE comes from the sourced conf, not a typo for CONF_FILE
+            docker exec "$CONFIG_CONTAINER" tar -czf - -C "$CONFIG_CONTAINER_DIR" "$CONFIG_FILE" > "$CONF_TEMP"
+        else
+            tar -czf "$CONF_TEMP" -C "$CONFIG_SRC" "$CONFIG_FILE"
+        fi
+        # config.php carries passwordsalt and secret; without them a restored
+        # instance cannot decrypt anything. An empty archive here is a failed
+        # backup, not a warning.
+        tar -tzf "$CONF_TEMP" 2>/dev/null | grep -qF "$CONFIG_FILE" || {
+            log "❌ Config backup is empty: $CONFIG_FILE not readable"
+            rm -f "$DB_TEMP" "$CONF_TEMP"
+            exit 1
+        }
+
         log "   Creating combined archive..."
         tar -czf "$BACKUP_FILE" -C /tmp "$(basename "$DB_TEMP")" "$(basename "$CONF_TEMP")" 2>/dev/null || {
             log "❌ Backup archive creation failed!"
@@ -92,19 +137,63 @@ case "$TYPE" in
     "TAR_DIR")
         log "   Creating archive of subdirectories in $SRC_DIR..."
         cd "$SRC_DIR"
+        # SUBDIRS is a space-separated list in the conf; the splitting is wanted.
+        # shellcheck disable=SC2086
         tar -czf "$BACKUP_FILE" $SUBDIRS 2>/dev/null || {
              # Fallback to creating with what exists if some dirs are missing
+             # shellcheck disable=SC2086
              tar -czf "$BACKUP_FILE" $SUBDIRS 2>/dev/null || true
         }
         ;;
 
     "FILE")
-        log "   Copying file: $SRC_PATH..."
         if [ ! -f "$SRC_PATH" ]; then
             log "❌ ERROR: Source file not found: $SRC_PATH"
             exit 1
         fi
-        cp "$SRC_PATH" "$BACKUP_FILE"
+        if is_sqlite "$SRC_PATH"; then
+            # A plain cp of a live SQLite file can capture a torn page mid-write
+            # and drops anything still in the -wal. Same output filename, so
+            # restore procedures are unaffected.
+            log "   SQLite detected, taking online snapshot: $SRC_PATH..."
+            sqlite_snapshot "$SRC_PATH" "$BACKUP_FILE"
+        else
+            log "   Copying file: $SRC_PATH..."
+            cp "$SRC_PATH" "$BACKUP_FILE"
+        fi
+        ;;
+
+    "SQLITE_TAR")
+        # SQLite database + the rest of its data directory, no downtime.
+        if [ ! -f "$SQLITE_DB" ]; then
+            log "❌ ERROR: SQLite database not found: $SQLITE_DB"
+            exit 1
+        fi
+        DB_NAME=$(basename "$SQLITE_DB")
+        SNAP_DIR=$(mktemp -d)
+        trap 'rm -rf "$SNAP_DIR"' EXIT
+
+        log "   Snapshotting $DB_NAME..."
+        sqlite_snapshot "$SQLITE_DB" "$SNAP_DIR/$DB_NAME"
+
+        log "   Creating archive..."
+        # Archive the snapshot, then the rest of the data dir with the live
+        # database and its sidecars excluded (the snapshot supersedes them).
+        tar_args=(
+            "-czf" "$BACKUP_FILE"
+            "-C" "$SNAP_DIR" "$DB_NAME"
+            "-C" "$SRC_PATH"
+            "--exclude=./$DB_NAME"
+            "--exclude=./${DB_NAME}-wal"
+            "--exclude=./${DB_NAME}-shm"
+        )
+        for exc in $EXCLUDES; do
+            tar_args+=("--exclude=$exc")
+        done
+        tar "${tar_args[@]}" . || {
+            log "❌ Backup failed!"
+            exit 1
+        }
         ;;
 
     *)
@@ -121,6 +210,7 @@ log "✅ Backup created: $(basename "$BACKUP_FILE") ($FILE_SIZE)"
 # Smart retention cleanup
 if [ -f "$RETENTION_HELPER" ]; then
     log "   Running smart retention cleanup..."
+    # shellcheck source=/dev/null
     source "$RETENTION_HELPER"
     smart_retention_cleanup "$DST_DIR" "${FILENAME_PREFIX}-*.${EXTENSION}" "$SERVICE_NAME"
 else

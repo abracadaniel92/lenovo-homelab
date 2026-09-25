@@ -1,0 +1,26 @@
+services:
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    container_name: ntfy
+    restart: always
+    profiles:
+      - utilities
+      - monitoring
+      - all
+    command: serve
+    environment:
+      NTFY_BASE_URL: https://ntfy.gmojsoski.com
+      NTFY_BEHIND_PROXY: "true"
+      NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+      NTFY_AUTH_FILE: /var/lib/ntfy/auth.db
+      # deny-all + explicit users: topics are NOT world-readable even though
+      # the service is public via the tunnel
+      NTFY_AUTH_DEFAULT_ACCESS: deny-all
+      # relay through ntfy.sh so iOS push works (payloads stay self-hosted)
+      NTFY_UPSTREAM_BASE_URL: https://ntfy.sh
+      NTFY_ENABLE_LOGIN: "true"
+    ports:
+      - "8085:80"
+    volumes:
+      - ./cache:/var/cache/ntfy
+      - ./lib:/var/lib/ntfy

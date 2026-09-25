@@ -1,47 +1,26 @@
-# Portfolio Website
+# gmojsoski.com site root
 
-Portfolio website for Goce Mojsoski.
+Static files served by Caddy for `gmojsoski.com` and `www.gmojsoski.com`.
 
-## Development
+## Source
 
-### Quick Start
-
-Start a local development server:
+Built output from [portfolio_v2](https://github.com/abracadaniel92/portfolio_v2):
 
 ```bash
-npm run dev
+cd "/home/goce/Desktop/Cursor projects/portfolio_v2"
+npm ci && npm run build   # → dist/
 ```
 
-This will start a server at `http://localhost:8080` (or another port if 8080 is in use).
+## Deploy
 
-### Available Scripts
+From Pi-version-control:
 
-- `npm run dev` or `npm start` - Start development server on port 8080
-- `npm run serve` - Same as `npm run dev`
-- `npm run preview` - Start preview server on port 3000
-
-### Project Structure
-
-```
-portfolio/
-├── index.html          # Main HTML file
-├── css/                # Stylesheets
-├── js/                 # JavaScript files
-├── images/             # Images and assets
-├── files/              # PDFs and other files
-└── Caddyfile          # Caddy web server configuration
+```bash
+make portfolio-update
 ```
 
-## Technologies
+This runs `scripts/update-portfolio.sh`, which pulls `portfolio_v2`, builds `dist/`, and rsyncs it here (`/mnt/ssd/docker-projects/caddy/site`, mounted in the container as `/srv/site`).
 
-- HTML5
-- CSS3 (Custom CSS + Tailwind CSS via CDN)
-- Vanilla JavaScript
-- Caddy (for production serving)
+## Contents
 
-## Notes
-
-- The site uses Tailwind CSS via CDN (no build step required)
-- All JavaScript is vanilla (no frameworks)
-- The site is fully static and can be served from any static file server
-
+After deploy: `index.html`, hashed `assets/`, favicons, `og-image.png`, `site.webmanifest`, and `files/GoceMojsoskiCV.pdf`.

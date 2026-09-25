@@ -116,7 +116,7 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix
 
 ### Fix subdomains (502/404 errors)
 ```bash
-bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-subdomains-down.sh"
+bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-external-access.sh"
 ```
 
 ## Git
@@ -137,9 +137,3 @@ git push origin main
 ---
 
 *Last updated: January 2026*
-
-
-
-
-
-

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FreshRSS subscription set — Jobs + Security only.
+
+  Every feed below was fetched and confirmed to return parseable items on
+  2026-08-16; the item count at that moment is noted per feed. Feeds that were
+  probed and found dead are listed at the bottom so nobody re-adds them.
+
+  Import: FreshRSS -> Subscription management -> Import / export -> Import.
+  Import is ADDITIVE. Delete the feeds you no longer want first (see README).
+
+  Your existing "The Hacker News" feed (Cybersecurity category) is deliberately
+  NOT included — it is already subscribed and re-importing risks a duplicate.
+  Note it is thehackernews.com, an infosec outlet — NOT news.ycombinator.com.
+  The HN feeds below are a different site entirely.
+-->
+<opml version="2.0">
+  <head>
+    <title>gmojsoski homelab — jobs + security</title>
+  </head>
+  <body>
+
+    <!-- ================================================================
+         JOBS — boards
+         Replaces running career-ops/scan.mjs on a timer. These are the
+         RSS-publishing subset of the sources tuned in
+         career-ops/docs/gig-scanning/portals.gig.yml.
+         RemoteOK, Working Nomads and 4 Day Week are absent: no live feed.
+         ================================================================ -->
+    <outline text="Jobs" title="Jobs">
+      <outline type="rss" text="We Work Remotely"
+               title="We Work Remotely"
+               xmlUrl="https://weworkremotely.com/remote-jobs.rss"
+               htmlUrl="https://weworkremotely.com/" />
+      <!-- 100 items -->
+
+      <outline type="rss" text="Himalayas"
+               title="Himalayas"
+               xmlUrl="https://himalayas.app/jobs/rss"
+               htmlUrl="https://himalayas.app/jobs" />
+      <!-- 100 items -->
+
+      <outline type="rss" text="Jobicy"
+               title="Jobicy"
+               xmlUrl="https://jobicy.com/?feed=job_feed"
+               htmlUrl="https://jobicy.com/" />
+      <!-- 50 items -->
+
+      <outline type="rss" text="Remotive"
+               title="Remotive"
+               xmlUrl="https://remotive.com/remote-jobs/feed"
+               htmlUrl="https://remotive.com/" />
+      <!-- 17 items -->
+
+      <outline type="rss" text="NoDesk"
+               title="NoDesk"
+               xmlUrl="https://nodesk.co/remote-jobs/index.xml"
+               htmlUrl="https://nodesk.co/remote-jobs/" />
+      <!-- 10 items — curated, low volume, good signal -->
+
+      <outline type="rss" text="Jobspresso"
+               title="Jobspresso"
+               xmlUrl="https://jobspresso.co/?feed=job_feed"
+               htmlUrl="https://jobspresso.co/" />
+      <!-- 10 items -->
+    </outline>
+
+    <!-- ================================================================
+         JOBS — Hacker News gig threads (via hnrss.org)
+         These filter SERVER-SIDE, so they arrive pre-tuned and need no
+         FreshRSS query. The monthly "Freelancer? Seeking Freelancer?"
+         thread is the highest-value one for fractional/consulting work.
+         ================================================================ -->
+    <outline text="Jobs — HN" title="Jobs — HN">
+      <outline type="rss" text="HN: Freelancer? Seeking Freelancer?"
+               title="HN: Freelancer? Seeking Freelancer?"
+               xmlUrl="https://hnrss.org/whoishiring/freelance"
+               htmlUrl="https://news.ycombinator.com/" />
+      <!-- 20 items -->
+
+      <outline type="rss" text="HN Who is hiring: fractional"
+               title="HN Who is hiring: fractional"
+               xmlUrl="https://hnrss.org/whoishiring/jobs?q=fractional"
+               htmlUrl="https://news.ycombinator.com/" />
+
+      <outline type="rss" text="HN Who is hiring: freelance"
+               title="HN Who is hiring: freelance"
+               xmlUrl="https://hnrss.org/whoishiring/jobs?q=freelance"
+               htmlUrl="https://news.ycombinator.com/" />
+
+      <outline type="rss" text="HN Who is hiring: contract"
+               title="HN Who is hiring: contract"
+               xmlUrl="https://hnrss.org/whoishiring/jobs?q=contract"
+               htmlUrl="https://news.ycombinator.com/" />
+
+      <outline type="rss" text="HN Who is hiring: part-time"
+               title="HN Who is hiring: part-time"
+               xmlUrl="https://hnrss.org/whoishiring/jobs?q=part-time"
+               htmlUrl="https://news.ycombinator.com/" />
+    </outline>
+
+    <!-- ================================================================
+         CYBERSECURITY
+         Category name matches the existing one so these land alongside
+         "The Hacker News" instead of creating a second security category.
+
+         Scope note: image and package UPDATES are already handled by
+         Watchtower (daily 02:00) and Renovate. These feeds cover what
+         those cannot — advisories for software you run, actively
+         exploited bugs, and supply-chain incidents.
+         ================================================================ -->
+    <outline text="Cybersecurity" title="Cybersecurity">
+      <outline type="rss" text="CISA Cybersecurity Advisories"
+               title="CISA Cybersecurity Advisories"
+               xmlUrl="https://www.cisa.gov/cybersecurity-advisories/all.xml"
+               htmlUrl="https://www.cisa.gov/news-events/cybersecurity-advisories" />
+      <!-- 30 items — the actionable one: known-exploited, vendor-specific -->
+
+      <outline type="rss" text="BleepingComputer"
+               title="BleepingComputer"
+               xmlUrl="https://www.bleepingcomputer.com/feed/"
+               htmlUrl="https://www.bleepingcomputer.com/" />
+      <!-- 15 items — best coverage of self-hosted/container CVEs. Overlaps
+           The Hacker News heavily on the daily-news beat; if Cybersecurity
+           feels noisy, this is the one to drop, not CISA/Krebs/Schneier. -->
+
+      <outline type="rss" text="Krebs on Security"
+               title="Krebs on Security"
+               xmlUrl="https://krebsonsecurity.com/feed/"
+               htmlUrl="https://krebsonsecurity.com/" />
+      <!-- 10 items — low volume, high signal -->
+
+      <outline type="rss" text="Schneier on Security"
+               title="Schneier on Security"
+               xmlUrl="https://www.schneier.com/feed/"
+               htmlUrl="https://www.schneier.com/" />
+      <!-- 10 items — low volume, high signal -->
+    </outline>
+
+  </body>
+</opml>
+
+<!--
+  PROBED AND DEAD as of 2026-08-16 — do not re-add without re-checking:
+    https://remoteok.com/remote-jobs.rss                  410 Gone
+    https://www.workingnomads.com/jobsrss                 404
+    https://4dayweek.io/jobs.rss                          404
+    https://weworkremotely.com/categories/*.rss           301 loop
+    https://www.debian.org/security/dsa-long.en.rdf       404 (moved; no
+                                                          replacement found)
+    https://nvd.nist.gov/feeds/xml/cve/.../nvd-rss.xml    404 (retired)
+    https://github.com/advisories.atom                    406
+
+  ALREADY SUBSCRIBED — not in this file, do not re-add:
+    https://feeds.feedburner.com/TheHackersNews   [Cybersecurity]
+
+  NOT ADDED, on purpose:
+    news.ycombinator.com/rss — the HN front page. You have no such feed today
+    and the gig threads above already cover the job use case. Add it only if
+    you want general HN, which is a lot of volume for little signal here.
+-->

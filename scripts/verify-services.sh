@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-SUBDOMAINS=("gmojsoski.com" "jellyfin.gmojsoski.com" "cloud.gmojsoski.com" "vault.gmojsoski.com" "paperless.gmojsoski.com" "files.gmojsoski.com" "mattermost.gmojsoski.com" "linkwarden.gmojsoski.com" "immich.gmojsoski.com" "rss.gmojsoski.com" "budget.gmojsoski.com" "css.gmojsoski.com")
+SUBDOMAINS=("gmojsoski.com" "jellyfin.gmojsoski.com" "cloud.gmojsoski.com" "vault.gmojsoski.com" "paperless.gmojsoski.com" "mattermost.gmojsoski.com" "linkwarden.gmojsoski.com" "immich.gmojsoski.com" "rss.gmojsoski.com" "budget.gmojsoski.com" "css.gmojsoski.com" "cal.gmojsoski.com")
 LOG_FILE="/home/goce/Desktop/Cursor projects/Pi-version-control/logs/verification.log"
 
 mkdir -p "$(dirname "$LOG_FILE")"
@@ -12,7 +12,9 @@ FAILED=0
 
 for sub in "${SUBDOMAINS[@]}"; do
     STATUS=$(curl -o /dev/null -s -w "%{http_code}" "https://$sub")
-    if [ "$STATUS" == "200" ] || [ "$STATUS" == "302" ]; then
+    # 307 is a healthy answer too: Next.js apps (Cal) redirect every path,
+    # including the root, so they never return a bare 200 or 302.
+    if [ "$STATUS" == "200" ] || [ "$STATUS" == "302" ] || [ "$STATUS" == "307" ]; then
         echo "✅ $sub: $STATUS" | tee -a "$LOG_FILE"
     else
         echo "❌ $sub: $STATUS" | tee -a "$LOG_FILE"
