@@ -1,0 +1,23 @@
+# fail2ban config for the Raspberry Pi (SSH on port 222, key-only login)
+# Install: sudo cp pi.local /etc/fail2ban/jail.d/pi.local
+
+[DEFAULT]
+# First ban 1 hour, doubling for repeat offenders up to 1 week
+bantime = 3600
+bantime.increment = true
+bantime.factor = 2
+bantime.maxtime = 604800
+
+# 5 failures within 10 minutes -> ban
+findtime = 600
+maxretry = 5
+
+# Never ban localhost or the home network
+ignoreip = 127.0.0.1/8 ::1 192.168.1.0/24
+
+# Raspberry Pi OS logs to the systemd journal only (no /var/log/auth.log)
+backend = systemd
+
+[sshd]
+enabled = true
+port = 222
