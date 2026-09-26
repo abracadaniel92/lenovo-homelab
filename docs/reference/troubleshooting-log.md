@@ -2,6 +2,135 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Restore drills for all 5 services: Linkwarden had no database in its backups
+
+**Date:** 2026-09-26
+**Action:** Extended the restore drill from Vaultwarden to all five backed-up
+services. Building it exposed two real defects, both fixed.
+**Result:** ✅ **ALL 5 RESTORE DRILLS PASS.** Linkwarden backups had been
+shipping with **no database at all** for ~8 months; fixed and re-run. Nextcloud
+backups could not restore onto a fresh server; fixed and re-run.
+
+### 🔍 Finding 1: Linkwarden backups contained no bookmarks (data loss risk)
+
+`linkwarden.conf` listed `SUBDIRS="data pgdata meili_data"`, but:
+
+- `pgdata` is `drwx------ 70 root`, and backups run as `goce`. tar could not
+  read a single file inside it.
+- `TAR_DIR` in `backup-engine.sh` ran **the same tar twice** with `2>/dev/null`
+  and ended in `|| true`, so it could not fail.
+
+Every archive therefore shipped `data/` and an empty shell of `meili_data/`,
+and **no database**. Linkwarden keeps links, tags, collections and users in
+Postgres, so a restore would have produced page snapshots with nothing pointing
+at them. The archive was 16 MB, fresh, valid gzip, and passed the new `.ok`
+verification, because the tar really was a valid tar. **This is precisely the
+gap a restore drill exists to close.**
+
+At the time of discovery the live DB held **7 bookmarks and 1 user**, none of
+which were in any backup.
+
+Tarring a live `pgdata` would have been wrong even if readable: it is a torn
+copy of a running database. Switched to a new `PG_DUMP_AND_DIRS` type that runs
+`pg_dump` through the container.
+
+`meili_data` was dropped from the backup. Its `.mdb` files are root-owned and
+were never really captured either, and it is a Meilisearch index derived from
+the Postgres data, so it is rebuildable. Trade-off recorded in the conf: after
+a restore, search may be empty until Linkwarden reindexes.
+
+`TAR_DIR` now fails loudly. The duplicate retry and `|| true` are gone.
+
+### 🔍 Finding 2: Nextcloud backups could not restore onto a fresh server
+
+The drill loaded the dump into a clean Postgres and it aborted:
+
+```
+ERROR:  role "oc_contact@gmojsoski.com" does not exist
+```
+
+`pg_dump` emits `ALTER TABLE ... OWNER TO <role>` and `GRANT` for roles it
+**never creates**; only `pg_dumpall --globals-only` carries role definitions.
+The dump contained **0** `CREATE ROLE` statements while depending on 2 roles.
+
+Restoring into the existing container would have worked, since the roles are
+already there. Restoring after losing the machine, which is the case backups
+exist for, would have failed until someone hand-created the roles.
+
+Both Postgres backup types now capture a globals dump alongside, asserted
+non-empty (`grep -q "CREATE ROLE"`). Applies to Nextcloud and Linkwarden.
+
+### ✅ Implementation
+
+| File | Change |
+|---|---|
+| `scripts/restore-drill.sh` | **New.** All 5 services, `restore-drill.sh [service]` |
+| `scripts/restore-drill-vaultwarden.sh` | **Deleted**, superseded by the above |
+| `scripts/backup-engine.sh` | New `PG_DUMP_AND_DIRS` type; `TAR_DIR` fails loudly; both PG types capture `pg_dumpall --globals-only` |
+| `scripts/backup.d/linkwarden.conf` | `TAR_DIR` → `PG_DUMP_AND_DIRS`, dropped `pgdata`/`meili_data` |
+
+Two bugs in the drill harness itself, both worth remembering:
+
+- **`pg_isready` lies.** The official Postgres image runs initdb against a
+  temporary server on the same socket, then restarts. `pg_isready` *and* a real
+  `select 1` both answer yes against that temporary server, so the dump load
+  died halfway with `connection to server on socket ... failed`. Fixed by
+  waiting for the image's own `init process complete` log line first.
+- Assertions were written `test && ok || bad`, which reports a false pass if
+  `ok()` returns non-zero. Replaced with `want_*` if/else helpers.
+
+### 🧪 Verification
+
+```bash
+bash scripts/restore-drill.sh     # ALL RESTORE DRILLS PASSED
+```
+
+```
+vaultwarden  603 passwords restored, HTTP 200 in 2s, matches live
+nextcloud    126 tables, 2 users, config.php has instanceid/passwordsalt/secret
+travelsync   db integrity ok, credentials.json + token.pickle present
+kitchenowl   integrity ok, 27 tables, alembic version present
+linkwarden   7 bookmarks, 1 user, dump loads into a clean postgres
+```
+
+All 5 newest archives carry a `.ok` sidecar. `test-health-modules.sh` 11/11 and
+`test-backup-freshness.sh` 7/7 still pass.
+
+### 📝 Lessons learned
+
+- **Three layers of verification caught none of this.** Archive-read-at-write,
+  `.ok` sidecar and hourly freshness all passed a Linkwarden backup with no
+  database. They check the container, not the contents. Only a restore checks
+  the contents.
+- **Error suppression is how backups die.** `2>/dev/null` plus `|| true` turned
+  a total failure into a daily success for eight months. Same root shape as the
+  2026-01-28 outage.
+- **A backup that restores in place is not a backup that restores.** Nextcloud
+  would have restored fine onto the existing server and failed on a new one.
+  Test against a *clean* target or the test proves nothing.
+- Permission mismatches are a recurring theme here: Nextcloud's `config.php`
+  (2026-09-25), Linkwarden's `pgdata` and `meili_data` (today). Anything the
+  `goce` user cannot read is silently absent unless asserted.
+
+### 📌 Open items
+
+1. **Linkwarden archives older than `linkwarden-20260926-192441.tar.gz` have no
+   database** and should not be trusted. They age out under retention. The same
+   applies to the B2 copies until the 03:00 sync runs.
+2. Backup archives are mode 644 and now include Postgres role password hashes.
+   Consistent with existing posture (the dumps already held user hashes), but
+   worth tightening.
+3. No drill for FreshRSS, which still has no `backup.d` conf at all.
+
+### 📍 Files involved
+
+- `scripts/restore-drill.sh`, `scripts/backup-engine.sh`,
+  `scripts/backup.d/linkwarden.conf`
+- Archives: `/mnt/ssd/backups/{vaultwarden,nextcloud,travelsync,kitchenowl,linkwarden}/`
+
+**Status**: ✅ All five services proven restorable. Re-run after any upgrade to
+one of them, and monthly otherwise.
+
 ## [2026-09-26] Proved the alert chain and the Vaultwarden backup actually work
 
 **Date:** 2026-09-26
