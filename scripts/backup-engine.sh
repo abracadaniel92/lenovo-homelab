@@ -95,6 +95,24 @@ case "$TYPE" in
             exit 1
         }
 
+        # pg_dump NEVER emits CREATE ROLE, but its output is full of
+        # "ALTER TABLE ... OWNER TO <role>" and GRANTs. Restoring into a fresh
+        # Postgres therefore dies on the first missing role. Proven by the
+        # restore drill on 2026-09-26: the Nextcloud dump aborted with
+        # `role "oc_contact@gmojsoski.com" does not exist`. Only pg_dumpall
+        # --globals-only carries roles, so capture it alongside.
+        GLOBALS_TEMP="/tmp/${FILENAME_PREFIX}-globals-${TIMESTAMP}.sql"
+        docker exec "$DB_CONTAINER" pg_dumpall -U "$DB_USER" --globals-only > "$GLOBALS_TEMP" 2>/dev/null || {
+            log "❌ Globals (roles) dump failed!"
+            rm -f "$DB_TEMP" "$GLOBALS_TEMP"
+            exit 1
+        }
+        grep -q "CREATE ROLE" "$GLOBALS_TEMP" || {
+            log "❌ Globals dump contains no roles"
+            rm -f "$DB_TEMP" "$GLOBALS_TEMP"
+            exit 1
+        }
+
         log "   Backing up configuration..."
         CONF_TEMP="/tmp/${FILENAME_PREFIX}-config-${TIMESTAMP}.tar.gz"
         # Nextcloud's config.php is mode 640 www-data:www-data while backups run as
@@ -118,12 +136,12 @@ case "$TYPE" in
         }
 
         log "   Creating combined archive..."
-        tar -czf "$BACKUP_FILE" -C /tmp "$(basename "$DB_TEMP")" "$(basename "$CONF_TEMP")" 2>/dev/null || {
+        tar -czf "$BACKUP_FILE" -C /tmp "$(basename "$DB_TEMP")" "$(basename "$CONF_TEMP")" "$(basename "$GLOBALS_TEMP")" 2>/dev/null || {
             log "❌ Backup archive creation failed!"
-            rm -f "$DB_TEMP" "$CONF_TEMP"
+            rm -f "$DB_TEMP" "$CONF_TEMP" "$GLOBALS_TEMP"
             exit 1
         }
-        rm -f "$DB_TEMP" "$CONF_TEMP"
+        rm -f "$DB_TEMP" "$CONF_TEMP" "$GLOBALS_TEMP"
         ;;
 
     "TAR")
@@ -134,15 +152,65 @@ case "$TYPE" in
         }
         ;;
 
+    "PG_DUMP_AND_DIRS")
+        # Postgres + on-disk directories. Use this rather than TAR_DIR whenever a
+        # Postgres data directory is involved: tarring a live pgdata produces a
+        # torn copy that Postgres may refuse to start from, and on this host it
+        # also fails outright because pgdata is mode 700 owned by uid 70 while
+        # backups run as goce. See troubleshooting-log 2026-09-26.
+        log "   Dumping database: $DB_NAME..."
+        DB_TEMP="/tmp/${FILENAME_PREFIX}-db-${TIMESTAMP}.sql"
+        docker exec "$DB_CONTAINER" pg_dump -U "$DB_USER" "$DB_NAME" > "$DB_TEMP" || {
+            log "❌ Database dump failed!"
+            rm -f "$DB_TEMP"
+            exit 1
+        }
+        # A dump that ran but produced no schema is a failed backup, not a small
+        # one. This is the assertion the Linkwarden backup never had.
+        grep -q "CREATE TABLE" "$DB_TEMP" || {
+            log "❌ Database dump contains no tables: $DB_NAME"
+            rm -f "$DB_TEMP"
+            exit 1
+        }
+        log "   Dump OK ($(wc -l < "$DB_TEMP") lines)"
+
+        # See PG_DUMP_AND_TAR above: pg_dump emits OWNER TO / GRANT for roles it
+        # never creates, so a restore into a fresh Postgres needs the globals.
+        GLOBALS_TEMP="/tmp/${FILENAME_PREFIX}-globals-${TIMESTAMP}.sql"
+        docker exec "$DB_CONTAINER" pg_dumpall -U "$DB_USER" --globals-only > "$GLOBALS_TEMP" 2>/dev/null || {
+            log "❌ Globals (roles) dump failed!"
+            rm -f "$DB_TEMP" "$GLOBALS_TEMP"
+            exit 1
+        }
+        grep -q "CREATE ROLE" "$GLOBALS_TEMP" || {
+            log "❌ Globals dump contains no roles"
+            rm -f "$DB_TEMP" "$GLOBALS_TEMP"
+            exit 1
+        }
+
+        log "   Creating combined archive..."
+        # shellcheck disable=SC2086  # SUBDIRS is a space-separated list; splitting is wanted
+        tar -czf "$BACKUP_FILE" -C /tmp "$(basename "$DB_TEMP")" "$(basename "$GLOBALS_TEMP")" -C "$SRC_DIR" $SUBDIRS || {
+            log "❌ Backup archive creation failed!"
+            rm -f "$DB_TEMP" "$GLOBALS_TEMP" "$BACKUP_FILE"
+            exit 1
+        }
+        rm -f "$DB_TEMP" "$GLOBALS_TEMP"
+        ;;
+
     "TAR_DIR")
         log "   Creating archive of subdirectories in $SRC_DIR..."
-        cd "$SRC_DIR"
-        # SUBDIRS is a space-separated list in the conf; the splitting is wanted.
-        # shellcheck disable=SC2086
-        tar -czf "$BACKUP_FILE" $SUBDIRS 2>/dev/null || {
-             # Fallback to creating with what exists if some dirs are missing
-             # shellcheck disable=SC2086
-             tar -czf "$BACKUP_FILE" $SUBDIRS 2>/dev/null || true
+        cd "$SRC_DIR" || { log "❌ ERROR: cannot enter $SRC_DIR"; exit 1; }
+        # Previously this ran the SAME tar twice with stderr suppressed and ended
+        # in `|| true`, so it could not fail. That is how Linkwarden shipped 8
+        # months of backups with no database in them: pgdata is unreadable as
+        # goce, tar errored on every file, and the archive was declared good.
+        # Errors are now visible and fatal.
+        # shellcheck disable=SC2086  # SUBDIRS is a space-separated list; splitting is wanted
+        tar -czf "$BACKUP_FILE" $SUBDIRS || {
+            log "❌ Backup failed! (one or more of: $SUBDIRS)"
+            rm -f "$BACKUP_FILE"
+            exit 1
         }
         ;;
 

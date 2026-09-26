@@ -2,6 +2,255 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Backblaze offsite audit: copies are good, but the sync can fail silently
+
+**Date:** 2026-09-26
+**Action:** Audited the B2 offsite copies: verified one end to end by
+downloading and opening it, then checked how the sync is scheduled and
+monitored.
+**Result:** ⚠️ **Copies verified good. Monitoring is not.** The nightly sync is
+a plain user cron, so a failure is silent and nothing checks the offsite copies
+are current. **Fix specified below, NOT yet implemented.**
+
+### ✅ What was verified (the good news)
+
+Downloaded `vaultwarden-20260926-020001.tar.gz` from B2 and opened it:
+
+```bash
+rclone copy b2-backup:Goce-Lenovo/vaultwarden/vaultwarden-20260926-020001.tar.gz /tmp/b2test/
+md5sum /tmp/b2test/<file> /mnt/ssd/backups/vaultwarden/<file>
+```
+
+- **md5 identical** to the local copy (`90a299e6...`)
+- Extracts, `PRAGMA integrity_check` = ok, **603 ciphers**, newest entry
+  `2026-09-25 12:58`, `rsa_key.pem` present
+- `/var/log/rclone-sync.log` shows 03:00 runs completing successfully on
+  2026-09-23, 24, 25 and 26
+- All 5 services present in `b2-backup:Goce-Lenovo/`, 454 objects, 437 MiB
+
+So the data that is up there is real and restorable.
+
+### 🔍 Gap 1 (the important one): a failed sync is silent
+
+`crontab -l` (user `goce`):
+
+```
+0 3 * * * /usr/local/bin/sync-backups-to-b2.sh
+```
+
+It is **not a systemd unit**, so the `notify-failure@.service` notifier
+installed earlier today does not cover it. The script does capture the exit
+code and log "completed with warnings", but nothing reads that log. There is no
+`MAILTO` in `/etc/crontab` either.
+
+Worse, **no `health.d/` module looks at B2 at all**. `50-backup-freshness.sh`
+only checks local archives. So the offsite copy could stop updating and every
+signal on the box would still read green. That is the same failure class as the
+2026-01-28 outage: the thing that would report the problem is not watching.
+
+### 🔍 Gap 2: nothing is encrypted before upload
+
+`rclone config show b2-backup` reports `type = b2`, not `crypt`. Backblaze
+encrypts at rest on their side, but the archives are uploaded as-is.
+
+- **Vaultwarden is fine.** Ciphers are encrypted client-side and the key never
+  leaves the user's devices, so the vault is opaque to Backblaze.
+- **TravelSync is the concern.** Its archive contains `credentials.json` and
+  `token.pickle`, which are live **Google OAuth credentials**, readable.
+- Nextcloud database contents, and (as of today) Postgres role password hashes
+  from the new globals dump, are also readable.
+
+Judgement call, not an obvious bug. Client-side encryption adds a key that, if
+lost, makes every offsite copy unrecoverable.
+
+### 🔍 Gap 3: the superseded bucket grows forever
+
+`Goce-Lenovo-superseded` (created 2026-09-25 when `--backup-dir` turned the
+sync from a mirror into an archive) has no lifecycle rule. 6 objects /
+3.1 MiB today, so not urgent, but unbounded.
+
+### 📌 The fix that is needed
+
+**1. Move the sync off cron onto a systemd timer** so it inherits the existing
+failure notifier and becomes visible in `systemctl list-timers`.
+
+- New `systemd/sync-backups-to-b2.service` + `.timer` (daily 03:00).
+- Service needs `User=goce`: rclone's config lives in that user's home, which
+  is why the current script wraps everything in `sudo -u goce`.
+- Attach `OnFailure=notify-failure@%n.service`, the same way
+  `repair-silent-failures.sh` step 4 does for the other units, and add it to
+  that script's unit loop so it is idempotent.
+- Remove the `0 3 * * *` line from the `goce` crontab in the same change, or
+  the sync runs twice.
+
+**2. Add `scripts/health.d/60-offsite-freshness.sh`**, modelled on
+`50-backup-freshness.sh`: for each `backup.d/*.conf`, list the matching prefix
+in `b2-backup:Goce-Lenovo/<service>/` and alarm if the newest object is older
+than `MAX_AGE_HOURS` (plus a grace margin, since the offsite copy is by
+definition behind the local one).
+
+- Use `rclone lsjson --files-only` and read `ModTime`, rather than parsing
+  `lsf` output.
+- The health check runs as **root**, rclone config belongs to **goce**, so it
+  must call `sudo -u goce rclone`.
+- B2 list calls are class B transactions and cheap, but one listing per service
+  per hour is still ~120 calls/day. Consider a single recursive `lsjson` of the
+  bucket instead of one call per service.
+- Leave a self-check next to `test-backup-freshness.sh`.
+
+**3. Optional, decide separately:** an `rclone crypt` remote layered over
+`b2-backup` for Gap 2, and a B2 lifecycle rule for Gap 3.
+
+### ⚠️ Immediate note
+
+The **Linkwarden copy in B2 is still the broken pre-fix archive** (no database)
+until the 03:00 sync on 2026-09-27 uploads
+`linkwarden-20260926-193030.tar.gz`. Confirm after that run:
+
+```bash
+sudo -u goce rclone lsf b2-backup:Goce-Lenovo/linkwarden/ | sort | tail -3
+```
+
+### 📍 Files involved
+
+- `scripts/sync-backups-to-b2.sh` (and its deployed copy
+  `/usr/local/bin/sync-backups-to-b2.sh`)
+- `/var/log/rclone-sync.log`, `goce` crontab
+- To create: `systemd/sync-backups-to-b2.{service,timer}`,
+  `scripts/health.d/60-offsite-freshness.sh`
+
+**Status**: ⚠️ Audit complete, copies proven good, **fix not implemented**.
+Picked up from the CLI next session.
+
+## [2026-09-26] Restore drills for all 5 services: Linkwarden had no database in its backups
+
+**Date:** 2026-09-26
+**Action:** Extended the restore drill from Vaultwarden to all five backed-up
+services. Building it exposed two real defects, both fixed.
+**Result:** ✅ **ALL 5 RESTORE DRILLS PASS.** Linkwarden backups had been
+shipping with **no database at all** for ~8 months; fixed and re-run. Nextcloud
+backups could not restore onto a fresh server; fixed and re-run.
+
+### 🔍 Finding 1: Linkwarden backups contained no bookmarks (data loss risk)
+
+`linkwarden.conf` listed `SUBDIRS="data pgdata meili_data"`, but:
+
+- `pgdata` is `drwx------ 70 root`, and backups run as `goce`. tar could not
+  read a single file inside it.
+- `TAR_DIR` in `backup-engine.sh` ran **the same tar twice** with `2>/dev/null`
+  and ended in `|| true`, so it could not fail.
+
+Every archive therefore shipped `data/` and an empty shell of `meili_data/`,
+and **no database**. Linkwarden keeps links, tags, collections and users in
+Postgres, so a restore would have produced page snapshots with nothing pointing
+at them. The archive was 16 MB, fresh, valid gzip, and passed the new `.ok`
+verification, because the tar really was a valid tar. **This is precisely the
+gap a restore drill exists to close.**
+
+At the time of discovery the live DB held **7 bookmarks and 1 user**, none of
+which were in any backup.
+
+Tarring a live `pgdata` would have been wrong even if readable: it is a torn
+copy of a running database. Switched to a new `PG_DUMP_AND_DIRS` type that runs
+`pg_dump` through the container.
+
+`meili_data` was dropped from the backup. Its `.mdb` files are root-owned and
+were never really captured either, and it is a Meilisearch index derived from
+the Postgres data, so it is rebuildable. Trade-off recorded in the conf: after
+a restore, search may be empty until Linkwarden reindexes.
+
+`TAR_DIR` now fails loudly. The duplicate retry and `|| true` are gone.
+
+### 🔍 Finding 2: Nextcloud backups could not restore onto a fresh server
+
+The drill loaded the dump into a clean Postgres and it aborted:
+
+```
+ERROR:  role "oc_contact@gmojsoski.com" does not exist
+```
+
+`pg_dump` emits `ALTER TABLE ... OWNER TO <role>` and `GRANT` for roles it
+**never creates**; only `pg_dumpall --globals-only` carries role definitions.
+The dump contained **0** `CREATE ROLE` statements while depending on 2 roles.
+
+Restoring into the existing container would have worked, since the roles are
+already there. Restoring after losing the machine, which is the case backups
+exist for, would have failed until someone hand-created the roles.
+
+Both Postgres backup types now capture a globals dump alongside, asserted
+non-empty (`grep -q "CREATE ROLE"`). Applies to Nextcloud and Linkwarden.
+
+### ✅ Implementation
+
+| File | Change |
+|---|---|
+| `scripts/restore-drill.sh` | **New.** All 5 services, `restore-drill.sh [service]` |
+| `scripts/restore-drill-vaultwarden.sh` | **Deleted**, superseded by the above |
+| `scripts/backup-engine.sh` | New `PG_DUMP_AND_DIRS` type; `TAR_DIR` fails loudly; both PG types capture `pg_dumpall --globals-only` |
+| `scripts/backup.d/linkwarden.conf` | `TAR_DIR` → `PG_DUMP_AND_DIRS`, dropped `pgdata`/`meili_data` |
+
+Two bugs in the drill harness itself, both worth remembering:
+
+- **`pg_isready` lies.** The official Postgres image runs initdb against a
+  temporary server on the same socket, then restarts. `pg_isready` *and* a real
+  `select 1` both answer yes against that temporary server, so the dump load
+  died halfway with `connection to server on socket ... failed`. Fixed by
+  waiting for the image's own `init process complete` log line first.
+- Assertions were written `test && ok || bad`, which reports a false pass if
+  `ok()` returns non-zero. Replaced with `want_*` if/else helpers.
+
+### 🧪 Verification
+
+```bash
+bash scripts/restore-drill.sh     # ALL RESTORE DRILLS PASSED
+```
+
+```
+vaultwarden  603 passwords restored, HTTP 200 in 2s, matches live
+nextcloud    126 tables, 2 users, config.php has instanceid/passwordsalt/secret
+travelsync   db integrity ok, credentials.json + token.pickle present
+kitchenowl   integrity ok, 27 tables, alembic version present
+linkwarden   7 bookmarks, 1 user, dump loads into a clean postgres
+```
+
+All 5 newest archives carry a `.ok` sidecar. `test-health-modules.sh` 11/11 and
+`test-backup-freshness.sh` 7/7 still pass.
+
+### 📝 Lessons learned
+
+- **Three layers of verification caught none of this.** Archive-read-at-write,
+  `.ok` sidecar and hourly freshness all passed a Linkwarden backup with no
+  database. They check the container, not the contents. Only a restore checks
+  the contents.
+- **Error suppression is how backups die.** `2>/dev/null` plus `|| true` turned
+  a total failure into a daily success for eight months. Same root shape as the
+  2026-01-28 outage.
+- **A backup that restores in place is not a backup that restores.** Nextcloud
+  would have restored fine onto the existing server and failed on a new one.
+  Test against a *clean* target or the test proves nothing.
+- Permission mismatches are a recurring theme here: Nextcloud's `config.php`
+  (2026-09-25), Linkwarden's `pgdata` and `meili_data` (today). Anything the
+  `goce` user cannot read is silently absent unless asserted.
+
+### 📌 Open items
+
+1. **Linkwarden archives older than `linkwarden-20260926-192441.tar.gz` have no
+   database** and should not be trusted. They age out under retention. The same
+   applies to the B2 copies until the 03:00 sync runs.
+2. Backup archives are mode 644 and now include Postgres role password hashes.
+   Consistent with existing posture (the dumps already held user hashes), but
+   worth tightening.
+3. No drill for FreshRSS, which still has no `backup.d` conf at all.
+
+### 📍 Files involved
+
+- `scripts/restore-drill.sh`, `scripts/backup-engine.sh`,
+  `scripts/backup.d/linkwarden.conf`
+- Archives: `/mnt/ssd/backups/{vaultwarden,nextcloud,travelsync,kitchenowl,linkwarden}/`
+
+**Status**: ✅ All five services proven restorable. Re-run after any upgrade to
+one of them, and monthly otherwise.
+
 ## [2026-09-26] Proved the alert chain and the Vaultwarden backup actually work
 
 **Date:** 2026-09-26
@@ -459,6 +708,84 @@ Verified after teardown: container and both dirs gone, 35 containers running
 (36 minus Watchtower), no service disrupted. The
 `com.centurylinklabs.watchtower.*` labels left on other services are inert.
 
+### 📝 Lessons learned
+
+1. **A monitor that can only report failures it survives is not a monitor.**
+   Every alert here was emitted *by* `health-check-engine.sh`. When that stopped
+   executing, the reporter and the outage were the same component. `OnFailure=`
+   fires even when `ExecStart` never got off the ground, which is exactly the
+   case that was invisible. Alerting must be out-of-band from the thing it
+   watches.
+
+2. **"Green" is not "working". Check the function, not the process.** Three
+   separate systems in one day reported healthy while doing nothing:
+   `systemctl list-timers` showed a recent `LAST` for a unit failing instantly
+   on every fire; `docker ps` showed Watchtower `Up 2 weeks (healthy)` while its
+   job panicked in a recovered goroutine; the Nextcloud backup exited 0 while
+   shipping an empty config archive. Liveness checks measure the wrapper.
+
+3. **`|| log "warning"` on a failed command is a silent failure.** The Nextcloud
+   config tar failed every night for eight months behind `2>/dev/null` and a
+   friendly warning. If the artifact is required for recovery, assert on the
+   artifact and exit non-zero. Warnings in an unread log are not signals.
+
+4. **Verify backups by restoring/inspecting them, never by their existence.**
+   The archive was present, recent-looking and the right shape. It was 7 weeks
+   stale (WAL race) and, for Nextcloud, missing the secrets needed to decrypt
+   anything. `ls` proves nothing; row counts and `PRAGMA integrity_check` do.
+
+5. **Never put a space in an infrastructure path.** One space took out four
+   systems on the same day because each caller was independently unquoted. The
+   fix is a space-free symlink, not auditing every quote forever.
+
+6. **`set -e` in a loop over services is a hazard.** It aborted
+   `backup-all-critical.sh` after the first of five, so even successful cron
+   runs only ever backed up Vaultwarden. Collect failures, continue, exit
+   non-zero at the end.
+
+7. **Offsite `rclone sync` is a mirror, not a backup.** It faithfully
+   replicated local destruction within 24 hours. `--backup-dir` is what makes
+   it an archive.
+
+8. **A symlink that makes deployment easy makes accidental deployment easy.**
+   Introducing `/opt/homelab` means `git checkout` on the server is now a
+   deploy; this bit during this very session. Documented in `CLAUDE.md`.
+
+### 📍 Files involved
+
+**Repo**
+- `scripts/backup-engine.sh` — `is_sqlite()`, `sqlite_snapshot()`, `SQLITE_TAR`
+  type, SQLite-aware `FILE` type, container-side config read + hard assert
+- `scripts/backup-all-critical.sh` — removed `set -e`, derived `SCRIPT_DIR`
+- `scripts/backup.d/vaultwarden.conf`, `scripts/backup.d/nextcloud.conf`
+- `scripts/health.d/50-backup-freshness.sh` — new alarm
+- `scripts/test-backup-freshness.sh` — its self-check (outside `health.d/` on
+  purpose: the engine sources every `*.sh` there)
+- `scripts/notify-unit-failure.sh`, `systemd/notify-failure@.service` — new
+- `scripts/repair-silent-failures.sh` — the idempotent root-side repair
+- `scripts/sync-backups-to-b2.sh` — `--backup-dir`
+- `Makefile` (`update` target), `README.md` (service table), `CLAUDE.md`
+- `docker/watchtower/` — deleted
+
+**Live (server)**
+- `/opt/homelab` → symlink to the repo working tree
+- `/etc/systemd/system/notify-failure@.service`
+- `/etc/systemd/system/enhanced-health-check.service.d/override.conf`
+- `/etc/systemd/system/{hdd-health-check,slack-goatcounter-weekly,portfolio-update}.service.d/onfailure.conf`
+- `/etc/crontab` (backed up to `/etc/crontab.bak-<timestamp>`)
+- `/usr/local/bin/sync-backups-to-b2.sh`
+- `/mnt/ssd/docker-projects/watchtower/`, `/home/docker-projects/watchtower/` — removed
+
+### 🚚 Landed
+
+`feature/repair-silent-automation-failures` → `develop` (PR #86) → `main`
+(PR #87); `CLAUDE.md` deploy rule via PR #88. Server working tree returned to
+`main` and verified afterwards, per the new rule.
+
+**Status**: ✅ **RESOLVED.** Health check hourly and passing, failure alerting
+out-of-band, all 5 backups fresh and content-verified, offsite is an archive,
+Watchtower gone. Four follow-ups remain open (see above).
+
 ## [2026-09-25] Vaultwarden 1.35.1 → 1.37.3: iOS autofill save crash, and a silently truncating backup
 
 **Date:** 2026-09-25
@@ -574,10 +901,20 @@ docker compose pull && docker compose up -d
 
 ### 📝 Notes / open items
 
+> **Update, same day, later:** the two items below marked ✅ were resolved within
+> hours by the automation-repair entry at the top of this log. The original text
+> is kept as written (this log is append-only); the markers record the outcome.
+
 - **Duplicate vault entries** exist from the failed-looking saves (at minimum the
   2026-09-25 pair, likely more from 2026-09-19). Needs a manual pass in the vault.
+  ⏳ **Still open.**
 - **`backup-engine.sh` WAL race** (above) is unfixed and affects other services.
+  ✅ **Resolved**: new `SQLITE_TAR` type plus a SQLite-aware `FILE` type. Verified
+  603/603 ciphers with `integrity_check ok`.
 - **Backups not running since 2026-01-28**; timer/cron unverified.
+  ✅ **Resolved**: root cause was the space in the repo path breaking the cron
+  line. Cron rewritten via `/opt/homelab`; all 5 services verified fresh; a
+  freshness alarm now catches a recurrence within 48h.
 - **`ADMIN_TOKEN` is plain text.** 1.37.3 now warns about this on every start:
   `You are using a plain text ADMIN_TOKEN which is insecure.` Fix is
   `vaultwarden hash` to generate an Argon2 PHC string.
@@ -585,6 +922,34 @@ docker compose pull && docker compose up -d
   `SSO_ENABLED: "true"` OIDC block that is **not** present on the live container,
   plus placeholder secrets. The repo file is aspirational for SSO. Left alone
   deliberately; reconciling it is separate work.
+
+### 📝 Lessons learned
+
+1. **"It failed" from a user can mean "it succeeded and then crashed".** The
+   iOS client reported a save error; the server logs showed the write committing
+   two seconds *before* the crash. The client choked decoding the response. Read
+   the server timeline before trusting the client's account of what happened,
+   and check for side effects: every "failed" save left a real duplicate entry.
+2. **Pinning `:latest` is not pinning.** The container had been running the same
+   image for nine months while `:latest` moved on, so "we're on latest" was true
+   and meaningless. Pin explicit tags and let Renovate propose bumps.
+3. **Client/server API skew is a real breakage class for self-hosted services.**
+   Vaultwarden tracks upstream Bitwarden clients; its release notes say which
+   server version a given client requires. Worth checking before assuming a bug.
+4. **A version-skew incident is a good moment to test a backup**, which is the
+   only reason the eight-month backup outage was found at all.
+
+### 📍 Files involved
+
+- `/home/docker-projects/vaultwarden/docker-compose.yml` (live) — image pinned
+  `vaultwarden/server:1.37.3`
+- `docker/vaultwarden/docker-compose.yml` (repo) — mirrored the pin
+- `/mnt/ssd/backups/vaultwarden/vaultwarden-preupgrade-1.35.1-20260925.tar.gz`
+- `scripts/backup.d/vaultwarden.conf` — `DOCKER_TAR` → `SQLITE_TAR`
+
+**Status**: ✅ **RESOLVED.** 1.37.3 live and healthy, web-vault 2026.7.0,
+603 ciphers intact, `vault.gmojsoski.com` 200 internal and external, iOS saves
+working. Two follow-ups open: duplicate vault entries, plaintext `ADMIN_TOKEN`.
 
 ## [2026-09-25] Cal follow-up: Google Calendar + Meet, public privacy policy, Koalendar cutover
 
