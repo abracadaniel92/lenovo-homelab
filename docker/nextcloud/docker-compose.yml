@@ -22,7 +22,7 @@ services:
       start_period: 40s
 
   app:
-    image: nextcloud:30-apache
+    image: nextcloud:35-apache
     container_name: nextcloud-app
     depends_on:
       db:

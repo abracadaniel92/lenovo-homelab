@@ -1,6 +1,6 @@
 services:
   jellyfin:
-    image: jellyfin/jellyfin:latest
+    image: jellyfin/jellyfin:10.11  # pinned: 12.x breaks the Bookshelf plugin (Books library) until it ships a 12 build
     container_name: jellyfin
     restart: always
     profiles:
@@ -23,6 +23,3 @@ services:
     cpus: '2.0'
     networks:
       - default
-
-
-
