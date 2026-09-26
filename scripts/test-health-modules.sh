@@ -81,6 +81,33 @@ assert_set   "$(config_alert MISSING)"                          "missing config 
 # the ambiguity that hid the 2026-01-28 outage for eight months.
 assert_set   "$(config_log 'service: http://localhost:8080')"   "healthy path logs a verdict"
 
+echo "no 'local' outside a function (whole bug class):"
+
+# Behavioural tests only catch the instances someone thought to write a case
+# for. This is structural: bash refuses `local` at script top level, erroring
+# and assigning nothing, which is how two separate @all alerts ended up being
+# sent completely empty. Scans every health script so a third cannot appear.
+top_level_local() {
+    awk '
+      /^[a-zA-Z_][a-zA-Z0-9_]*\(\)[[:space:]]*\{/ { fn=1; depth=1; next }
+      fn && /\{/ { depth++ }
+      fn && /\}/ { depth--; if (depth <= 0) fn=0 }
+      /[[:space:]]local[[:space:]]/ && !fn { printf "%s:%d ", FILENAME, NR }
+    ' "$1"
+}
+
+all_hits=""
+for f in "$SCRIPT_DIR/enhanced-health-check.sh" "$SCRIPT_DIR/health-check-engine.sh" \
+         "$SCRIPT_DIR"/health.d/*.sh; do
+    [ -f "$f" ] || continue
+    all_hits="$all_hits$(top_level_local "$f")"
+done
+if [ -n "$all_hits" ]; then
+    fail "top-level 'local' found at: $all_hits"
+else
+    pass "no top-level 'local' in any health script"
+fi
+
 echo "HTTP probe + notification delivery (health-check-engine.sh):"
 
 # A real server, so these assert on actual status codes rather than a mock.

@@ -8,6 +8,20 @@
 # explicitly upgrading the monitoring/recovery system itself.
 ###############################################################################
 
+# shellcheck disable=SC1091,SC2024,SC2046,SC2086,SC2155,SC2164
+#
+# 22 pre-existing warnings, declared rather than swept. This file is READ-ONLY
+# core (see above) and the 2026-09-26 edit below was approved only to fix one
+# empty-alert bug; rewriting 22 lines of live recovery logic in the same change
+# is exactly what that rule exists to prevent. The file was never linted before
+# because pre-commit only checks files a commit touches, and this one had not
+# been touched.
+#
+# NOT all cosmetic. The 7 SC2164s are `cd <dir>` without `|| exit` immediately
+# before `docker compose restart`, so a missing directory means the restart runs
+# in whatever the current directory happens to be. That deserves its own pass.
+# Tracked in troubleshooting-log 2026-09-26.
+
 LOG_FILE="/var/log/enhanced-health-check.log"
 MAX_LOG_SIZE=10485760  # 10MB
 
@@ -487,8 +501,16 @@ if [ "$EXTERNAL_DOWN" = true ]; then
     log "CRITICAL: External access down detected. Running fix-external-access.sh..."
 
     # Send Slack notification for critical outage
-    local slack_title="🚨 CRITICAL: External Access Down"
-    local slack_message="@all
+    #
+    # NOT `local`: this block is top-level script, not a function body, and bash
+    # refuses `local` there. It errored on every run and assigned nothing, so
+    # this alert, the one that pages @all when the whole site is unreachable,
+    # went out with an empty title and an empty body. health.d/20-cloudflared.sh
+    # inherited the same lines by copy-paste and was fixed on 2026-09-26.
+    # Edited with the user's explicit approval, as the READ-ONLY note above
+    # requires (troubleshooting-log 2026-09-26).
+    slack_title="🚨 CRITICAL: External Access Down"
+    slack_message="@all
 
 *Domain:* gmojsoski.com
 *Status:* Not accessible (502/404/503)

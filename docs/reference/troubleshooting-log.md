@@ -88,14 +88,40 @@ file just built, rather than re-reading every archive 24 times a day.
 
 Backfilled across all existing archives: **18 verified, 0 corrupt.**
 
-### 📌 Not fixed, needs a decision
+### ✅ Monolith empty-alert bug fixed too (same day, on request)
 
-**The empty-alert bug is in the monolith too**, at
-`enhanced-health-check.sh:490`: `local slack_title=` at top level, where bash
-refuses the assignment. The module inherited it by copy-paste. `make health`
-therefore still sends the `@all` external-access alert with an empty title and
-body. `enhanced-health-check.sh` is read-only core per CLAUDE.md, so it was
-left alone.
+`enhanced-health-check.sh:490` had the identical `local` at top level, so
+`make health` also sent the `@all` external-access alert empty. Fixed with the
+user's explicit approval, which the file's READ-ONLY note requires.
+
+Guarded structurally rather than by one more example-specific case:
+`test-health-modules.sh` now scans **every** health script for `local` outside
+a function, so a third instance cannot appear. Verified to flag lines 490 and
+491 of the pre-fix file and stay silent on the fixed one.
+
+22 pre-existing shellcheck warnings surfaced once the file was touched
+(pre-commit only lints files a commit changes, and this one had not been
+changed since the hook was added). Declared via a file-level directive rather
+than swept: rewriting 22 lines of live recovery logic inside a change approved
+for one bug is what the read-only rule exists to prevent. **7 of them are
+SC2164**, `cd <dir>` with no `|| exit` immediately before
+`docker compose restart`, so a missing directory means the restart runs in
+whatever the current directory happens to be. That warrants its own pass.
+
+### 📌 Three divergent copies of the health check
+
+Found while checking whether the fix needed mirroring to `/usr/local/bin`:
+
+| Copy | State |
+|---|---|
+| `scripts/enhanced-health-check.sh` | Current. What `make health` runs, so the fix is already live for that path |
+| `/usr/local/bin/enhanced-health-check.sh` | **Stale, 2026-01-16.** Still carries the empty-alert bug. Nothing in systemd or cron invokes it |
+| heredoc inside `scripts/permanent-auto-recovery.sh` | A third, older copy embedded in a one-shot installer that is not scheduled. Running it would overwrite `/usr/local/bin` with an ancient version |
+
+Not deployed to `/usr/local/bin` on purpose: nothing executes that path any
+more, and mirroring would keep three copies alive instead of resolving them.
+CLAUDE.md still lists it as a hand-mirrored file. Consolidating needs a
+decision, and deleting anything needs confirmation.
 
 Also still open, all lower severity: no HTTP checks for Jellyfin (8096),
 Nextcloud (8081), Linkwarden (8090) or Planning Poker (3000); no 80% disk
