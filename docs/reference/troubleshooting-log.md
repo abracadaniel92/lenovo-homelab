@@ -2,6 +2,80 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] B2 offsite: encrypted, on a systemd timer, and monitored
+
+**Date:** 2026-09-26
+**Action:** Implemented the fix specified in the "Backblaze offsite audit"
+entry below, all three gaps, via a one-off setup script run by the user.
+**Result:** ✅ **Offsite copies are now client-side encrypted, the sync alerts
+on failure, and the health check watches B2 hourly.**
+
+### 🔧 What changed
+
+- **Gap 2 (encryption):** new rclone crypt remote `b2-crypt` over a NEW bucket
+  `Goce-Lenovo-crypt` (standard filename + directory name encryption). Current
+  files at `b2-crypt:current/`, superseded at `b2-crypt:superseded/YYYY-MM-DD`.
+  Key lives only in goce's `~/.config/rclone/rclone.conf`; user saved an
+  off-box copy.
+- **Gap 1 (silent failure):** `sync-backups-to-b2.service` (`User=goce`,
+  `OnFailure=notify-failure@%n.service`, `TimeoutStartSec=4h`) + `.timer`
+  (03:00, `Persistent=true`). The `0 3 * * *` line was removed from goce's
+  crontab (backup at `~/crontab.bak-*`). The script no longer uses sudo and
+  exits non-zero on failure.
+- **Monitoring:** `scripts/health.d/60-offsite-freshness.sh`, one recursive
+  `rclone lsf` per run, alarms if a service's newest offsite copy is older than
+  `MAX_AGE_HOURS` + 24h, or if B2 cannot be listed at all. It stays quiet until
+  the timer is enabled. Self-check: `scripts/test-offsite-freshness.sh`.
+- **Gap 3 (growth):** bucket lifecycle `daysFromHidingToDeleting=1` (every
+  `--backup-dir` move leaves a hidden version, B2 otherwise keeps them
+  forever); the sync script purges `superseded/` day folders older than 90
+  days, by folder name, not file mtime.
+
+Unit files are written by the setup script into `/etc/systemd/system/`, not
+kept in `systemd/`.
+
+### 💻 Commands
+
+```bash
+sudo bash /opt/homelab/scripts/setup-b2-encrypted-sync.sh
+```
+
+### ✅ Verification
+
+- Round trip: `vaultwarden-20260926-020001.tar.gz` downloaded through
+  `b2-crypt` is byte-identical (`cmp`) to the local archive
+- Raw bucket listing contains no service names or `.tar.gz`
+- `b2-crypt:current`: 478 objects, 469.7 MiB, includes the fixed
+  `linkwarden-20260926-193030.tar.gz` (closes the audit's "Immediate note")
+- Health check: `Offsite freshness: all services within their max age`
+- `systemctl list-timers`: next run Sun 2026-09-27 03:00; `crontab -l` has no
+  sync line
+
+### ⏭️ Still open
+
+- Old **plaintext** buckets `Goce-Lenovo` and `Goce-Lenovo-superseded` still
+  exist as a fallback. Delete with `rclone purge` once the off-box key copy is
+  confirmed. They still hold the readable TravelSync OAuth credentials.
+- After the 2026-09-27 03:00 run: `systemctl status sync-backups-to-b2.service`
+  should show `Result=success`.
+
+### 📍 Files involved
+
+- `scripts/sync-backups-to-b2.sh` → `/usr/local/bin/sync-backups-to-b2.sh`
+- `scripts/setup-b2-encrypted-sync.sh` (new)
+- `scripts/health.d/60-offsite-freshness.sh`, `scripts/test-offsite-freshness.sh` (new)
+- `/etc/systemd/system/sync-backups-to-b2.{service,timer}` (new, live only)
+- Docs: `common-commands.md`, `infrastructure-summary.md`, `backup-strategy.md`
+
+**Status**: ✅ Implemented and verified. Old plaintext buckets pending deletion.
+
+**Update 2026-09-26 (later):** Key backed up off-box (paper, Vaultwarden, phone).
+Before deleting, `comm` of both listings showed all 454 files of `Goce-Lenovo`
+present in `b2-crypt:current`; the 6 files only in `Goce-Lenovo-superseded`
+were retention-pruned Dec 2025/Jan 2026 archives. User then ran `rclone purge`
+on both plaintext buckets; `rclone lsd b2-backup:` lists only
+`Goce-Lenovo-crypt`. ✅ No readable copy of any backup remains offsite.
+
 ## [2026-09-26] Backblaze offsite audit: copies are good, but the sync can fail silently
 
 **Date:** 2026-09-26
