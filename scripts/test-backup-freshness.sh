@@ -28,6 +28,12 @@ touch -d "1 hour ago"   "$TMP/fresh_dir/fresh-20260925-000000.tar.gz"
 touch -d "72 hours ago" "$TMP/stale_dir/stale-20260922-000000.tar.gz"
 # empty_dir intentionally left with no archive at all
 
+# backup-engine.sh writes a .ok sidecar only after the archive passes a real
+# read, and the plugin treats its absence as unverified. Fixtures that are
+# supposed to stay quiet therefore need one.
+touch "$TMP/fresh_dir/fresh-20260925-000000.tar.gz.ok"
+touch "$TMP/stale_dir/stale-20260922-000000.tar.gz.ok"
+
 # Stub the engine-provided helpers the plugin expects.
 log() { :; }
 NOTIFIED=""
@@ -62,11 +68,23 @@ NOTIFIED=""
 source "$PLUGIN"
 check "all-fresh sends no notification" "${NOTIFIED:-<none>}" "<none>"
 
+# A recent archive with no .ok sidecar is a backup that ran but was never
+# verified. Distinguishing that from a good one is the whole point of the
+# sidecar: mtime alone cannot tell a valid archive from a corrupt one written
+# on schedule.
+rm -f "$TMP/fresh_dir/fresh-20260925-000000.tar.gz.ok"
+NOTIFIED=""
+# shellcheck source=/dev/null
+source "$PLUGIN"
+check "fresh but unverified is reported" "$(grep -c UNVERIFIED <<<"$NOTIFIED")" "1"
+touch "$TMP/fresh_dir/fresh-20260925-000000.tar.gz.ok"
+
 # A backup exactly at its limit must not alarm; one hour past it must.
 rm -f "$TMP/backup.d/fresh.conf"
 make_conf edge EdgeSvc stale_dir
 echo 'MAX_AGE_HOURS=72' >> "$TMP/backup.d/edge.conf"
 mv "$TMP/stale_dir/stale-20260922-000000.tar.gz" "$TMP/stale_dir/edge-20260922-000000.tar.gz"
+mv "$TMP/stale_dir/stale-20260922-000000.tar.gz.ok" "$TMP/stale_dir/edge-20260922-000000.tar.gz.ok"
 NOTIFIED=""
 # shellcheck source=/dev/null
 source "$PLUGIN"

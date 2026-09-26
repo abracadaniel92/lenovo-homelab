@@ -53,6 +53,11 @@ echo "=== 3. Fix health check ExecStart + attach notifier ==="
 # ExecStart is reset to empty first; without that systemd appends a second
 # command to a Type=oneshot unit instead of replacing the broken one.
 mkdir -p /etc/systemd/system/enhanced-health-check.service.d
+# TimeoutStartSec: the unit defaulted to infinity, so a health check that hung
+# (a service accepting connections but never answering) would wait forever. A
+# hang is not a failure, so OnFailure= never fires and the timer silently stops
+# producing runs: the same shape as the outage this script exists to repair.
+# 600s is far above a normal run (~5s, or ~60s when it restarts something).
 cat > /etc/systemd/system/enhanced-health-check.service.d/override.conf <<EOF
 [Unit]
 OnFailure=notify-failure@%n.service
@@ -60,6 +65,7 @@ OnFailure=notify-failure@%n.service
 [Service]
 ExecStart=
 ExecStart=$LINK/scripts/health-check-engine.sh
+TimeoutStartSec=600
 EOF
 ok "drop-in written (original unit file untouched)"
 

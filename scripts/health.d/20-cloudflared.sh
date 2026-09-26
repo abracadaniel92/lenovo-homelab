@@ -1,6 +1,32 @@
 #!/bin/bash
 # 20-cloudflared.sh: Health check for Cloudflare tunnel
 
+# Despite the filename, this module used to check only whether gmojsoski.com
+# answered from outside, and never whether cloudflared itself was running.
+# enhanced-health-check.sh restarts the container when `docker ps` shows it
+# gone; the modular rewrite dropped that. A dead tunnel was therefore only
+# caught indirectly by the external probe below, whose response is to run the
+# heavyweight fix-external-access.sh rather than just starting the container.
+CLOUDFLARED_DIR="/home/docker-projects/cloudflared"
+if [ "$(docker ps --filter "name=cloudflared" --format '{{.Names}}' 2>/dev/null | wc -l)" -lt 1 ]; then
+    log "CRITICAL: cloudflared container not running. Starting..."
+    if [ -d "$CLOUDFLARED_DIR" ]; then
+        (cd "$CLOUDFLARED_DIR" && docker compose up -d) >/dev/null 2>&1
+        sleep 5
+    else
+        log "ERROR: cloudflared compose dir missing: $CLOUDFLARED_DIR"
+    fi
+    if [ "$(docker ps --filter "name=cloudflared" --format '{{.Names}}' 2>/dev/null | wc -l)" -ge 1 ]; then
+        log "SUCCESS: cloudflared restarted"
+        send_slack_notification "✅ Cloudflare tunnel recovered" \
+            "cloudflared was not running and has been restarted." "✅"
+    else
+        log "ERROR: cloudflared failed to start"
+        send_slack_notification "🚨 Cloudflare tunnel down" \
+            "@all cloudflared is not running and could not be started. All external access is offline." "🚨"
+    fi
+fi
+
 # Check external access (subdomain downtime detection)
 EXTERNAL_DOWN=false
 if ! check_external_access "gmojsoski.com"; then

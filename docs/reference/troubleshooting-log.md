@@ -2,6 +2,121 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Audit of the health-check modular migration: the probe could not see 5xx
+
+**Date:** 2026-09-26
+**Action:** Audited every check in `enhanced-health-check.sh` (612 lines)
+against `health-check-engine.sh` + its 6 modules, after the entry below found
+that the one ported guard had kept its name and lost its behaviour. Fixed six
+findings.
+**Result:** ✅ **LIVE** (repo edits deploy via `/opt/homelab`).
+`test-health-modules.sh` 11/11, `test-backup-freshness.sh` 7/7.
+
+### 🔍 Finding 1: the HTTP probe reported 404 and 502 as healthy
+
+`check_service_http()` in the engine was:
+
+```bash
+curl -s --connect-timeout "$timeout" "$url" > /dev/null
+return $?
+```
+
+`curl` exits 0 for any response that arrives, so **only a refused connection
+registered as down**. Measured against live Caddy:
+
+| probe | actual | engine said | monolith said |
+|---|---|---|---|
+| Caddy root | 200 | HEALTHY | HEALTHY |
+| Caddy 404 path | 404 | **HEALTHY** | down |
+| closed port | 000 | down | down |
+
+Caddy's documented failure mode here is serving 502s (entries 2026-01-04,
+2026-01-06, 2026-01-08), so `10-caddy.sh`'s auto-restart **could never fire for
+the outage it exists to fix**. Also affected TravelSync and Bookmarks in
+`30-services.sh`. Now compares the status code, accepting 2xx/3xx.
+
+### 🔍 Finding 2: a hung service hung the health check forever
+
+The probe passed `--connect-timeout` but no `--max-time`, so a service that
+accepted the connection and never answered made curl wait indefinitely. The
+unit had `TimeoutStartUSec=infinity`. A hang is not a failure, so `OnFailure=`
+never fires: the notifier installed yesterday could not have caught it. That is
+a fresh silent-death path with the same signature as the eight-month outage.
+Fixed at both layers: `--max-time` on the probe, `TimeoutStartSec=600` in the
+drop-in.
+
+### 🔍 Finding 3: alerts were sent without checking they arrived
+
+The engine did `curl -s -X POST ... > /dev/null` and discarded the result, so a
+rotated webhook or a Mattermost outage silenced every alert with no trace. The
+monolith verifies HTTP 200 and body `ok`. The engine also built its JSON by
+string interpolation, so one quote or backslash in a message produced invalid
+JSON that Mattermost rejects, silently. `notify-unit-failure.sh` already used
+`json.dumps` for exactly this reason. Both fixed.
+
+### 🔍 Findings 4 and 5: two checks simply absent
+
+`20-cloudflared.sh` **never checked cloudflared**, only whether gmojsoski.com
+answered from outside. A dead tunnel was caught indirectly by the external
+probe, whose response is to run the heavyweight `fix-external-access.sh`
+instead of starting the container. The monolith restarts it directly. Restored.
+
+No module checked the **Docker daemon**. The monolith starts it and waits.
+Restored as `ensure_docker()`, with a bounded 15s wait rather than the
+monolith's `until docker ps; do sleep 2; done`, which spins forever if the
+daemon never returns and takes the health check with it.
+
+### 🔍 Finding 6: backup integrity verification was never running
+
+`verify-backups.sh` does `tar -tzf` integrity plus size sanity plus age. Its
+only caller is the monolith, and `/var/log/backup-verification.log` **does not
+exist**, so it has never run. `50-backup-freshness.sh` replaced it with
+mtime-only.
+
+**Not fixed by restoring the call.** That script hardcodes
+`kitchenowl-*.tar.gz`, but KitchenOwl backups are `.db` (`TYPE="FILE"`), so
+reviving it produces an immediate false "backup missing" alert, plus duplicate
+age alerts on thresholds that conflict with `backup.d/*.conf`.
+
+Implemented instead as the upgrade path `50-backup-freshness.sh` already named:
+`backup-engine.sh` verifies the artifact it just wrote (`tar -tzf`, or
+`PRAGMA integrity_check` for SQLite) and drops a `.ok` sidecar; the freshness
+module reports any newest archive lacking one. Verification runs **before**
+retention cleanup, so pruning can never run on the back of a failed backup,
+which is how the 2026-09-25 Vaultwarden archives were lost. One pass over a
+file just built, rather than re-reading every archive 24 times a day.
+
+Backfilled across all existing archives: **18 verified, 0 corrupt.**
+
+### 📌 Not fixed, needs a decision
+
+**The empty-alert bug is in the monolith too**, at
+`enhanced-health-check.sh:490`: `local slack_title=` at top level, where bash
+refuses the assignment. The module inherited it by copy-paste. `make health`
+therefore still sends the `@all` external-access alert with an empty title and
+body. `enhanced-health-check.sh` is read-only core per CLAUDE.md, so it was
+left alone.
+
+Also still open, all lower severity: no HTTP checks for Jellyfin (8096),
+Nextcloud (8081), Linkwarden (8090) or Planning Poker (3000); no 80% disk
+warning tier; memory and disk log nothing when healthy; the `:5000` conflict is
+detected but not resolved where the monolith kills the squatting PID; per-hour
+alert throttling was lost, so a sustained condition notifies every run; modules
+share the engine's shell, so variables leak between them.
+
+### 🧪 Verification
+
+```bash
+bash scripts/test-health-modules.sh     # 11/11
+bash scripts/test-backup-freshness.sh   # 7/7
+shellcheck scripts/health-check-engine.sh scripts/health.d/*.sh scripts/backup-engine.sh
+```
+
+Findings 1 and 6 were confirmed against the committed code before fixing: the
+old probe calls a real 404 HEALTHY, and the old freshness module stays quiet
+for an unverified archive. The probe assertions run against a throwaway
+`python3 -m http.server` so they exercise real status codes.
+
 ## [2026-09-26] Review of the 2026-09-25 repair: two more checks that could never fire
 
 **Date:** 2026-09-26

@@ -8,10 +8,10 @@
 # 2026-01-28 outage was caused by checks that reported healthy while doing
 # nothing, so the checks themselves now have to fail when they stop working.
 #
-# ponytail: stubs log()/send_slack_notification() and asserts on what would have
-# been sent. Ceiling: it does not exercise curl, docker or systemd, so it proves
-# the alerting logic, not the probes. Upgrade path is a container fixture, which
-# is not worth it for four assertions.
+# ponytail: stubs log()/send_slack_notification() for the module checks, and
+# stands up a throwaway python http.server for the probe checks so they run
+# against real HTTP status codes. Ceiling: docker and systemd are still not
+# exercised, so container restarts and unit state go unproven here.
 ###############################################################################
 set -uo pipefail
 
@@ -80,6 +80,69 @@ assert_set   "$(config_alert MISSING)"                          "missing config 
 # passes cannot be told apart in the log from a check that never ran, which is
 # the ambiguity that hid the 2026-01-28 outage for eight months.
 assert_set   "$(config_log 'service: http://localhost:8080')"   "healthy path logs a verdict"
+
+echo "HTTP probe + notification delivery (health-check-engine.sh):"
+
+# A real server, so these assert on actual status codes rather than a mock.
+# http.server answers 200 for an existing path, 404 for a missing one, and 501
+# for POST, which covers every case below.
+# -u is required: without it python buffers the "Serving HTTP on ... port N"
+# banner and the port can never be read back.
+( cd "$TMP" && exec python3 -u -m http.server 0 --bind 127.0.0.1 ) >"$TMP/srv.log" 2>&1 &
+SRV_PID=$!
+trap 'kill "$SRV_PID" 2>/dev/null; rm -rf "$TMP"' EXIT
+PORT=""
+for _ in $(seq 1 40); do
+    PORT=$(sed -n 's/.*port \([0-9][0-9]*\).*/\1/p' "$TMP/srv.log" | head -1)
+    [ -n "$PORT" ] && break
+    sleep 0.1
+done
+
+if [ -z "$PORT" ]; then
+    fail "could not start local http.server (probe checks skipped)"
+else
+    echo "ok" > "$TMP/exists.txt"
+    eval "$(sed -n '/^check_service_http()/,/^}/p' "$ENGINE")"
+
+    # THE regression: the old version was `curl -s "$url" >/dev/null; return $?`,
+    # which exits 0 for any response that arrives, so a 404 or a 502 read as
+    # healthy and only a refused connection registered.
+    if check_service_http "http://127.0.0.1:$PORT/exists.txt" 5; then
+        pass "200 reads as up"
+    else
+        fail "200 reads as DOWN"
+    fi
+    if check_service_http "http://127.0.0.1:$PORT/no-such-file" 5; then
+        fail "404 reads as UP (the regression is back)"
+    else
+        pass "404 reads as down"
+    fi
+    if check_service_http "http://127.0.0.1:1/" 2; then
+        fail "refused connection reads as UP"
+    else
+        pass "refused connection reads as down"
+    fi
+
+    # Notification delivery: http.server rejects POST with 501, so a correct
+    # implementation must report the failure rather than discard it.
+    notify_out=$(
+        SCRIPT_DIR="$TMP"
+        printf 'http://127.0.0.1:%s/hook' "$PORT" > "$TMP/health_webhook_url"
+        # shellcheck disable=SC2317,SC2329
+        log() { printf "%s\n" "$1"; }
+        eval "$(sed -n '/^send_slack_notification()/,/^}/p' "$ENGINE")"
+        # Quotes and a backslash: string-interpolated JSON would be invalid here.
+        send_slack_notification 'Title with "quotes"' 'body \ with "quotes" and \n' '🚨'
+    )
+    case "$notify_out" in
+        *"FAILED to send"*) pass "non-200 webhook response is reported" ;;
+        *)                  fail "webhook failure went unreported: [$notify_out]" ;;
+    esac
+    case "$notify_out" in
+        *"could not encode"*) fail "quotes/backslashes broke JSON encoding" ;;
+        *)                    pass "quotes and backslashes encode cleanly" ;;
+    esac
+fi
 
 echo
 if [ "$fails" -eq 0 ]; then

@@ -207,6 +207,48 @@ chmod 644 "$BACKUP_FILE"
 FILE_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
 log "✅ Backup created: $(basename "$BACKUP_FILE") ($FILE_SIZE)"
 
+# Verify the artifact we just wrote, then drop a .ok sidecar beside it.
+#
+# Why here and not in the hourly health check: this is the moment a bad backup
+# is worth catching, and it costs one pass over a file we just built instead of
+# re-reading every archive 24 times a day. scripts/health.d/50-backup-freshness.sh
+# asserts the sidecar exists, which upgrades it from "a file appeared recently"
+# to "a file appeared recently and was readable when written". That module's own
+# comment named this as the upgrade path.
+#
+# Runs BEFORE retention cleanup on purpose: pruning must never run on the back
+# of a backup that failed verification, or a corrupt newest archive takes the
+# good older ones with it. That is how the 2026-09-25 Vaultwarden archives were
+# lost.
+verify_artifact() {
+    case "$BACKUP_FILE" in
+        *.tar.gz|*.tgz)
+            # Decompresses and walks the member list, so this catches both a
+            # truncated gzip stream and a corrupt tar structure.
+            tar -tzf "$BACKUP_FILE" >/dev/null 2>&1 || return 1
+            ;;
+        *)
+            if is_sqlite "$BACKUP_FILE"; then
+                [ "$(python3 -c 'import sqlite3,sys; print(sqlite3.connect(sys.argv[1]).execute("PRAGMA integrity_check").fetchone()[0])' \
+                    "$BACKUP_FILE" 2>/dev/null)" = "ok" ] || return 1
+            else
+                [ -s "$BACKUP_FILE" ] || return 1
+            fi
+            ;;
+    esac
+}
+
+log "   Verifying archive..."
+if verify_artifact; then
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$BACKUP_FILE.ok"
+    chmod 644 "$BACKUP_FILE.ok"
+    log "   ✅ Verified"
+else
+    log "❌ Backup FAILED verification: $(basename "$BACKUP_FILE")"
+    log "   Kept for inspection, no .ok sidecar written, retention NOT run."
+    exit 1
+fi
+
 # Smart retention cleanup
 if [ -f "$RETENTION_HELPER" ]; then
     log "   Running smart retention cleanup..."
@@ -216,5 +258,12 @@ if [ -f "$RETENTION_HELPER" ]; then
 else
     log "⚠️  WARNING: Retention helper not found at $RETENTION_HELPER"
 fi
+
+# Retention globs on "<prefix>-*.<ext>", which never matches a .ok sidecar, so
+# pruned archives would leave theirs behind to accumulate forever.
+for ok in "$DST_DIR"/*.ok; do
+    [ -e "$ok" ] || continue          # glob did not match anything
+    [ -e "${ok%.ok}" ] || rm -f "$ok"
+done
 
 log "✅ $SERVICE_NAME backup complete!"

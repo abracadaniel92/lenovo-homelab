@@ -45,15 +45,56 @@ send_slack_notification() {
         return
     fi
 
-    local payload="{\"text\": \"$icon **$title**\n$message\"}"
-    curl -s -X POST -H 'Content-Type: application/json' --data "$payload" "$WEBHOOK_URL" > /dev/null
+    # JSON via python rather than string interpolation: alert bodies carry file
+    # paths, log excerpts and backticks, and a single quote or backslash would
+    # produce invalid JSON that Mattermost rejects. notify-unit-failure.sh takes
+    # the same approach for the same reason.
+    local payload
+    payload=$(python3 -c 'import json,sys; print(json.dumps({"text": f"{sys.argv[1]} **{sys.argv[2]}**\n{sys.argv[3]}"}))' \
+        "$icon" "$title" "$message" 2>/dev/null)
+    if [ -z "$payload" ]; then
+        log "ERROR: could not encode notification payload for: $title"
+        return 1
+    fi
+
+    # The delivery result was previously discarded, so a rotated webhook or a
+    # Mattermost outage silenced every alert with no trace in the log. An
+    # alerting path that cannot report its own failure is the bug this whole
+    # system was built to stop having.
+    local response http_code
+    response=$(curl -s -w '\n%{http_code}' --max-time 15 -X POST \
+        -H 'Content-Type: application/json' --data "$payload" "$WEBHOOK_URL" 2>&1)
+    http_code=$(printf '%s' "$response" | tail -1)
+    if [ "$http_code" != "200" ]; then
+        log "ERROR: notification FAILED to send (HTTP ${http_code:-none}): $title"
+        return 1
+    fi
 }
 
+# Treats any 2xx/3xx as up. The previous version was `curl -s ... ; return $?`,
+# which exits 0 for ANY response that arrives, so 404/500/502/503 all read as
+# healthy and only a refused connection registered. Caddy's documented failure
+# mode here is serving 502s (troubleshooting-log 2026-01-04, 01-06, 01-08), so
+# the Caddy auto-restart could never fire for the outage it exists to fix.
+#
+# --max-time, not just --connect-timeout: a service that accepts the connection
+# and never answers made curl wait forever, and the unit has no start timeout,
+# so the whole health check hung. A hang is not a failure, so OnFailure= stays
+# quiet: exactly the shape of the 8-month silent outage.
+#
+# ponytail: 4xx counts as down. Ceiling: a service that answers 401/403 by
+# design would read as down and get restarted hourly. None of the current call
+# sites do (all verified answering 200 or 302). Add the code to the accept list
+# here if one ever does.
 check_service_http() {
     local url=$1
     local timeout=${2:-5}
-    curl -s --connect-timeout "$timeout" "$url" > /dev/null
-    return $?
+    local status
+    status=$(curl -s -o /dev/null -w '%{http_code}' --max-time "$timeout" "$url" 2>/dev/null)
+    case "$status" in
+        2??|3??) return 0 ;;
+        *)       return 1 ;;
+    esac
 }
 
 check_external_access() {
@@ -119,10 +160,38 @@ check_disk_space() {
     fi
 }
 
+# Docker must be up before any module runs: nearly every one of them shells out
+# to docker, and without this they each fail separately with confusing output
+# instead of one clear cause. Carried over from enhanced-health-check.sh, which
+# had it and the modular rewrite dropped.
+#
+# Bounded wait, unlike the original's `until docker ps; do sleep 2; done`, which
+# spins forever if the daemon never comes back and takes the health check down
+# with it.
+ensure_docker() {
+    if ! systemctl is-active --quiet docker; then
+        log "ERROR: Docker not running. Starting..."
+        systemctl start docker
+    fi
+    local i
+    for i in $(seq 1 15); do
+        if docker ps >/dev/null 2>&1; then
+            [ "$i" -gt 1 ] && log "Docker became available after ${i}s"
+            return 0
+        fi
+        sleep 1
+    done
+    log "CRITICAL: Docker daemon unavailable after 15s, modules will be unreliable"
+    send_slack_notification "🚨 Docker daemon down" \
+        "The health check could not reach the Docker daemon after 15s. Container checks and auto-recovery are not functioning." "🚨"
+    return 1
+}
+
 # Start Health Check
 log "Starting modular health check run..."
 
 # Global Checks
+ensure_docker
 check_config_integrity
 check_memory_usage
 check_disk_space "/" "Root"
