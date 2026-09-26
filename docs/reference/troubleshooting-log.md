@@ -6,7 +6,8 @@ This log documents specific issues encountered on the server and their fixes.
 
 **Date:** 2026-09-26
 **Action:** Critical homelab alerts now also go to the ntfy topic Uptime Kuma
-already uses (public ntfy.sh, `lemongrab-alerts`). Cal.com bookings push there too.
+already uses (public ntfy.sh, random topic name `lemongrab-<32 hex>`, kept
+only in `scripts/ntfy_topic_url`, the Cal webhook, Uptime Kuma and the app). Cal.com bookings push there too.
 **Result:** ✅ Repo side done and tested. Needs the one-time server step below.
 
 ### Why
@@ -36,14 +37,16 @@ out on purpose (public topic). Verified with a sample payload:
 ### Server step (once)
 ```bash
 cd /opt/homelab && git pull
-echo "https://ntfy.sh/lemongrab-alerts" > scripts/ntfy_topic_url
+T="lemongrab-$(openssl rand -hex 16)"   # in your own terminal, not via Claude
+echo "https://ntfy.sh/$T" > scripts/ntfy_topic_url
 sudo /opt/homelab/scripts/ntfy-push.sh "🚨 test push from lemongrab"
 ```
 
 ### Note
-`lemongrab-alerts` is guessable: anyone can read it or post fake alerts. To
-switch to a random topic, change `ntfy_topic_url`, the Cal webhook URL and the
-Uptime Kuma notification, and resubscribe in the app.
+The topic name is the only access control on public ntfy.sh: whoever knows it
+can read and post. It replaced the guessable `lemongrab-alerts`. To rotate it,
+change `ntfy_topic_url`, the Cal webhook URL (path only) and the Uptime Kuma
+notification, and resubscribe in the app.
 
 ## [2026-09-26] B2 offsite: encrypted, on a systemd timer, and monitored
 
