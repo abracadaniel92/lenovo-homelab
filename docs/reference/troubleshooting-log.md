@@ -2,6 +2,34 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Uptime Kuma upgraded from 1.23.17 to 2.5.5 (major version)
+
+**Symptom:** none. Planned update. The compose file used `:latest`, but upstream keeps `latest` on v1, so the container never moved to v2.
+
+**Change:**
+- Live: `/mnt/ssd/docker-projects/uptime-kuma/docker-compose.yml` image `louislam/uptime-kuma:latest` → `louislam/uptime-kuma:2`
+- Repo: `docker/uptime-kuma/docker-compose.yml`, same change.
+
+**Commands:**
+```bash
+docker stop uptime-kuma
+# sudo needs a password, data is root-owned, so copy via a throwaway container
+cd /mnt/ssd/docker-projects && docker run --rm -v "$PWD":/w alpine cp -a /w/uptime-kuma/data /w/uptime-kuma-data-v1-backup-20260926
+cd uptime-kuma && docker compose pull && docker compose up -d
+docker logs -f uptime-kuma   # aggregate-table migration, do NOT interrupt
+```
+
+**Verification:**
+- v2 migration of the 560 MB SQLite DB took ~19 min (18:44 to 19:03 UTC), 15 monitors, ended with "Aggregate Table Migration Completed".
+- Container `Up (healthy)`, `localhost:3001` answers 302 (login), all 14 active monitors UP on their latest heartbeat.
+- `verify-services.sh`: all green except `budget` and `css` (already removed services, known drift).
+
+**Rollback:** stop container, replace `data/` with `/mnt/ssd/docker-projects/uptime-kuma-data-v1-backup-20260926`, set image back to `:1`, start. The v1 backup can be deleted once v2 has run fine for a while (~1.7 GB).
+
+**v2 breaking changes to keep in mind:** badge `:duration` only accepts `24h`/`30d`/`1y` style values; JSON backup/restore is gone (back up the `data/` dir); SMTP notification templates now use LiquidJS (case-sensitive variables).
+
+---
+
 ## [2026-09-26] Critical alerts and Cal bookings now push to the phone (ntfy)
 
 **Date:** 2026-09-26
