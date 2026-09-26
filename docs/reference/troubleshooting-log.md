@@ -2,6 +2,126 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Backblaze offsite audit: copies are good, but the sync can fail silently
+
+**Date:** 2026-09-26
+**Action:** Audited the B2 offsite copies: verified one end to end by
+downloading and opening it, then checked how the sync is scheduled and
+monitored.
+**Result:** ⚠️ **Copies verified good. Monitoring is not.** The nightly sync is
+a plain user cron, so a failure is silent and nothing checks the offsite copies
+are current. **Fix specified below, NOT yet implemented.**
+
+### ✅ What was verified (the good news)
+
+Downloaded `vaultwarden-20260926-020001.tar.gz` from B2 and opened it:
+
+```bash
+rclone copy b2-backup:Goce-Lenovo/vaultwarden/vaultwarden-20260926-020001.tar.gz /tmp/b2test/
+md5sum /tmp/b2test/<file> /mnt/ssd/backups/vaultwarden/<file>
+```
+
+- **md5 identical** to the local copy (`90a299e6...`)
+- Extracts, `PRAGMA integrity_check` = ok, **603 ciphers**, newest entry
+  `2026-09-25 12:58`, `rsa_key.pem` present
+- `/var/log/rclone-sync.log` shows 03:00 runs completing successfully on
+  2026-09-23, 24, 25 and 26
+- All 5 services present in `b2-backup:Goce-Lenovo/`, 454 objects, 437 MiB
+
+So the data that is up there is real and restorable.
+
+### 🔍 Gap 1 (the important one): a failed sync is silent
+
+`crontab -l` (user `goce`):
+
+```
+0 3 * * * /usr/local/bin/sync-backups-to-b2.sh
+```
+
+It is **not a systemd unit**, so the `notify-failure@.service` notifier
+installed earlier today does not cover it. The script does capture the exit
+code and log "completed with warnings", but nothing reads that log. There is no
+`MAILTO` in `/etc/crontab` either.
+
+Worse, **no `health.d/` module looks at B2 at all**. `50-backup-freshness.sh`
+only checks local archives. So the offsite copy could stop updating and every
+signal on the box would still read green. That is the same failure class as the
+2026-01-28 outage: the thing that would report the problem is not watching.
+
+### 🔍 Gap 2: nothing is encrypted before upload
+
+`rclone config show b2-backup` reports `type = b2`, not `crypt`. Backblaze
+encrypts at rest on their side, but the archives are uploaded as-is.
+
+- **Vaultwarden is fine.** Ciphers are encrypted client-side and the key never
+  leaves the user's devices, so the vault is opaque to Backblaze.
+- **TravelSync is the concern.** Its archive contains `credentials.json` and
+  `token.pickle`, which are live **Google OAuth credentials**, readable.
+- Nextcloud database contents, and (as of today) Postgres role password hashes
+  from the new globals dump, are also readable.
+
+Judgement call, not an obvious bug. Client-side encryption adds a key that, if
+lost, makes every offsite copy unrecoverable.
+
+### 🔍 Gap 3: the superseded bucket grows forever
+
+`Goce-Lenovo-superseded` (created 2026-09-25 when `--backup-dir` turned the
+sync from a mirror into an archive) has no lifecycle rule. 6 objects /
+3.1 MiB today, so not urgent, but unbounded.
+
+### 📌 The fix that is needed
+
+**1. Move the sync off cron onto a systemd timer** so it inherits the existing
+failure notifier and becomes visible in `systemctl list-timers`.
+
+- New `systemd/sync-backups-to-b2.service` + `.timer` (daily 03:00).
+- Service needs `User=goce`: rclone's config lives in that user's home, which
+  is why the current script wraps everything in `sudo -u goce`.
+- Attach `OnFailure=notify-failure@%n.service`, the same way
+  `repair-silent-failures.sh` step 4 does for the other units, and add it to
+  that script's unit loop so it is idempotent.
+- Remove the `0 3 * * *` line from the `goce` crontab in the same change, or
+  the sync runs twice.
+
+**2. Add `scripts/health.d/60-offsite-freshness.sh`**, modelled on
+`50-backup-freshness.sh`: for each `backup.d/*.conf`, list the matching prefix
+in `b2-backup:Goce-Lenovo/<service>/` and alarm if the newest object is older
+than `MAX_AGE_HOURS` (plus a grace margin, since the offsite copy is by
+definition behind the local one).
+
+- Use `rclone lsjson --files-only` and read `ModTime`, rather than parsing
+  `lsf` output.
+- The health check runs as **root**, rclone config belongs to **goce**, so it
+  must call `sudo -u goce rclone`.
+- B2 list calls are class B transactions and cheap, but one listing per service
+  per hour is still ~120 calls/day. Consider a single recursive `lsjson` of the
+  bucket instead of one call per service.
+- Leave a self-check next to `test-backup-freshness.sh`.
+
+**3. Optional, decide separately:** an `rclone crypt` remote layered over
+`b2-backup` for Gap 2, and a B2 lifecycle rule for Gap 3.
+
+### ⚠️ Immediate note
+
+The **Linkwarden copy in B2 is still the broken pre-fix archive** (no database)
+until the 03:00 sync on 2026-09-27 uploads
+`linkwarden-20260926-193030.tar.gz`. Confirm after that run:
+
+```bash
+sudo -u goce rclone lsf b2-backup:Goce-Lenovo/linkwarden/ | sort | tail -3
+```
+
+### 📍 Files involved
+
+- `scripts/sync-backups-to-b2.sh` (and its deployed copy
+  `/usr/local/bin/sync-backups-to-b2.sh`)
+- `/var/log/rclone-sync.log`, `goce` crontab
+- To create: `systemd/sync-backups-to-b2.{service,timer}`,
+  `scripts/health.d/60-offsite-freshness.sh`
+
+**Status**: ⚠️ Audit complete, copies proven good, **fix not implemented**.
+Picked up from the CLI next session.
+
 ## [2026-09-26] Restore drills for all 5 services: Linkwarden had no database in its backups
 
 **Date:** 2026-09-26
