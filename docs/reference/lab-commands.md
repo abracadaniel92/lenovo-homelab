@@ -24,7 +24,7 @@ If you have configured the alias `alias lab-make='make -C "/home/goce/Desktop/Cu
 *   **`lab-make backup`**
     Trigger the manual backup script for all critical services immediately.
 *   **`lab-make update`**
-    Run Watchtower once to check for and apply pending Docker updates.
+    List images with a newer build (`scripts/update-check.sh --print`). Applies nothing; update each service by hand.
 *   **`lab-make portfolio-update`**
     Manually update portfolio website (pull from GitHub and sync to Caddy).
     *   *Note:* Portfolio updates are now manual (timer disabled to reduce CPU usage).

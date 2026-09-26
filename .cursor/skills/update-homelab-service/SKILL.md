@@ -1,22 +1,24 @@
 ---
 name: update-homelab-service
-description: Safely update a Docker-composed homelab service (pull new image, restart, verify) while preserving data and respecting the surgical-isolation rule. Use when the user says "update X", "upgrade Y", "pull new image for Z", "bump service to latest", or wants to refresh a single service. For broad multi-service refreshes, prefer Watchtower or ask the user explicitly.
+description: Safely update a Docker-composed homelab service (pull new image, restart, verify) while preserving data and respecting the surgical-isolation rule. Use when the user says "update X", "upgrade Y", "pull new image for Z", "bump service to latest", or wants to refresh a single service. For broad multi-service refreshes, run `scripts/update-check.sh --print` to see what is behind, then update one service at a time.
 ---
 
 # Update Homelab Service
 
 Safe, surgical update workflow for a single Docker-composed service. Always target the **live** working directory, preserve persistent data, and verify after.
 
-## When to use this skill vs Watchtower
+## Nothing auto-updates
 
-The repo has `docker/watchtower/` running for opportunistic auto-updates. Use this skill instead when:
+Watchtower was removed on 2026-09-25 and nothing replaced it on purpose: every update is manual. `update-check.timer` pushes a weekly ntfy list of images whose tag has a newer build (`scripts/update-check.sh --print` shows it on demand). Take extra care when:
 
 - The service has **state** that needs care (Vaultwarden, Nextcloud, Immich, Outline, KitchenOwl, Mattermost, Linkwarden, paperless, etc.)
 - The user explicitly asks to update one service
 - A breaking-change major version bump is involved (read release notes first)
 - The service is **infrastructure-critical** (Caddy, cloudflared, Pi-hole, Portainer) — these should never be auto-updated; always manual + immediate verification
 
-For low-risk stateless services already covered by Watchtower, just confirm with the user that they want a manual update before running this workflow.
+The weekly check cannot tell a patch from a major jump (Jellyfin `:latest` moved 10.x → 12.x), and it never sees newer releases of pinned tags. Check release notes before every pull.
+
+Docker Hub allows 100 anonymous requests per hour per IP, and each pull and each check counts. A big batch of updates hits `429 Too Many Requests`; it refills within the hour.
 
 ## Workflow
 

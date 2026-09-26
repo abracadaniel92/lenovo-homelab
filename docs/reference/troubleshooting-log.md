@@ -2,6 +2,46 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Minor updates for 15 containers, and a weekly update check to replace Watchtower
+
+**Symptom:** none. Nothing had auto-updated since Watchtower was removed (2026-09-25), and Renovate has a `renovate.json` but has never opened a PR (the GitHub app is not installed). Most images use floating tags, so they only move on a manual pull.
+
+**Updated (same major version only):**
+
+| Service | From → To | Backup first |
+|---|---|---|
+| Home Assistant | 2026.9.1 → 2026.9.3 | `/home/docker-projects/homeassistant-config-pre-2026.9.3.tgz` |
+| Mattermost (+ postgres:15 rebuild) | 11.10.1 → 11.11.1 | `/home/docker-projects/mattermost-db-pre-update-20260926.sql.gz` |
+| Outline (+ postgres:15, redis:7 rebuilds) | 1.10.0 → 1.10.1 | `/home/docker-projects/outline-db-pre-update-20260926.sql.gz` |
+| Linkwarden | 2.16.2 → 2.16.3 | `backup-engine.sh linkwarden` |
+| GoatCounter | 2.6.0 → 2.7.0 (tag bump, live + repo compose) | `/mnt/ssd/docker-projects/goatcounter/goatcounter-data-pre-2.7.0` |
+| Homepage, FreshRSS, Portainer, Kiwix, Mosquitto, nginx-vaultwarden | newer builds of the same tag | stateless |
+| cloudflared | 2026.8.3 → 2026.9.3 | infra, verified right after |
+| Caddy | rebuilt v2.11.4 image | config validated against the new image first |
+
+**Deliberately NOT updated** (major jumps, each needs its own session): Jellyfin 10.11.5 → 12.1 (`:latest` already points at 12, so any pull upgrades it), Nextcloud 30.0.17 → 35 (30 is end of life; must go one major at a time), Stirling-PDF 2.14 → 3.0, Meilisearch 1.12 → 1.54 (follow Linkwarden's supported version), nextcloud-postgres:16 rebuild (do it with the Nextcloud work).
+
+**Gotcha: Docker Hub rate limit.** Anonymous pulls are 100 requests/hour per IP and each manifest check counts. The version survey plus the first pulls hit `429 Too Many Requests` for Mosquitto and nginx. Nothing broke; the old containers kept running. Check the remaining quota without spending one:
+```bash
+TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull" | python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')
+curl -s --head -H "Authorization: Bearer $TOKEN" https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest | grep -i ratelimit-remaining
+```
+
+**Profiles gotcha:** several stacks (Home Assistant, Mattermost) put services behind Compose `profiles:`, so `docker compose pull` with no flags silently does nothing. Use `docker compose --profile all ...` and name the service.
+
+**Verification:** `verify-services.sh` all green except `budget` and `css` (removed services, known drift). Mattermost `/api/v4/system/ping` 200, Outline local 200 with clean migrations, GoatCounter `/count` 200, Home Assistant local 200, Linkwarden healthy.
+Mattermost logs `Mail server connection test failed ... [::1]:10025` on every start. That is pre-existing: SMTP was never configured in its compose. Push notifications are unaffected.
+
+**New weekly update check (replaces Watchtower, notify-only):**
+- `scripts/update-check.sh`: compares each running image's digest with the registry, pushes one ntfy line (`Priority: default`) listing images with a newer build and any it could not check. Applies nothing. `--print` shows it on demand; `make update` runs that.
+- `scripts/test-update-check.sh`: stubbed-docker self-check.
+- `scripts/ntfy-push.sh`: `NTFY_PRIORITY` env (default still `high`).
+- `scripts/setup-update-check-timer.sh`: installs `update-check.{service,timer}` (Mondays 10:00, `OnFailure=notify-failure@`). **Needs a one-off `sudo bash /opt/homelab/scripts/setup-update-check-timer.sh`.**
+- Known limits (`ponytail:` comment in the script): it can't tell a patch from a major jump, and it never sees newer releases of pinned tags (Vaultwarden, Nextcloud 30, Cal.com).
+- Docs that still described Watchtower or Renovate as active were updated: the `update-homelab-service` skill, `lab-commands.md`, `troubleshooting.md`, `Makefile update`.
+
+---
+
 ## [2026-09-26] Immich upgraded from 2.7.5 to 3.2.2 (major version)
 
 **Symptom:** none. Planned update.
