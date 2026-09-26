@@ -2,6 +2,105 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Minor updates for 15 containers, and a weekly update check to replace Watchtower
+
+**Symptom:** none. Nothing had auto-updated since Watchtower was removed (2026-09-25), and Renovate has a `renovate.json` but has never opened a PR (the GitHub app is not installed). Most images use floating tags, so they only move on a manual pull.
+
+**Updated (same major version only):**
+
+| Service | From → To | Backup first |
+|---|---|---|
+| Home Assistant | 2026.9.1 → 2026.9.3 | `/home/docker-projects/homeassistant-config-pre-2026.9.3.tgz` |
+| Mattermost (+ postgres:15 rebuild) | 11.10.1 → 11.11.1 | `/home/docker-projects/mattermost-db-pre-update-20260926.sql.gz` |
+| Outline (+ postgres:15, redis:7 rebuilds) | 1.10.0 → 1.10.1 | `/home/docker-projects/outline-db-pre-update-20260926.sql.gz` |
+| Linkwarden | 2.16.2 → 2.16.3 | `backup-engine.sh linkwarden` |
+| GoatCounter | 2.6.0 → 2.7.0 (tag bump, live + repo compose) | `/mnt/ssd/docker-projects/goatcounter/goatcounter-data-pre-2.7.0` |
+| Homepage, FreshRSS, Portainer, Kiwix, Mosquitto, nginx-vaultwarden | newer builds of the same tag | stateless |
+| cloudflared | 2026.8.3 → 2026.9.3 | infra, verified right after |
+| Caddy | rebuilt v2.11.4 image | config validated against the new image first |
+
+**Deliberately NOT updated** (major jumps, each needs its own session): Jellyfin 10.11.5 → 12.1 (`:latest` already points at 12, so any pull upgrades it), Nextcloud 30.0.17 → 35 (30 is end of life; must go one major at a time), Stirling-PDF 2.14 → 3.0, Meilisearch 1.12 → 1.54 (follow Linkwarden's supported version), nextcloud-postgres:16 rebuild (do it with the Nextcloud work).
+
+**Gotcha: Docker Hub rate limit.** Anonymous pulls are 100 requests/hour per IP and each manifest check counts. The version survey plus the first pulls hit `429 Too Many Requests` for Mosquitto and nginx. Nothing broke; the old containers kept running. Check the remaining quota without spending one:
+```bash
+TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull" | python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')
+curl -s --head -H "Authorization: Bearer $TOKEN" https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest | grep -i ratelimit-remaining
+```
+
+**Profiles gotcha:** several stacks (Home Assistant, Mattermost) put services behind Compose `profiles:`, so `docker compose pull` with no flags silently does nothing. Use `docker compose --profile all ...` and name the service.
+
+**Verification:** `verify-services.sh` all green except `budget` and `css` (removed services, known drift). Mattermost `/api/v4/system/ping` 200, Outline local 200 with clean migrations, GoatCounter `/count` 200, Home Assistant local 200, Linkwarden healthy.
+Mattermost logs `Mail server connection test failed ... [::1]:10025` on every start. That is pre-existing: SMTP was never configured in its compose. Push notifications are unaffected.
+
+**New weekly update check (replaces Watchtower, notify-only):**
+- `scripts/update-check.sh`: compares each running image's digest with the registry, pushes one ntfy line (`Priority: default`) listing images with a newer build and any it could not check. Applies nothing. `--print` shows it on demand; `make update` runs that.
+- `scripts/test-update-check.sh`: stubbed-docker self-check.
+- `scripts/ntfy-push.sh`: `NTFY_PRIORITY` env (default still `high`).
+- `scripts/setup-update-check-timer.sh`: installs `update-check.{service,timer}` (Mondays 10:00, `OnFailure=notify-failure@`). **Needs a one-off `sudo bash /opt/homelab/scripts/setup-update-check-timer.sh`.**
+- Known limits (`ponytail:` comment in the script): it can't tell a patch from a major jump, and it never sees newer releases of pinned tags (Vaultwarden, Nextcloud 30, Cal.com).
+- Docs that still described Watchtower or Renovate as active were updated: the `update-homelab-service` skill, `lab-commands.md`, `troubleshooting.md`, `Makefile update`.
+
+---
+
+## [2026-09-26] Immich upgraded from 2.7.5 to 3.2.2 (major version)
+
+**Symptom:** none. Planned update.
+
+**Pre-checks against the v3 migration guide (https://immich.app/blog/v3-migration):**
+- DB already on VectorChord (`vchord 0.4.3`, pgvecto.rs not in use), so the pgvecto.rs removal does not affect us.
+- `.env` uses none of the removed variables (`IMMICH_MACHINE_LEARNING_PING_TIMEOUT`, `MACHINE_LEARNING_PRELOAD__CLIP`, `..._FACIAL_RECOGNITION`).
+- CPU supports x86-64-v2 (needed by the v3 ML image).
+- Our compose already matched upstream v3 (same Postgres image).
+
+**Change (live = repo dir for Immich):** `docker/immich/.env` `IMMICH_VERSION=v2` → `v3`. `.env` is gitignored, so this change exists only on the server.
+
+**Commands:**
+```bash
+docker exec immich_postgres pg_dumpall -U postgres --clean --if-exists | gzip > /home/docker-projects/immich-db-pre-v3-20260926.sql.gz
+cd docker/immich && docker compose pull && docker compose up -d
+```
+The server image pull was slow (~0.4 MB/s from ghcr.io, ~20 min). v2 kept serving until the pull finished.
+
+**Verification:**
+- DB migrations: "Finished running migrations" in ~2 s, no errors.
+- `/api/server/version` → 3.2.2; all 4 containers up, server/postgres/redis healthy; ML server reported healthy.
+- `https://immich.gmojsoski.com` → 200; 19,209 non-deleted assets in the DB.
+- Harmless log noise: `LegacyRouteConverter` warning about `/api/*`.
+
+**Backups / rollback:** pre-upgrade dump `/home/docker-projects/immich-db-pre-v3-20260926.sql.gz` (99 MB), plus Immich's own nightly dumps in `/mnt/ssd_1tb/immich-library/backups/`. The photo library (81 GB) is not changed by the upgrade.
+
+**Gap noticed:** there is no `scripts/backup.d/` config for Immich. The only backups are Immich's own nightly DB dumps on the same disk as the photos.
+
+---
+
+## [2026-09-26] Uptime Kuma upgraded from 1.23.17 to 2.5.5 (major version)
+
+**Symptom:** none. Planned update. The compose file used `:latest`, but upstream keeps `latest` on v1, so the container never moved to v2.
+
+**Change:**
+- Live: `/mnt/ssd/docker-projects/uptime-kuma/docker-compose.yml` image `louislam/uptime-kuma:latest` → `louislam/uptime-kuma:2`
+- Repo: `docker/uptime-kuma/docker-compose.yml`, same change.
+
+**Commands:**
+```bash
+docker stop uptime-kuma
+# sudo needs a password, data is root-owned, so copy via a throwaway container
+cd /mnt/ssd/docker-projects && docker run --rm -v "$PWD":/w alpine cp -a /w/uptime-kuma/data /w/uptime-kuma-data-v1-backup-20260926
+cd uptime-kuma && docker compose pull && docker compose up -d
+docker logs -f uptime-kuma   # aggregate-table migration, do NOT interrupt
+```
+
+**Verification:**
+- v2 migration of the 560 MB SQLite DB took ~19 min (18:44 to 19:03 UTC), 15 monitors, ended with "Aggregate Table Migration Completed".
+- Container `Up (healthy)`, `localhost:3001` answers 302 (login), all 14 active monitors UP on their latest heartbeat.
+- `verify-services.sh`: all green except `budget` and `css` (already removed services, known drift).
+
+**Rollback:** stop container, replace `data/` with `/mnt/ssd/docker-projects/uptime-kuma-data-v1-backup-20260926`, set image back to `:1`, start. The v1 backup can be deleted once v2 has run fine for a while (~1.7 GB).
+
+**v2 breaking changes to keep in mind:** badge `:duration` only accepts `24h`/`30d`/`1y` style values; JSON backup/restore is gone (back up the `data/` dir); SMTP notification templates now use LiquidJS (case-sensitive variables).
+
+---
+
 ## [2026-09-26] Critical alerts and Cal bookings now push to the phone (ntfy)
 
 **Date:** 2026-09-26

@@ -51,8 +51,8 @@ status:
 # unmaintained). Kept as a signpost rather than deleted so `make update` tells
 # you the new flow instead of failing with "No rule to make target".
 update:
-	@echo "Image updates are handled by Renovate, which opens PRs against this repo."
-	@echo "To update one service by hand:"
+	@bash scripts/update-check.sh --print
+	@echo "Nothing is applied. To update one service by hand:"
 	@echo "  cd /mnt/ssd/docker-projects/<service> && docker compose pull && docker compose up -d"
 	@echo "Pin the tag in docker-compose.yml so the change is reviewable, not silent."
 

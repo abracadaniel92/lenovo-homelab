@@ -31,7 +31,7 @@ if [ -n "$(find "$stamp" -mmin "-$DEDUP_MINUTES" 2>/dev/null)" ]; then
     exit 0
 fi
 
-if curl -fsS --max-time 10 -H "Title: lemongrab" -H "Priority: high" -d "$TITLE" "$TOPIC_URL" >/dev/null; then
+if curl -fsS --max-time 10 -H "Title: lemongrab" -H "Priority: ${NTFY_PRIORITY:-high}" -d "$TITLE" "$TOPIC_URL" >/dev/null; then
     touch "$stamp"
 else
     echo "ntfy-push: POST to ntfy failed for: $TITLE" >&2

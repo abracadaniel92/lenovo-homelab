@@ -86,9 +86,9 @@ docker compose logs -f      # view logs
 docker compose restart      # restart
 ```
 
-### Watchtower auto-updates
+### Image updates
 
-Watchtower updates containers daily at 2 AM, **except** (manual updates only): Nextcloud, Vaultwarden, Jellyfin, KitchenOwl.
+Nothing auto-updates (Watchtower was removed on 2026-09-25). `update-check.timer` sends a weekly ntfy push listing images with a newer build; `make update` shows the same list. Update one service at a time with the `update-homelab-service` skill.
 
 ### Resource limits
 

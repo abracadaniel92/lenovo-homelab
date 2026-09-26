@@ -1,6 +1,6 @@
 services:
   goatcounter:
-    image: arp242/goatcounter:2.6.0
+    image: arp242/goatcounter:2.7.0
     container_name: goatcounter
     restart: always
     profiles:
