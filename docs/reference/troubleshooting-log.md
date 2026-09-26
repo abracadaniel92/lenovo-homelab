@@ -708,6 +708,84 @@ Verified after teardown: container and both dirs gone, 35 containers running
 (36 minus Watchtower), no service disrupted. The
 `com.centurylinklabs.watchtower.*` labels left on other services are inert.
 
+### 📝 Lessons learned
+
+1. **A monitor that can only report failures it survives is not a monitor.**
+   Every alert here was emitted *by* `health-check-engine.sh`. When that stopped
+   executing, the reporter and the outage were the same component. `OnFailure=`
+   fires even when `ExecStart` never got off the ground, which is exactly the
+   case that was invisible. Alerting must be out-of-band from the thing it
+   watches.
+
+2. **"Green" is not "working". Check the function, not the process.** Three
+   separate systems in one day reported healthy while doing nothing:
+   `systemctl list-timers` showed a recent `LAST` for a unit failing instantly
+   on every fire; `docker ps` showed Watchtower `Up 2 weeks (healthy)` while its
+   job panicked in a recovered goroutine; the Nextcloud backup exited 0 while
+   shipping an empty config archive. Liveness checks measure the wrapper.
+
+3. **`|| log "warning"` on a failed command is a silent failure.** The Nextcloud
+   config tar failed every night for eight months behind `2>/dev/null` and a
+   friendly warning. If the artifact is required for recovery, assert on the
+   artifact and exit non-zero. Warnings in an unread log are not signals.
+
+4. **Verify backups by restoring/inspecting them, never by their existence.**
+   The archive was present, recent-looking and the right shape. It was 7 weeks
+   stale (WAL race) and, for Nextcloud, missing the secrets needed to decrypt
+   anything. `ls` proves nothing; row counts and `PRAGMA integrity_check` do.
+
+5. **Never put a space in an infrastructure path.** One space took out four
+   systems on the same day because each caller was independently unquoted. The
+   fix is a space-free symlink, not auditing every quote forever.
+
+6. **`set -e` in a loop over services is a hazard.** It aborted
+   `backup-all-critical.sh` after the first of five, so even successful cron
+   runs only ever backed up Vaultwarden. Collect failures, continue, exit
+   non-zero at the end.
+
+7. **Offsite `rclone sync` is a mirror, not a backup.** It faithfully
+   replicated local destruction within 24 hours. `--backup-dir` is what makes
+   it an archive.
+
+8. **A symlink that makes deployment easy makes accidental deployment easy.**
+   Introducing `/opt/homelab` means `git checkout` on the server is now a
+   deploy; this bit during this very session. Documented in `CLAUDE.md`.
+
+### 📍 Files involved
+
+**Repo**
+- `scripts/backup-engine.sh` — `is_sqlite()`, `sqlite_snapshot()`, `SQLITE_TAR`
+  type, SQLite-aware `FILE` type, container-side config read + hard assert
+- `scripts/backup-all-critical.sh` — removed `set -e`, derived `SCRIPT_DIR`
+- `scripts/backup.d/vaultwarden.conf`, `scripts/backup.d/nextcloud.conf`
+- `scripts/health.d/50-backup-freshness.sh` — new alarm
+- `scripts/test-backup-freshness.sh` — its self-check (outside `health.d/` on
+  purpose: the engine sources every `*.sh` there)
+- `scripts/notify-unit-failure.sh`, `systemd/notify-failure@.service` — new
+- `scripts/repair-silent-failures.sh` — the idempotent root-side repair
+- `scripts/sync-backups-to-b2.sh` — `--backup-dir`
+- `Makefile` (`update` target), `README.md` (service table), `CLAUDE.md`
+- `docker/watchtower/` — deleted
+
+**Live (server)**
+- `/opt/homelab` → symlink to the repo working tree
+- `/etc/systemd/system/notify-failure@.service`
+- `/etc/systemd/system/enhanced-health-check.service.d/override.conf`
+- `/etc/systemd/system/{hdd-health-check,slack-goatcounter-weekly,portfolio-update}.service.d/onfailure.conf`
+- `/etc/crontab` (backed up to `/etc/crontab.bak-<timestamp>`)
+- `/usr/local/bin/sync-backups-to-b2.sh`
+- `/mnt/ssd/docker-projects/watchtower/`, `/home/docker-projects/watchtower/` — removed
+
+### 🚚 Landed
+
+`feature/repair-silent-automation-failures` → `develop` (PR #86) → `main`
+(PR #87); `CLAUDE.md` deploy rule via PR #88. Server working tree returned to
+`main` and verified afterwards, per the new rule.
+
+**Status**: ✅ **RESOLVED.** Health check hourly and passing, failure alerting
+out-of-band, all 5 backups fresh and content-verified, offsite is an archive,
+Watchtower gone. Four follow-ups remain open (see above).
+
 ## [2026-09-25] Vaultwarden 1.35.1 → 1.37.3: iOS autofill save crash, and a silently truncating backup
 
 **Date:** 2026-09-25
@@ -823,10 +901,20 @@ docker compose pull && docker compose up -d
 
 ### 📝 Notes / open items
 
+> **Update, same day, later:** the two items below marked ✅ were resolved within
+> hours by the automation-repair entry at the top of this log. The original text
+> is kept as written (this log is append-only); the markers record the outcome.
+
 - **Duplicate vault entries** exist from the failed-looking saves (at minimum the
   2026-09-25 pair, likely more from 2026-09-19). Needs a manual pass in the vault.
+  ⏳ **Still open.**
 - **`backup-engine.sh` WAL race** (above) is unfixed and affects other services.
+  ✅ **Resolved**: new `SQLITE_TAR` type plus a SQLite-aware `FILE` type. Verified
+  603/603 ciphers with `integrity_check ok`.
 - **Backups not running since 2026-01-28**; timer/cron unverified.
+  ✅ **Resolved**: root cause was the space in the repo path breaking the cron
+  line. Cron rewritten via `/opt/homelab`; all 5 services verified fresh; a
+  freshness alarm now catches a recurrence within 48h.
 - **`ADMIN_TOKEN` is plain text.** 1.37.3 now warns about this on every start:
   `You are using a plain text ADMIN_TOKEN which is insecure.` Fix is
   `vaultwarden hash` to generate an Argon2 PHC string.
@@ -834,6 +922,34 @@ docker compose pull && docker compose up -d
   `SSO_ENABLED: "true"` OIDC block that is **not** present on the live container,
   plus placeholder secrets. The repo file is aspirational for SSO. Left alone
   deliberately; reconciling it is separate work.
+
+### 📝 Lessons learned
+
+1. **"It failed" from a user can mean "it succeeded and then crashed".** The
+   iOS client reported a save error; the server logs showed the write committing
+   two seconds *before* the crash. The client choked decoding the response. Read
+   the server timeline before trusting the client's account of what happened,
+   and check for side effects: every "failed" save left a real duplicate entry.
+2. **Pinning `:latest` is not pinning.** The container had been running the same
+   image for nine months while `:latest` moved on, so "we're on latest" was true
+   and meaningless. Pin explicit tags and let Renovate propose bumps.
+3. **Client/server API skew is a real breakage class for self-hosted services.**
+   Vaultwarden tracks upstream Bitwarden clients; its release notes say which
+   server version a given client requires. Worth checking before assuming a bug.
+4. **A version-skew incident is a good moment to test a backup**, which is the
+   only reason the eight-month backup outage was found at all.
+
+### 📍 Files involved
+
+- `/home/docker-projects/vaultwarden/docker-compose.yml` (live) — image pinned
+  `vaultwarden/server:1.37.3`
+- `docker/vaultwarden/docker-compose.yml` (repo) — mirrored the pin
+- `/mnt/ssd/backups/vaultwarden/vaultwarden-preupgrade-1.35.1-20260925.tar.gz`
+- `scripts/backup.d/vaultwarden.conf` — `DOCKER_TAR` → `SQLITE_TAR`
+
+**Status**: ✅ **RESOLVED.** 1.37.3 live and healthy, web-vault 2026.7.0,
+603 ciphers intact, `vault.gmojsoski.com` 200 internal and external, iOS saves
+working. Two follow-ups open: duplicate vault entries, plaintext `ADMIN_TOKEN`.
 
 ## [2026-09-25] Cal follow-up: Google Calendar + Meet, public privacy policy, Koalendar cutover
 
