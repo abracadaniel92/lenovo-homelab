@@ -2,6 +2,81 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Proved the alert chain and the Vaultwarden backup actually work
+
+**Date:** 2026-09-26
+**Action:** Sent a live test alert through the real notification path, and ran
+the first Vaultwarden restore drill. Saved the drill as
+`scripts/restore-drill-vaultwarden.sh`.
+**Result:** ✅ Both passed. Mattermost accepted the alert (HTTP 200), and the
+newest backup restored into a working vault with **603 of 603 ciphers**.
+
+### 🔍 Background
+
+Everything in this repo alerts to one Mattermost webhook, and until today the
+engine discarded the POST result, so nobody knew whether alerts arrived. The
+log's last recorded send attempts were **failures in January** (HTTP 400, then
+502) and nothing had sent since, because no alert condition had fired.
+
+Backups had the same shape of doubt. `backup-engine.sh` now verifies each
+archive as it writes it and `50-backup-freshness.sh` asserts the `.ok` sidecar
+hourly, but **readable is not restorable.** Neither catches a backup missing
+`rsa_key.pem`, or a schema the current image refuses to open. No one had ever
+restored one.
+
+### ✅ Implementation
+
+1. **Test alert.** Sent through the engine's own `send_slack_notification`
+   rather than `test-mattermost-webhook.sh`, so the thing proven is the path
+   real alerts take, not a second copy of the logic. Returned 0 (HTTP 200).
+2. **Restore drill.** Newest archive extracted to a temp dir, booted in a
+   throwaway container, compared against live, then torn down.
+3. Saved as `scripts/restore-drill-vaultwarden.sh`, safe to run on production:
+   throwaway container name, temp data dir, port 8077, `trap` cleanup on
+   `EXIT INT TERM`. Never touches the live container, its data dir, or 8082.
+
+```bash
+bash scripts/restore-drill-vaultwarden.sh
+```
+
+### 🧪 Verification
+
+```
+1. Extract        archive extracts, db.sqlite3 present, rsa_key.pem present
+2. Contents       603 ciphers, 1 user, 8 folders, newest 2026-09-25 12:58
+3. Boot           HTTP 200 after 2s, 0 errors in startup log
+4. vs live        restored 603 / live 603, counts match
+RESTORE DRILL PASSED
+```
+
+Live container confirmed still `Up 26 hours (healthy)` afterwards, temp dirs
+removed, no leftover containers.
+
+### 📝 Lessons learned
+
+- **An untested backup is a hypothesis.** Three layers of verification were
+  added today (archive read at write time, `.ok` sidecar, hourly freshness) and
+  none of them would have caught a missing `rsa_key.pem`. Only restoring does.
+- **`rsa_key.pem` is the quiet one.** The archive looks complete without it and
+  restores to a vault that serves fine, but every session token and
+  2FA-remember device is invalidated. It is asserted explicitly for that reason.
+- **Test the real path, not a copy.** `test-mattermost-webhook.sh` exists, but
+  passing it would only prove that script works. The engine's own function is
+  what pages you at 3am.
+- The January failures show this webhook **has** broken before. Delivery is now
+  checked and logged (same-day fix), so the next failure is visible instead of
+  silent.
+
+### 📍 Files involved
+
+- `scripts/restore-drill-vaultwarden.sh` (new)
+- `scripts/health-check-engine.sh` (`send_slack_notification`, used as-is)
+- Archive under test: `/mnt/ssd/backups/vaultwarden/vaultwarden-20260926-020001.tar.gz`
+
+**Status**: ✅ Both chains proven end to end. Re-run the drill after any
+Vaultwarden upgrade, and roughly monthly otherwise. The other four services
+still have no restore drill.
+
 ## [2026-09-26] Audit of the health-check modular migration: the probe could not see 5xx
 
 **Date:** 2026-09-26
