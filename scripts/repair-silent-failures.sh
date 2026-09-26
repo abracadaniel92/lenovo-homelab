@@ -111,8 +111,16 @@ sleep 3
 STATE=$(systemctl show -p Result --value enhanced-health-check.service)
 echo "health check Result: $STATE"
 if [ "$STATE" = "success" ]; then
-    echo "✅ REPAIR OK — health check executed for the first time since 2026-01-28"
-    echo "   Backup freshness alarm should have fired for the 5 stale services."
+    echo "✅ REPAIR OK: health check ran and exited clean"
+    # Report what this run actually found rather than narrating the first one.
+    # This script is idempotent and meant to be re-run, so a fixed message
+    # ("the 5 stale services") is accurate once and wrong every time after.
+    echo "   What the run reported:"
+    # Everything since the last "Starting..." marker, i.e. only the run we just
+    # triggered. Printing the whole block rather than grepping for known
+    # keywords, so a module emitting something unanticipated is still shown.
+    awk '/Starting modular health check run/ {buf=""} {buf = buf "     " $0 "\n"}
+         END {printf "%s", buf}' /var/log/enhanced-health-check.log
 else
     echo "❌ still failing, inspect: systemctl status enhanced-health-check.service"
     exit 1

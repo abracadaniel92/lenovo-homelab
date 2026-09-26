@@ -59,13 +59,19 @@ repair rather than introduced by it.
 |---|---|
 | `scripts/health-check-engine.sh` | `check_config_integrity` now checks `~/.cloudflared/config.yml`; header corrected (it claimed to be a staged refactor "NOT yet wired up in production" while being the production ExecStart) |
 | `scripts/health.d/20-cloudflared.sh` | Dropped `local`; `FIX_SCRIPT` routed via `/opt/homelab` |
-| `scripts/test-health-modules.sh` | **New.** 5 assertions covering both defects |
-| `scripts/repair-silent-failures.sh` | `docker-containers-start.service` added to the `OnFailure=` loop |
+| `scripts/test-health-modules.sh` | **New.** 6 assertions covering both defects |
+| `scripts/repair-silent-failures.sh` | `docker-containers-start.service` added to the `OnFailure=` loop; VERIFY now prints the run's actual log block instead of the hardcoded "should have fired for the 5 stale services", which was true on the first run and wrong on every re-run of a script that is meant to be idempotent |
+
+Follow-up in the same session: `check_config_integrity` now logs a verdict on
+the healthy path too. It was silent when passing, and in the log that is
+indistinguishable from never having run, which is the exact ambiguity that hid
+the 2026-01-28 outage for eight months. `50-backup-freshness.sh` already got
+this right. Covered by the 6th assertion.
 
 ### 🧪 Verification
 
 ```bash
-bash scripts/test-health-modules.sh          # PASS, 5/5
+bash scripts/test-health-modules.sh          # PASS, 6/6
 shellcheck -S error scripts/health-check-engine.sh scripts/health.d/20-cloudflared.sh
 grep -c "127.0.0.1:8080" ~/.cloudflared/config.yml   # 0, guard starts quiet
 ```

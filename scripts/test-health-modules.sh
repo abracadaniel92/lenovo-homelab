@@ -49,11 +49,12 @@ echo "config integrity guard (health-check-engine.sh):"
 # Extracted so sourcing does not trigger a real health check run.
 sed -n '/^check_config_integrity()/,/^}/p' "$ENGINE" > "$TMP/fn.sh"
 
-config_alert() {   # $1 = config contents, or MISSING
+# Prints "<alert>|<log output>" so both channels can be asserted on.
+config_run() {   # $1 = config contents, or MISSING
     (
-        alerts=""
+        alerts=""; logs=""
         # shellcheck disable=SC2317,SC2329  # both are called by the sourced function
-        log() { :; }
+        log() { logs="$logs$1"; }
         # shellcheck disable=SC2317,SC2329
         send_slack_notification() { alerts="$1"; }
         cf="$TMP/config.yml"
@@ -63,15 +64,22 @@ config_alert() {   # $1 = config contents, or MISSING
         # Repoint the hardcoded live path at the fixture.
         eval "$(declare -f check_config_integrity | sed "s|/home/goce/.cloudflared/config.yml|$cf|")"
         check_config_integrity
-        printf '%s' "$alerts"
+        printf '%s|%s' "$alerts" "$logs"
     )
 }
+config_alert() { local out; out=$(config_run "$1"); printf '%s' "${out%%|*}"; }
+config_log()   { local out; out=$(config_run "$1"); printf '%s' "${out##*|}"; }
 
 # The old version grep'd /etc/caddy/config.d/*.caddy, which does not exist on
 # the host, so it could never fire. This case fails if it reverts to a no-op.
 assert_set   "$(config_alert 'service: http://127.0.0.1:8080')" "127.0.0.1:8080 alarms"
 assert_empty "$(config_alert 'service: http://localhost:8080')" "localhost:8080 stays quiet"
 assert_set   "$(config_alert MISSING)"                          "missing config alarms"
+
+# The healthy path must still say something. A check that is silent when it
+# passes cannot be told apart in the log from a check that never ran, which is
+# the ambiguity that hid the 2026-01-28 outage for eight months.
+assert_set   "$(config_log 'service: http://localhost:8080')"   "healthy path logs a verdict"
 
 echo
 if [ "$fails" -eq 0 ]; then

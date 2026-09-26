@@ -91,6 +91,11 @@ check_config_integrity() {
         log "WARNING: 127.0.0.1:8080 in $cf_config, must be localhost:8080"
         send_slack_notification "⚠️ Tunnel config regression" \
             "\`$cf_config\` contains \`127.0.0.1:8080\`, which fails intermittently on this host. Replace with \`localhost:8080\` and restart cloudflared." "⚠️"
+    else
+        # Logged even when healthy, on purpose. A check that is silent when it
+        # passes is indistinguishable in the log from a check that never ran,
+        # and that ambiguity is what hid the 2026-01-28 outage for 8 months.
+        log "Tunnel config OK: no 127.0.0.1:8080 in $cf_config"
     fi
 }
 
