@@ -11,8 +11,8 @@ Overview of the backup architecture and retention policies.
 
 ### Offsite Backups (Backblaze B2)
 - **Provider**: Backblaze B2 Cloud Storage
-- **Bucket**: `Goce-Lenovo`
-- **Sync Schedule**: Daily at 3:00 AM (after local backups)
+- **Bucket**: `Goce-Lenovo-crypt`, client-side encrypted (rclone crypt remote `b2-crypt`)
+- **Sync Schedule**: Daily at 3:00 AM via `sync-backups-to-b2.timer` (after local backups)
 - **Sync Script**: `/usr/local/bin/sync-backups-to-b2.sh`
 
 ## Retention Policy

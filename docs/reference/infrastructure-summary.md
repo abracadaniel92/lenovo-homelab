@@ -157,9 +157,11 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix
 ### Offsite Backup (Backblaze B2)
 
 - **Provider**: Backblaze B2 Cloud Storage
-- **Bucket**: `Goce-Lenovo`
-- **Location**: `b2-backup:Goce-Lenovo/`
-- **Sync Schedule**: Daily at 3:00 AM (after local backups)
+- **Bucket**: `Goce-Lenovo-crypt` (client-side encrypted via rclone crypt remote `b2-crypt`)
+- **Location**: `b2-crypt:current/` (superseded files: `b2-crypt:superseded/YYYY-MM-DD`, kept 90 days)
+- **Sync Schedule**: Daily at 3:00 AM, `sync-backups-to-b2.timer` (systemd, OnFailure notifier)
+- **Monitoring**: `scripts/health.d/60-offsite-freshness.sh` (hourly)
+- **Encryption key**: in goce's `rclone.conf` only; must also be kept off-box (Vaultwarden + paper)
 - **Sync Script**: `/usr/local/bin/sync-backups-to-b2.sh`
 - **Log File**: `/var/log/rclone-sync.log`
 - **Status**: ✅ Configured and running (443 files synced)
@@ -167,10 +169,10 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix
 **Manual Commands**:
 ```bash
 # Sync now
-rclone sync /mnt/ssd/backups/ b2-backup:Goce-Lenovo/
+sudo systemctl start sync-backups-to-b2.service
 
-# List files in B2
-rclone ls b2-backup:Goce-Lenovo/
+# List files in B2 (decrypted view)
+rclone ls b2-crypt:current/
 
 # Check sync logs
 tail -f /var/log/rclone-sync.log

@@ -66,12 +66,13 @@ bash scripts/backup-travelsync.sh
 
 ### Sync to Backblaze B2
 ```bash
-sudo /usr/local/bin/sync-backups-to-b2.sh
+sudo systemctl start sync-backups-to-b2.service   # runs as goce, encrypted
 ```
 
 ### Check B2 sync status
 ```bash
-rclone ls b2-backup:Goce-Lenovo/
+systemctl list-timers sync-backups-to-b2.timer
+rclone ls b2-crypt:current/        # decrypted view; raw bucket is Goce-Lenovo-crypt
 tail -f /var/log/rclone-sync.log
 ```
 
