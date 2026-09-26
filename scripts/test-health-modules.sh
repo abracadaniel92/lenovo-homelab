@@ -89,6 +89,7 @@ echo "no 'local' outside a function (whole bug class):"
 # sent completely empty. Scans every health script so a third cannot appear.
 top_level_local() {
     awk '
+      /^[[:space:]]*#/ { next }  # comments say "local" in prose
       /^[a-zA-Z_][a-zA-Z0-9_]*\(\)[[:space:]]*\{/ { fn=1; depth=1; next }
       fn && /\{/ { depth++ }
       fn && /\}/ { depth--; if (depth <= 0) fn=0 }

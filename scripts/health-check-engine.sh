@@ -38,6 +38,12 @@ send_slack_notification() {
     local message="$2"
     local icon="${3:-🚨}"
 
+    # Criticals also go to the phone (title only, deduped). Before the webhook
+    # check, so a missing Mattermost webhook does not silence the push too.
+    if [ "$icon" = "🚨" ]; then
+        "$SCRIPT_DIR/ntfy-push.sh" "$title" 2>&1 | while read -r l; do log "ERROR: $l"; done
+    fi
+
     # Get webhook from environment or file
     WEBHOOK_URL=$(cat "$SCRIPT_DIR/health_webhook_url" 2>/dev/null || echo "")
     if [ -z "$WEBHOOK_URL" ]; then
