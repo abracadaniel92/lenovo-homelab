@@ -1,5 +1,6 @@
 # Sensitive credentials
 **/health_webhook_url
+**/ntfy_topic_url
 *.json
 !gokapi/config.json.template  # Keep gokapi config template
 !renovate.json                  # Renovate configuration

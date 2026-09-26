@@ -13,6 +13,9 @@ set -uo pipefail
 UNIT="${1:-unknown}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Phone push first: it must not depend on the Mattermost webhook existing.
+"$SCRIPT_DIR/ntfy-push.sh" "🚨 systemd unit failed: $UNIT"
+
 WEBHOOK_URL=$(cat "$SCRIPT_DIR/health_webhook_url" 2>/dev/null || echo "")
 if [ -z "$WEBHOOK_URL" ]; then
     echo "notify-unit-failure: no webhook at $SCRIPT_DIR/health_webhook_url" >&2

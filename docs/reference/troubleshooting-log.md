@@ -2,6 +2,49 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Critical alerts and Cal bookings now push to the phone (ntfy)
+
+**Date:** 2026-09-26
+**Action:** Critical homelab alerts now also go to the ntfy topic Uptime Kuma
+already uses (public ntfy.sh, `lemongrab-alerts`). Cal.com bookings push there too.
+**Result:** ✅ Repo side done and tested. Needs the one-time server step below.
+
+### Why
+Only Uptime Kuma reached the phone. Backup, offsite, SMART, disk and failed-unit
+alerts went to Mattermost only, which is easy to miss for days.
+
+### Changes (repo, live through /opt/homelab after `git pull`)
+- `scripts/ntfy-push.sh` (new): pushes a TITLE only, priority high. The topic
+  is public, so anyone who knows its name can read it, and alert bodies carry
+  paths and log lines. Dedups the same title for 6h (stamps in
+  `/run/homelab-ntfy`), because the engine re-alerts every hourly run.
+- `health-check-engine.sh`: `send_slack_notification` calls it for 🚨 alerts
+  only, before the Mattermost webhook check.
+- `notify-unit-failure.sh`: pushes `🚨 systemd unit failed: <unit>`.
+- Topic URL is read from `scripts/ntfy_topic_url` (gitignored). No file, no push.
+- Self-check: `bash scripts/test-ntfy-push.sh`.
+- `test-health-modules.sh`: the top-level `local` check now skips comment
+  lines (it flagged the word "local" in 60-offsite-freshness.sh comments).
+
+### Cal.com (UI only, stored in Cal's database)
+Settings → Developer → Webhooks, URL uses ntfy inline templating:
+title `Cal: {{.triggerEvent | replace "_" " " | lower | title}}`, message
+`{{.payload.type}}, <startTime in Europe/Skopje>`. Attendee names are left
+out on purpose (public topic). Verified with a sample payload:
+`Cal: Booking Created | 30min, Mon 28 Sep 14:00`.
+
+### Server step (once)
+```bash
+cd /opt/homelab && git pull
+echo "https://ntfy.sh/lemongrab-alerts" > scripts/ntfy_topic_url
+sudo /opt/homelab/scripts/ntfy-push.sh "🚨 test push from lemongrab"
+```
+
+### Note
+`lemongrab-alerts` is guessable: anyone can read it or post fake alerts. To
+switch to a random topic, change `ntfy_topic_url`, the Cal webhook URL and the
+Uptime Kuma notification, and resubscribe in the app.
+
 ## [2026-09-26] B2 offsite: encrypted, on a systemd timer, and monitored
 
 **Date:** 2026-09-26
