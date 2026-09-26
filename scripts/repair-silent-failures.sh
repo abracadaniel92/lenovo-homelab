@@ -64,7 +64,10 @@ EOF
 ok "drop-in written (original unit file untouched)"
 
 echo "=== 4. Attach notifier to the other scheduled units ==="
-for unit in hdd-health-check.service slack-goatcounter-weekly.service portfolio-update.service; do
+# docker-containers-start.service is included even though its 203/EXEC is still
+# undiagnosed: the notifier is what makes an undiagnosed failure visible, so the
+# unit that is actually failing is the last one that should be left without it.
+for unit in hdd-health-check.service slack-goatcounter-weekly.service portfolio-update.service docker-containers-start.service; do
     if systemctl cat "$unit" >/dev/null 2>&1; then
         mkdir -p "/etc/systemd/system/${unit}.d"
         printf '[Unit]\nOnFailure=notify-failure@%%n.service\n' > "/etc/systemd/system/${unit}.d/onfailure.conf"

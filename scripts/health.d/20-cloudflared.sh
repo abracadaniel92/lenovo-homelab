@@ -9,8 +9,12 @@ if ! check_external_access "gmojsoski.com"; then
 fi
 
 if [ "$EXTERNAL_DOWN" = true ]; then
-    local slack_title="🚨 CRITICAL: External Access Down"
-    local slack_message="@all
+    # NOT `local`: modules are source'd at the engine's top level, not inside a
+    # function, where `local` errors out and assigns nothing. That sent an alert
+    # with an empty title and empty body for the single most critical failure
+    # this homelab has, the one that pages @all.
+    slack_title="🚨 CRITICAL: External Access Down"
+    slack_message="@all
 
 *Domain:* gmojsoski.com
 *Status:* Not accessible (502/404/503)
@@ -19,12 +23,14 @@ if [ "$EXTERNAL_DOWN" = true ]; then
 *Check log:*
 \`sudo tail -50 /var/log/enhanced-health-check.log\`"
     send_slack_notification "$slack_title" "$slack_message" "🚨"
-    
-    FIX_SCRIPT="/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix-external-access.sh"
+
+    # Via /opt/homelab: the literal path contains a space, and that is what
+    # killed this whole layer for eight months (troubleshooting-log 2026-09-25).
+    FIX_SCRIPT="/opt/homelab/restart services/fix-external-access.sh"
     if [ -f "$FIX_SCRIPT" ]; then
         log "Running fix script: $FIX_SCRIPT"
         bash "$FIX_SCRIPT"
-        
+
         # Verify if back up
         sleep 10
         if check_external_access "gmojsoski.com"; then

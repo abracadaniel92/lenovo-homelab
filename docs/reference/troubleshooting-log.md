@@ -2,6 +2,97 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Review of the 2026-09-25 repair: two more checks that could never fire
+
+**Date:** 2026-09-26
+**Action:** Reviewed yesterday's automation repair. The repair itself verified
+clean; the review found two guards inside the newly re-armed health check that
+were incapable of reporting a failure.
+**Result:** ✅ **LIVE** (repo edits deploy instantly via `/opt/homelab`).
+Self-check `scripts/test-health-modules.sh`, 5/5 pass.
+
+### ✅ Yesterday's repair verified
+
+Independently re-checked, all confirmed: health check running hourly (all 6
+modules), all 5 backups ran 02:00 today off the repaired cron, B2 sync ran 03:00
+with `--backup-dir` and created the `Goce-Lenovo-superseded` bucket, freshness
+self-check 6/6. The WAL fix is real: today's Vaultwarden archive holds **603
+ciphers, newest `2026-09-25 12:58`, `integrity_check ok`, `rsa_key.pem`
+present**, exact agreement with the live DB, against the 598/7-weeks-stale
+archive the old `DOCKER_TAR` produced.
+
+### 🔍 Finding 1: the tunnel 127.0.0.1 guard was a no-op
+
+`check_config_integrity()` in `health-check-engine.sh` grep'd
+`/etc/caddy/config.d/*.caddy`. **That path does not exist on the host** (Caddy's
+configs live in the container and the repo), so the glob never matched, nothing
+was ever logged, and the guard reported healthy by doing nothing. The invariant
+it is supposed to protect (tunnel `service:` URLs must be `localhost:8080`,
+never `127.0.0.1:8080`) was therefore unguarded in production.
+
+The monolithic `enhanced-health-check.sh` still has the real version, pointed at
+`~/.cloudflared/config.yml`. The modular rewrite kept the name and lost the
+behaviour (`# Optional: Auto-fix logic can be added here`).
+
+Now checks the cloudflared config. **Detect-and-alert, not the monolith's silent
+`sed -i`**: that file is append-only/sacred, and an in-place edit does not take
+effect until cloudflared restarts, so the quiet auto-fix left the running tunnel
+broken while looking resolved. Live config verified clean (0 occurrences), so
+the newly-live check starts quiet.
+
+### 🔍 Finding 2: the @all outage alert was being sent empty
+
+`health.d/20-cloudflared.sh` assigned its alert title and body with `local` at
+module top level. Modules are `source`d at the engine's top level, not inside a
+function, and bash refuses `local` there: it errors and assigns nothing. So the
+single most critical alert in this homelab, external access down, pages
+`@all`, went out **with an empty title and an empty body**. Dropped `local`.
+Its `FIX_SCRIPT` path was also the literal space-containing repo path; routed
+via `/opt/homelab`.
+
+Both are the same shape as the 2026-01-28 outage and were re-armed by yesterday's
+repair rather than introduced by it.
+
+### 📍 Changes
+
+| File | Change |
+|---|---|
+| `scripts/health-check-engine.sh` | `check_config_integrity` now checks `~/.cloudflared/config.yml`; header corrected (it claimed to be a staged refactor "NOT yet wired up in production" while being the production ExecStart) |
+| `scripts/health.d/20-cloudflared.sh` | Dropped `local`; `FIX_SCRIPT` routed via `/opt/homelab` |
+| `scripts/test-health-modules.sh` | **New.** 5 assertions covering both defects |
+| `scripts/repair-silent-failures.sh` | `docker-containers-start.service` added to the `OnFailure=` loop |
+
+### 🧪 Verification
+
+```bash
+bash scripts/test-health-modules.sh          # PASS, 5/5
+shellcheck -S error scripts/health-check-engine.sh scripts/health.d/20-cloudflared.sh
+grep -c "127.0.0.1:8080" ~/.cloudflared/config.yml   # 0, guard starts quiet
+```
+
+Each assertion was confirmed to fail against the pre-fix code, not just pass
+against the new code.
+
+### 📌 Open items
+
+1. **`docker-containers-start.service` drop-in is in the repo but NOT deployed.**
+   Needs `sudo bash /opt/homelab/scripts/repair-silent-failures.sh` (idempotent).
+   It is still in a `failed` state and is the only failing unit without a notifier.
+2. **`make health` and the hourly timer run different scripts.** The Makefile
+   runs `enhanced-health-check.sh` (612 lines), systemd runs
+   `health-check-engine.sh` + 6 modules. Not yet ported, so not covered hourly:
+   `check_caddyfile_integrity` (the gzip/mobile-download guard from 2026-01-08),
+   `check_udp_buffers`, the docker-daemon check, HTTP checks for Jellyfin /
+   Nextcloud / Linkwarden, the 80% disk warning tier, and per-hour alert
+   throttling. Deliberately NOT "fixed" by repointing the Makefile: that would
+   have reduced what a human sees rather than increasing what runs hourly.
+   Finding 1 suggests the rest of the port needs auditing for the same
+   name-kept-behaviour-lost defect, not just completing.
+3. `Goce-Lenovo-superseded` has no lifecycle rule: a new dated folder daily,
+   forever. 3.1 MiB / 6 objects today, so not urgent.
+4. FreshRSS still has no `backup.d/*.conf` (carried over from yesterday). Newest
+   archive 2026-08-16, 41 days old, and invisible to the freshness alarm.
+
 ## [2026-09-25] A space in the repo path silently killed health checks, backups and auto-recovery for 8 months
 
 **Date:** 2026-09-25
