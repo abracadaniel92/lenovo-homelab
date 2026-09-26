@@ -2,6 +2,41 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-27] Nextcloud 30 → 35, Stirling-PDF 3.0, Meilisearch 1.13.3, Jellyfin pinned to 10.11
+
+**Symptom:** none. Planned. Nextcloud 30 was end of life (no security fixes) and publicly reachable at cloud.gmojsoski.com.
+
+**Docker Hub was rate-limited, so images came from Google's Docker Hub mirror.** Anonymous Docker Hub allows 100 requests/hour per IP, and the 2026-09-26 update batch used it up. `mirror.gcr.io` is Google's public pull-through cache of Docker Hub; it serves the same image digests and is not rate-limited:
+```bash
+docker pull mirror.gcr.io/library/nextcloud:31-apache && docker tag mirror.gcr.io/library/nextcloud:31-apache nextcloud:31-apache
+# non-library images: mirror.gcr.io/<user>/<repo>:<tag>, e.g. mirror.gcr.io/jellyfin/jellyfin:10.11
+```
+Compose only pulls when the image is missing, so `docker compose up -d` then uses the local tag. Don't run `docker compose pull` in that state (it goes back to Docker Hub).
+
+### Nextcloud 30.0.17 → 35.0.1 (live: `/home/apps/nextcloud`)
+- **Backup first (maintenance mode on):** `pg_dump -Fc` → `/home/docker-projects/nextcloud-db-pre-31-20260926.dump` (all 126 tables), full copy of the install (code + config + data, 10.8 GB) → `/home/apps/nextcloud-app-pre-31-20260926`.
+- **One major at a time** (Nextcloud refuses to skip): image `nextcloud:N-apache` for N = 31..35 in the live and repo compose. The image entrypoint runs `occ upgrade` itself; after each step: wait for `occ status` = N, not in maintenance, no DB upgrade pending; `occ db:add-missing-indices`; check that every app enabled at the start is still enabled.
+- Steps: 31.0.14, 32.0.15, 33.0.9, 34.0.4, 35.0.1. All 46 previously enabled apps are still enabled. On 33, `drawio` was auto-disabled as incompatible, then the entrypoint's app update installed drawio 4.3.9 and re-enabled it. `app_api` updated to 5.0.2.
+- `nextcloud-postgres` moved to the current `postgres:16` build (same major) on the way.
+- After: `occ maintenance:repair --include-expensive`, `db:add-missing-columns`, `db:add-missing-primary-keys`. `occ setupchecks` shows only ℹ notes (no memcache configured, AppAPI deploy daemon not set, remote address not determined behind the proxy, no server ID), no warnings or errors. `cron.php` runs; `status.php` → 35.0.1; login page 200.
+- **Rollback:** stop the stack, restore `app/` from the copy, `pg_restore --clean` the dump into `nextcloud`, set the image back to `nextcloud:30-apache`.
+
+### Stirling-PDF 2.14.3 → 3.0.0 (live = repo `docker/stirling-pdf`, `:latest`)
+No breaking changes listed. Config backed up to `/mnt/ssd_1tb/stirling-pdf/config-pre-v3-20260927`. `/api/v1/info/status` → `{"version":"3.0.0","status":"UP"}`, container healthy. The "Error" lines in its log are only JVM flags (`-XX:+ExitOnOutOfMemoryError`).
+
+### Meilisearch 1.12.8 → 1.13.3 (Linkwarden search, live-only: `/home/docker-projects/linkwarden`)
+Target is 1.13.3 because that's what Linkwarden's own compose ships, not the newest Meilisearch (1.54). Stopped it, copied `meili_data` → `meili_data-pre-1.13-20260927` (5.5 MB), started 1.13.3 once with `MEILI_EXPERIMENTAL_DUMPLESS_UPGRADE=true`, confirmed the `upgradeDatabase` task `succeeded`, then removed the variable and recreated. The `links` index has 7 documents = 7 rows in `"Link"`. linkwarden.gmojsoski.com 200.
+
+### Jellyfin: pinned to `10.11`, updated 10.11.5 → 10.11.11 (live: `/home/docker-projects/jellyfin`)
+**Not upgraded to 12 on purpose.** The Books library (65 epubs, `/media/books`) needs the Bookshelf plugin, whose newest release (13.0.0.0) targets 10.11; Jellyfin 12 says to remove non-built-in plugins before upgrading. `:latest` already pointed at 12, so the image is now pinned to `jellyfin/jellyfin:10.11` (live + repo), which still gets 10.11 patch releases. Config backed up to `/home/docker-projects/jellyfin/jellyfin-config-pre-10.11.11-20260927.tgz`. After the update: `Loaded plugin: Bookshelf 13.0.0.0`, jellyfin.gmojsoski.com 302.
+**Revisit when Bookshelf publishes a release with `targetAbi` 12.x** (check `https://repo.jellyfin.org/files/plugin/manifest.json`).
+
+**Verification:** `verify-services.sh` all green except `budget` / `css` (removed services, known drift).
+
+**Known limit:** the weekly `update-check.sh` compares digests of the current tag, so it will not announce Nextcloud 36 (`35-apache` never moves to 36) or Jellyfin 12 (pinned). Check those by hand now and then.
+
+---
+
 ## [2026-09-26] Minor updates for 15 containers, and a weekly update check to replace Watchtower
 
 **Symptom:** none. Nothing had auto-updated since Watchtower was removed (2026-09-25), and Renovate has a `renovate.json` but has never opened a PR (the GitHub app is not installed). Most images use floating tags, so they only move on a manual pull.
