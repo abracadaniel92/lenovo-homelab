@@ -69,6 +69,13 @@ sudo bash /opt/homelab/scripts/setup-b2-encrypted-sync.sh
 
 **Status**: ✅ Implemented and verified. Old plaintext buckets pending deletion.
 
+**Update 2026-09-26 (later):** Key backed up off-box (paper, Vaultwarden, phone).
+Before deleting, `comm` of both listings showed all 454 files of `Goce-Lenovo`
+present in `b2-crypt:current`; the 6 files only in `Goce-Lenovo-superseded`
+were retention-pruned Dec 2025/Jan 2026 archives. User then ran `rclone purge`
+on both plaintext buckets; `rclone lsd b2-backup:` lists only
+`Goce-Lenovo-crypt`. ✅ No readable copy of any backup remains offsite.
+
 ## [2026-09-26] Backblaze offsite audit: copies are good, but the sync can fail silently
 
 **Date:** 2026-09-26
