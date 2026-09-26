@@ -89,8 +89,9 @@ The human-readable master for additions is `SERVICE_ADDITION_CHECKLIST.md`.
 - Scope isolation: troubleshooting service A never touches service B's files.
 - Removing ANY public routing (Caddy block or tunnel hostname) requires an
   impact summary + explicit user confirmation first.
-- Storage: always ASK where new data lives (NVMe `/home` vs `/mnt/ssd_1tb`
-  vs mergerfs `/mnt/storage`). Root partition is 101 GB — keep it lean;
+- Storage: always ASK where new data lives (NVMe `/home` vs `/mnt/ssd_1tb`).
+  The old HDDs and the mergerfs `/mnt/storage` pool were unplugged on
+  purpose (old, unreliable) as of 2026-09-26; don't use it. Root partition is 101 GB — keep it lean;
   never put service data on `/`.
 - Ports: preferred range 8000–8100; check `sudo ss -tulpn` first; avoid
   5000 (AirPlay) and 9000 (Portainer). Authoritative list:

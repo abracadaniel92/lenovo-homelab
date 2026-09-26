@@ -2,6 +2,37 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-26] Immich upgraded from 2.7.5 to 3.2.2 (major version)
+
+**Symptom:** none. Planned update.
+
+**Pre-checks against the v3 migration guide (https://immich.app/blog/v3-migration):**
+- DB already on VectorChord (`vchord 0.4.3`, pgvecto.rs not in use), so the pgvecto.rs removal does not affect us.
+- `.env` uses none of the removed variables (`IMMICH_MACHINE_LEARNING_PING_TIMEOUT`, `MACHINE_LEARNING_PRELOAD__CLIP`, `..._FACIAL_RECOGNITION`).
+- CPU supports x86-64-v2 (needed by the v3 ML image).
+- Our compose already matched upstream v3 (same Postgres image).
+
+**Change (live = repo dir for Immich):** `docker/immich/.env` `IMMICH_VERSION=v2` → `v3`. `.env` is gitignored, so this change exists only on the server.
+
+**Commands:**
+```bash
+docker exec immich_postgres pg_dumpall -U postgres --clean --if-exists | gzip > /home/docker-projects/immich-db-pre-v3-20260926.sql.gz
+cd docker/immich && docker compose pull && docker compose up -d
+```
+The server image pull was slow (~0.4 MB/s from ghcr.io, ~20 min). v2 kept serving until the pull finished.
+
+**Verification:**
+- DB migrations: "Finished running migrations" in ~2 s, no errors.
+- `/api/server/version` → 3.2.2; all 4 containers up, server/postgres/redis healthy; ML server reported healthy.
+- `https://immich.gmojsoski.com` → 200; 19,209 non-deleted assets in the DB.
+- Harmless log noise: `LegacyRouteConverter` warning about `/api/*`.
+
+**Backups / rollback:** pre-upgrade dump `/home/docker-projects/immich-db-pre-v3-20260926.sql.gz` (99 MB), plus Immich's own nightly dumps in `/mnt/ssd_1tb/immich-library/backups/`. The photo library (81 GB) is not changed by the upgrade.
+
+**Gap noticed:** there is no `scripts/backup.d/` config for Immich. The only backups are Immich's own nightly DB dumps on the same disk as the photos.
+
+---
+
 ## [2026-09-26] Uptime Kuma upgraded from 1.23.17 to 2.5.5 (major version)
 
 **Symptom:** none. Planned update. The compose file used `:latest`, but upstream keeps `latest` on v1, so the container never moved to v2.
