@@ -69,7 +69,6 @@ Per-service setup lives next to each stack and in the docs tree:
 - **Paperless**: `docker/paperless/README.md`
 - **Mattermost**: `docker/mattermost/README.md`
 - **Unbound (recursive DNS)**: `docker/unbound/README.md`
-- **Pi Alert (network monitoring)**: `docker/pi-alert/README.md`
 - **KitchenOwl recipe import**: [kitchenowl-recipe-import.md](kitchenowl-recipe-import.md)
 - **Jellyfin books library**: [jellyfin-books-setup.md](jellyfin-books-setup.md)
 - **Monitoring & auto-recovery**: [../concepts/monitoring-and-recovery.md](../concepts/monitoring-and-recovery.md)

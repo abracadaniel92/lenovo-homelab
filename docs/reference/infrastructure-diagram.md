@@ -20,7 +20,6 @@ graph TB
             subgraph PiServices["Docker Services (host network)"]
                 PIHOLE["Pi-hole<br/>:53 DNS<br/>:80 Web UI<br/>Network-wide Ad Blocking"]
                 UNBOUND["Unbound<br/>:5335<br/>Recursive DNS Resolver<br/>Queries Root Servers"]
-                PI_ALERT["Pi Alert<br/>Network Monitoring<br/>Device Discovery<br/>→ Mattermost Alerts"]
                 UPTIME_KUMA_PI["Uptime Kuma<br/>:3001<br/>Secondary Instance"]
             end
         end
@@ -101,8 +100,6 @@ graph TB
     PIHOLE -->|Upstream DNS<br/>127.0.0.1:5335| UNBOUND
     UNBOUND -->|Root DNS Queries| Internet
 
-    %% Pi-hole Monitoring
-    PI_ALERT -->|Network Alerts| MATTERMOST_APP
 
     %% Cloudflare Tunnel to Caddy
     CLOUDFLARED_1 -->|localhost:8080| CADDY
@@ -209,7 +206,7 @@ graph TB
     class NEXTCLOUD_APP,VAULTWARDEN,NGINX_VW,GOKAPI,TRAVELSYNC storage
     class PAPERLESS_WEB,MATTERMOST_APP,OUTLINE_APP productivity
     class KITCHENOWL,GOATCOUNTER,LINKWARDEN,UPTIME_KUMA,PORTAINER,HOMEPAGE,PLANNING_POKER,BOOKMARKS utility
-    class HEALTH_CHECK,BACKUP_VERIFY,ANALYTICS_REPORT,PI_MONITORING,UPTIME_KUMA_PI,PIHOLE,UNBOUND,PI_ALERT monitoring
+    class HEALTH_CHECK,BACKUP_VERIFY,ANALYTICS_REPORT,PI_MONITORING,UPTIME_KUMA_PI,PIHOLE,UNBOUND monitoring
     class LOCAL_BACKUPS,BACKUP_SCRIPTS,B2_SYNC backup
     class NEXTCLOUD_DB,MATTERMOST_DB,PAPERLESS_REDIS,OUTLINE_DB,OUTLINE_REDIS database
 ```
@@ -327,7 +324,7 @@ graph TB
 > - **Storage**: 512GB SSD with 374GB /home partition - monitor disk usage as media library grows
 > - **Memory**: 32GB RAM is generous - current services use ~50-60% under load
 > - **Network**: Single Gigabit Ethernet - consider link aggregation or 2.5GbE upgrade for media streaming
-> - **Raspberry Pi**: 4GB RAM is sufficient for Pi-hole + Unbound + Pi Alert
+> - **Raspberry Pi**: 4GB RAM is sufficient for Pi-hole + Unbound + Uptime Kuma
 > - **Services**: Docker profiles allow selective startup - useful for resource management
 > - **Backup**: Backblaze B2 costs scale with storage - monitor monthly costs as backup size grows
 > - **Monitoring**: Consider adding Prometheus + Grafana for detailed metrics visualization

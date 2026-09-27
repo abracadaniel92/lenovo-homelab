@@ -2,6 +2,25 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-27] Knowledge MCP server and Pi Alert removed
+
+**Symptom:** none. Cleanup. The knowledge MCP server was no longer used, and Pi
+Alert no longer runs on the Pi.
+
+**Change (live):** removed the MCP health module first (so the hourly check stops
+restarting it), then `docker compose down` on `knowledge-mcp`, deleted its image,
+its project directory and its client entries in the Claude/Cursor MCP configs.
+
+**Change (repo):** removed `scripts/health.d/31-mcp-knowledge.sh`, `docker/pi-alert/`,
+`docs/how-to-guides/mcp-knowledge-server.md` and their mentions in the docs.
+Port 8001 is free again.
+
+**Not changed:** `scripts/enhanced-health-check.sh` (read-only core) still has an
+MCP block. The timer runs `health-check-engine.sh`, and that block skips the
+restart when the directory is missing.
+
+**Verification:** no `knowledge` container left; `scripts/test-health-modules.sh` PASS.
+
 ## [2026-09-27] Nextcloud 30 → 35, Stirling-PDF 3.0, Meilisearch 1.13.3, Jellyfin pinned to 10.11
 
 **Symptom:** none. Planned. Nextcloud 30 was end of life (no security fixes) and publicly reachable at cloud.gmojsoski.com.

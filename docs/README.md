@@ -18,7 +18,6 @@ Step-by-step tasks:
 
 - [setup.md](how-to-guides/setup.md) — end-to-end main-server setup (Docker, Caddy, services, profiles)
 - [pi-hole-setup.md](how-to-guides/pi-hole-setup.md) — Raspberry Pi 4 DNS & ad blocking
-- [mcp-knowledge-server.md](how-to-guides/mcp-knowledge-server.md) — private LAN knowledge MCP server (Cursor + Claude Code CLI)
 - [cloudflare-monitoring.md](how-to-guides/cloudflare-monitoring.md) — where & how to monitor the Cloudflare Tunnel
 - [setup-uptime-kuma-notifications.md](how-to-guides/setup-uptime-kuma-notifications.md) — Uptime Kuma alerts (ntfy.sh)
 - [add-monitoring-trio.md](how-to-guides/add-monitoring-trio.md) — deploy Scrutiny + ntfy + Beszel (prepared, not yet applied)

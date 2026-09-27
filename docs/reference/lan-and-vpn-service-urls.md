@@ -18,7 +18,6 @@
 | 🐳 | **Portainer** | `http://192.168.1.97:9000` |
 | 🔒 | **Portainer** *(HTTPS)* | `https://192.168.1.97:9443` |
 | 🔐 | **Authentik** | `http://192.168.1.97:9091` |
-| 🤖 | **MCP Knowledge** *(LAN only)* | `http://192.168.1.97:8001/sse` — see [mcp-knowledge-server.md](../how-to-guides/mcp-knowledge-server.md) |
 
 ---
 
