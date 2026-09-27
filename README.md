@@ -101,7 +101,7 @@ systemd/       # Service + timer units (health checks, backups, etc.)
 scripts/       # Backups, health checks, auto-recovery, notifications
 restart services/  # Emergency recovery scripts (fix-all-services.sh, fix-external-access.sh)
 cloudflare/    # Cloudflare Tunnel ingress config
-fail2ban/      # fail2ban jail configs (Pi SSH)
+fail2ban/      # fail2ban jail configs (lemongrab + Pi SSH)
 docs/          # All documentation (see docs/README.md)
 ```
 
