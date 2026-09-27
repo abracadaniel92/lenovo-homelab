@@ -78,7 +78,6 @@ graph TB
             subgraph MonitoringAutomation["🛡️ Monitoring & Automation"]
                 HEALTH_CHECK["Enhanced Health Check<br/>Timer: Every hour<br/>Script: /usr/local/bin/<br/>enhanced-health-check.sh"]
                 BACKUP_VERIFY["Backup Verification<br/>Hourly via Health Check<br/>verify-backups.sh"]
-                ANALYTICS_REPORT["Analytics Bot<br/>Weekly Report<br/>Sunday @ 10 AM<br/>→ Mattermost"]
                 PI_MONITORING["System Bot<br/>Health Reports<br/>Every 5 days<br/>→ Mattermost"]
             end
 
@@ -163,7 +162,6 @@ graph TB
     HEALTH_CHECK -->|Alerts @here/@all| MATTERMOST_APP
     BACKUP_VERIFY -->|Hourly Integrity<br/>Checks| LOCAL_BACKUPS
     BACKUP_VERIFY -->|Backup Alerts @all| MATTERMOST_APP
-    ANALYTICS_REPORT -->|Weekly Stats| MATTERMOST_APP
     PI_MONITORING -->|System Health<br/>Every 5 days| MATTERMOST_APP
 
     %% Uptime Kuma Monitoring
@@ -206,7 +204,7 @@ graph TB
     class NEXTCLOUD_APP,VAULTWARDEN,NGINX_VW,GOKAPI,TRAVELSYNC storage
     class PAPERLESS_WEB,MATTERMOST_APP,OUTLINE_APP productivity
     class KITCHENOWL,GOATCOUNTER,LINKWARDEN,UPTIME_KUMA,PORTAINER,HOMEPAGE,PLANNING_POKER,BOOKMARKS utility
-    class HEALTH_CHECK,BACKUP_VERIFY,ANALYTICS_REPORT,PI_MONITORING,UPTIME_KUMA_PI,PIHOLE,UNBOUND monitoring
+    class HEALTH_CHECK,BACKUP_VERIFY,PI_MONITORING,UPTIME_KUMA_PI,PIHOLE,UNBOUND monitoring
     class LOCAL_BACKUPS,BACKUP_SCRIPTS,B2_SYNC backup
     class NEXTCLOUD_DB,MATTERMOST_DB,PAPERLESS_REDIS,OUTLINE_DB,OUTLINE_REDIS database
 ```
@@ -308,7 +306,6 @@ graph TB
 
 **Systemd Timers**:
 - `enhanced-health-check.timer`: Every hour
-- `slack-goatcounter-weekly.timer`: Sunday @ 10 AM
 - `slack-pi-monitoring.timer`: Every 5 days
 - `portfolio-update.timer`: Manual trigger via `make portfolio-update`
 

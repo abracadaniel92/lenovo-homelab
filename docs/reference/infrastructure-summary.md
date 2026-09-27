@@ -136,7 +136,6 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix
 
 | Timer | Schedule | Purpose |
 |-------|----------|---------|
-| `slack-goatcounter-weekly.timer` | Sundays 10 AM | Weekly analytics report |
 | `slack-pi-monitoring.timer` | (if enabled) | Pi server monitoring |
 
 ## Backup System

@@ -2,6 +2,32 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+## [2026-09-27] Cleanup: GoatCounter weekly report removed, dead boot unit, Docker prune, Cal ALLOWED_HOSTNAMES
+
+**Symptom:** `systemctl --failed` showed `docker-containers-start.service` (its
+`/usr/local/bin/start-docker-containers.sh` no longer exists; containers start via
+their own restart policies) and `slack-goatcounter-weekly.service` (failing since
+2026-09-20). The weekly report script also had its Mattermost webhook URL hardcoded
+in this public repo. Cal.com logged `Match of WEBAPP_URL with ALLOWED_HOSTNAMES failed`
+on every request.
+
+**Change (repo):** removed `scripts/slack-goatcounter-weekly.sh` and
+`systemd/slack-goatcounter-weekly.{service,timer}` plus doc mentions (report no
+longer wanted; GoatCounter itself stays). Added `ALLOWED_HOSTNAMES='"gmojsoski.com"'`
+to `docker/calcom/.env.example`.
+
+**Change (live):** same line appended to `docker/calcom/.env` (the calcom stack runs
+from the repo dir), `docker compose up -d calcom`. `docker image prune -a` +
+`docker builder prune -a` freed 42.9 GB (`/home` 60% to 49%). Unit removal done by
+a sudo temp script: disable + delete both units and their `onfailure.conf` drop-ins,
+`daemon-reload`, `reset-failed`.
+
+**Follow-up (manual):** delete the old incoming webhook in Mattermost
+(Integrations → Incoming Webhooks). The URL is still in git history.
+
+**Verification:** calcom `healthy`, `printenv ALLOWED_HOSTNAMES` = `"gmojsoski.com"`,
+0 warnings in the next minute, https://cal.gmojsoski.com returns 307 (login redirect).
+
 ## [2026-09-27] Knowledge MCP server and Pi Alert removed
 
 **Symptom:** none. Cleanup. The knowledge MCP server was no longer used, and Pi

@@ -16,7 +16,6 @@ All active scripts are in the parent `scripts/` directory:
 - `backup-*.sh` - All backup scripts
 - `verify-*.sh` - Verification scripts
 - `setup-*.sh` - Setup scripts
-- `slack-goatcounter-weekly.sh` - Weekly analytics reports
 - `slack-pi-monitoring.sh` - Pi monitoring reports
 
 ## Remaining Archived Scripts
