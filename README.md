@@ -102,6 +102,7 @@ scripts/       # Backups, health checks, auto-recovery, notifications
 restart services/  # Emergency recovery scripts (fix-all-services.sh, fix-external-access.sh)
 cloudflare/    # Cloudflare Tunnel ingress config
 fail2ban/      # fail2ban jail configs (lemongrab + Pi SSH)
+ssh/           # sshd drop-ins (lemongrab key-only login)
 docs/          # All documentation (see docs/README.md)
 ```
 
