@@ -23,6 +23,7 @@ Step-by-step tasks:
 - [add-monitoring-trio.md](how-to-guides/add-monitoring-trio.md) — deploy Scrutiny + ntfy + Beszel (prepared, not yet applied)
 - [kitchenowl-recipe-import.md](how-to-guides/kitchenowl-recipe-import.md) — import .docx recipes into KitchenOwl
 - [jellyfin-books-setup.md](how-to-guides/jellyfin-books-setup.md) — add a books library to Jellyfin
+- [offsite-pi-backup.md](how-to-guides/offsite-pi-backup.md): second offsite Immich copy on a Pi at work (restic, append-only, planned)
 - [external-access-investigation.md](how-to-guides/external-access-investigation.md) — troubleshooting external access
 - [test-docker-profiles.md](how-to-guides/test-docker-profiles.md) — verifying Docker Compose profiles
 - [gmojsoski-404-and-canonical-fix.md](how-to-guides/gmojsoski-404-and-canonical-fix.md) — fix blog URLs serving the homepage, add a real 404 (prepared, not yet applied)
