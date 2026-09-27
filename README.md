@@ -1,7 +1,7 @@
 # Lenovo ThinkCentre Home Lab
 
 [![GitHub last commit](https://img.shields.io/github/last-commit/abracadaniel92/lenovo-homelab?style=flat-square&logo=github)](https://github.com/abracadaniel92/lenovo-homelab/commits/main)
-[![Docker](https://img.shields.io/badge/containers-30-blue?style=flat-square&logo=docker)](https://github.com/abracadaniel92/lenovo-homelab)
+[![Docker](https://img.shields.io/badge/containers-35-blue?style=flat-square&logo=docker)](https://github.com/abracadaniel92/lenovo-homelab)
 
 Configuration, scripts, and setup for a self-hosted home lab on two devices: a **Lenovo ThinkCentre** (`lemongrab`) running all application services, and a **Raspberry Pi 4** (`pihole`) running Pi-hole + Unbound for network-wide DNS and ad blocking.
 
@@ -21,10 +21,10 @@ For the full network topology, see [docs/reference/infrastructure-diagram.md](do
 | Mount | Device | Use |
 |-------|--------|-----|
 | `/`, `/home` | 512GB NVMe SSD | OS + Docker data (`/home/docker-data/`) |
-| `/mnt/ssd_1tb` | 1TB SATA SSD | Sensitive/primary data (e.g. Immich) |
-| `/mnt/storage` | 1TB + 2TB (mergerfs, ~3TB) | Archives (e.g. Kiwix) |
-| `/mnt/ssd/backups` | — | Local backups |
-| `/mnt/disk_old` | 500GB (2013) | Legacy / non-critical |
+| `/mnt/ssd_1tb` | 1TB SATA SSD | Primary data (e.g. Immich, Kiwix) |
+| `/mnt/ssd/backups` | n/a | Local backups |
+
+The old HDDs (mergerfs `/mnt/storage` pool, `/mnt/disk_old`) were unplugged on 2026-09-26. Don't put data there.
 
 ## Services
 
@@ -39,13 +39,11 @@ Reverse proxy is **Caddy** (`localhost:8080`), fronted by a **Cloudflare Tunnel*
 | Immich | immich.gmojsoski.com | Photo & video backup |
 | Vaultwarden | vault.gmojsoski.com | Password manager |
 | Paperless-ngx | paperless.gmojsoski.com | Document management |
-| Mattermost | mattermost.gmojsoski.com | Team chat (+ Clawdbot AI, local Ollama) |
+| Mattermost | mattermost.gmojsoski.com | Team chat |
 | Linkwarden | linkwarden.gmojsoski.com | Bookmarks + web archiving |
 | FreshRSS | rss.gmojsoski.com | RSS aggregator |
-| Actual Budget | budget.gmojsoski.com | Personal finance |
 | GoatCounter | analytics.gmojsoski.com | Web analytics |
 | TravelSync | tickets.gmojsoski.com | Travel document processing |
-| Centar Srbija Stil | css.gmojsoski.com | Static site |
 | Cal | cal.gmojsoski.com | Scheduling / booking pages |
 | Outline | local only | Wiki / knowledge base |
 | Home Assistant | local only | Home automation |
@@ -61,14 +59,12 @@ repo), not by an in-cluster updater. Watchtower was removed on 2026-09-25: it ha
 not completed a run since 2026-03-27 and `containrrr/watchtower` is unmaintained.
 See `docs/reference/troubleshooting-log.md`.
 
-> A private **MCP Knowledge** server (`knowledge-mcp`, host `:8001`, **LAN only**) is also deployed — see [docs/how-to-guides/mcp-knowledge-server.md](docs/how-to-guides/mcp-knowledge-server.md). Its code lives in the separate `mcp_server` project.
-
 ### On pihole (Raspberry Pi 4)
 
-- **Pi-hole** — network-wide DNS & ad blocking
-- **Unbound** — recursive DNS resolver (queries root servers directly)
-- **Pi Alert** — device discovery & network monitoring (Mattermost alerts)
-- **Uptime Kuma** — secondary monitoring instance for redundancy
+- **Pi-hole**: network-wide DNS & ad blocking
+- **Unbound**: recursive DNS resolver (queries root servers directly)
+- **Uptime Kuma**: secondary monitoring instance for redundancy
+- **fail2ban**: SSH jail (port 222), config in [`fail2ban/pi.local`](fail2ban/pi.local)
 
 See [docs/how-to-guides/pi-hole-setup.md](docs/how-to-guides/pi-hole-setup.md).
 
@@ -101,10 +97,11 @@ Everything is indexed in **[docs/README.md](docs/README.md)**. Highlights:
 
 ```
 docker/        # Per-service Docker Compose stacks (caddy/config.d/ holds split *.caddy snippets)
-systemd/       # Service + timer units (health checks, weekly refreshes, etc.)
+systemd/       # Service + timer units (health checks, backups, etc.)
 scripts/       # Backups, health checks, auto-recovery, notifications
 restart services/  # Emergency recovery scripts (fix-all-services.sh, fix-external-access.sh)
 cloudflare/    # Cloudflare Tunnel ingress config
+fail2ban/      # fail2ban jail configs (Pi SSH)
 docs/          # All documentation (see docs/README.md)
 ```
 
