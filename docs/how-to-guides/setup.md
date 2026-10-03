@@ -1,6 +1,6 @@
 # Setup Instructions
 
-End-to-end setup for the ThinkCentre (lemongrab) main server. For the Raspberry Pi DNS node, see [pi-hole-setup.md](pi-hole-setup.md).
+End-to-end setup for the ThinkCentre (lemongrab) main server. For the Raspberry Pi DNS node, see [pihole/README.md](../../pihole/README.md).
 
 ## 1. Initial System Setup
 
@@ -68,7 +68,7 @@ Per-service setup lives next to each stack and in the docs tree:
 
 - **Paperless**: `docker/paperless/README.md`
 - **Mattermost**: `docker/mattermost/README.md`
-- **Unbound (recursive DNS)**: `docker/unbound/README.md`
+- **Unbound (recursive DNS)**: `pihole/docker/unbound/README.md`
 - **KitchenOwl recipe import**: [kitchenowl-recipe-import.md](kitchenowl-recipe-import.md)
 - **Jellyfin books library**: [jellyfin-books-setup.md](jellyfin-books-setup.md)
 - **Monitoring & auto-recovery**: [../concepts/monitoring-and-recovery.md](../concepts/monitoring-and-recovery.md)

@@ -41,7 +41,7 @@ Client → Pi-hole (port 53) → Unbound (127.0.0.1:5335) → Root DNS Servers
 
 1. **Start Unbound**:
    ```bash
-   cd /path/to/repo/docker/unbound
+   cd /path/to/repo/pihole/docker/unbound
    docker compose up -d
    ```
 
@@ -96,4 +96,3 @@ Change Pi-hole `PIHOLE_DNS_` back to `'1.1.1.1;1.0.0.1'` and restart Pi-hole.
 - **Disk**: Minimal (cached DNS records)
 
 Pi 4 with 4GB RAM can easily handle both Pi-hole and Unbound.
-

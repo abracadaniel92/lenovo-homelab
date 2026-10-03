@@ -11,4 +11,3 @@ services:
       - ./unbound.conf:/etc/unbound/unbound.conf:ro  # klutchell/unbound expects config here
     environment:
       TZ: 'Europe/Skopje'  # Match system timezone
-

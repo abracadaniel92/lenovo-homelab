@@ -17,13 +17,11 @@ Architecture and design decisions:
 Step-by-step tasks:
 
 - [setup.md](how-to-guides/setup.md) — end-to-end main-server setup (Docker, Caddy, services, profiles)
-- [pi-hole-setup.md](how-to-guides/pi-hole-setup.md) — Raspberry Pi 4 DNS & ad blocking
 - [cloudflare-monitoring.md](how-to-guides/cloudflare-monitoring.md) — where & how to monitor the Cloudflare Tunnel
 - [setup-uptime-kuma-notifications.md](how-to-guides/setup-uptime-kuma-notifications.md) — Uptime Kuma alerts (ntfy.sh)
 - [add-monitoring-trio.md](how-to-guides/add-monitoring-trio.md) — deploy Scrutiny + ntfy + Beszel (prepared, not yet applied)
 - [kitchenowl-recipe-import.md](how-to-guides/kitchenowl-recipe-import.md) — import .docx recipes into KitchenOwl
 - [jellyfin-books-setup.md](how-to-guides/jellyfin-books-setup.md) — add a books library to Jellyfin
-- [offsite-pi-backup.md](how-to-guides/offsite-pi-backup.md): second offsite Immich copy on a Pi at work (restic, append-only, planned)
 - [external-access-investigation.md](how-to-guides/external-access-investigation.md) — troubleshooting external access
 - [test-docker-profiles.md](how-to-guides/test-docker-profiles.md) — verifying Docker Compose profiles
 - [gmojsoski-404-and-canonical-fix.md](how-to-guides/gmojsoski-404-and-canonical-fix.md) — fix blog URLs serving the homepage, add a real 404 (prepared, not yet applied)
@@ -43,6 +41,13 @@ Quick lookup & technical detail:
 - [health-check-status.md](reference/health-check-status.md) — health check configuration status
 - [lan-and-vpn-service-urls.md](reference/lan-and-vpn-service-urls.md) — LAN/VPN service URL cheat sheet
 - [learnings-from-repos.md](reference/learnings-from-repos.md) — learnings from analyzing other repos
+
+## Other devices
+
+Each non-lemongrab device has its own top-level folder with its setup guide as `README.md`:
+
+- [pihole/](../pihole/README.md) — Raspberry Pi 4: Pi-hole + Unbound DNS & ad blocking
+- [terra/](../terra/README.md) — Terra PC at work: second offsite Immich copy (restic, append-only, planned)
 
 ## Quick links
 

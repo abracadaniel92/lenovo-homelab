@@ -46,7 +46,7 @@ cd ~/pihole
 
 ## Step 3: Create docker-compose.yml
 
-The docker-compose.yml file is located in this repository at `docker/pihole/docker-compose.yml`.
+The docker-compose.yml file is located in this repository at `pihole/docker/pihole/docker-compose.yml`.
 
 **Key Configuration:**
 - Uses `network_mode: host` for direct DNS access (ports 53, 80)
@@ -59,7 +59,7 @@ The docker-compose.yml file is located in this repository at `docker/pihole/dock
 2. `FTLCONF_LOCAL_IPV4`: Set to your Pi's IP address
 
 ```bash
-cd /path/to/repo/docker/pihole
+cd /path/to/repo/pihole/docker/pihole
 # Edit docker-compose.yml and update WEBPASSWORD and FTLCONF_LOCAL_IPV4
 nano docker-compose.yml
 ```
@@ -92,7 +92,7 @@ This is the key configuration that makes local access to your services work with
 ## Step 5: Start Pi-hole
 
 ```bash
-cd /path/to/repo/docker/pihole
+cd /path/to/repo/pihole/docker/pihole
 docker compose up -d
 
 # Wait for Pi-hole to fully start (about 30-60 seconds)
@@ -356,7 +356,7 @@ If disabling IPv6 in the admin UI doesn't work, create a custom dnsmasq config f
    ```conf
    # Block AAAA (IPv6) queries for local domains with Local DNS Records
    # This prevents forwarding IPv6 queries upstream for domains that have Local DNS Records
-   
+
    # Block AAAA queries for specific domains (uncomment as needed):
    server=/rocketchat.gmojsoski.com/#
    server=/jellyfin.gmojsoski.com/#
@@ -487,7 +487,7 @@ Internet
 | Pi-hole Admin | `http://[REDACTED_INTERNAL_IP_2]/admin` |
 | DNS Port | `53` |
 | Web Port | `80` |
-| Config Location | `docker/pihole/` (in repository) |
+| Config Location | `pihole/docker/pihole/` (in repository) |
 | Local DNS | Configured via Admin UI (Local DNS → DNS Records) |
 | Docker Volumes | `pihole_config`, `dnsmasq_config` (persistent) |
 | Upstream DNS | `1.1.1.1`, `1.0.0.1` (Cloudflare) |
@@ -501,7 +501,7 @@ Internet
 - **Deployment**: Docker (network_mode: host)
 - **Data Storage**: Docker volumes (persistent across container updates)
 - **Local DNS**: Configured via Admin UI (12 subdomains pointing to ThinkCentre)
-- **Blocklists**: 
+- **Blocklists**:
   - Default: Steven Black hosts (75,488 domains)
   - Recommended: OISD Small (`https://small.oisd.nl`)
 - **Status**: ✅ Operational - All devices using Pi-hole for DNS
@@ -509,7 +509,3 @@ Internet
 ---
 
 *Last updated: January 2026*
-
-
-
-

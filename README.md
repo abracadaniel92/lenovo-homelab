@@ -64,9 +64,9 @@ See `docs/reference/troubleshooting-log.md`.
 - **Pi-hole**: network-wide DNS & ad blocking
 - **Unbound**: recursive DNS resolver (queries root servers directly)
 - **Uptime Kuma**: secondary monitoring instance for redundancy
-- **fail2ban**: SSH jail (port 222), config in [`fail2ban/pi.local`](fail2ban/pi.local)
+- **fail2ban**: SSH jail (port 222), config in [`pihole/fail2ban/pi.local`](pihole/fail2ban/pi.local)
 
-See [docs/how-to-guides/pi-hole-setup.md](docs/how-to-guides/pi-hole-setup.md).
+See [pihole/README.md](pihole/README.md).
 
 ## Quick start
 
@@ -101,9 +101,11 @@ systemd/       # Service + timer units (health checks, backups, etc.)
 scripts/       # Backups, health checks, auto-recovery, notifications
 restart services/  # Emergency recovery scripts (fix-all-services.sh, fix-external-access.sh)
 cloudflare/    # Cloudflare Tunnel ingress config
-fail2ban/      # fail2ban jail configs (lemongrab + Pi SSH)
+fail2ban/      # fail2ban jail config (lemongrab SSH)
 ssh/           # sshd drop-ins (lemongrab key-only login)
 docs/          # All documentation (see docs/README.md)
+pihole/        # Raspberry Pi DNS node: Pi-hole + Unbound stacks, fail2ban, setup guide
+terra/         # Terra PC at work: offsite restic backup target (plan)
 ```
 
 > Live server paths differ from the repo: services run from `/home/docker-projects/` and `/home/apps/`, with `/mnt/ssd/` symlinks and `/mnt/ssd/backups/`.

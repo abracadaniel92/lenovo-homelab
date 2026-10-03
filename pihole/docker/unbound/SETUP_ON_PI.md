@@ -7,7 +7,7 @@
 # Search for the repo
 find ~ -name "Pi-version-control" -type d 2>/dev/null
 # Or search for pihole docker-compose
-find ~ -name "pihole" -path "*/docker/pihole" -type d 2>/dev/null
+find ~ -name "pihole" -path "*/pihole/docker/pihole" -type d 2>/dev/null
 ```
 
 **Option B: Clone the repo if you haven't:**
@@ -21,7 +21,7 @@ cd Pi-version-control/Pi-version-control
 
 ```bash
 # Adjust the path based on where you found/cloned the repo
-cd /path/to/Pi-version-control/Pi-version-control/docker/unbound
+cd /path/to/Pi-version-control/pihole/docker/unbound
 
 # Verify files are there
 ls -la
@@ -73,7 +73,7 @@ This means the config file isn't being found. Check:
 2. `unbound.conf` file exists: `ls -la unbound.conf`
 3. Try running with full path:
    ```bash
-   docker compose -f /full/path/to/docker/unbound/docker-compose.yml up -d
+   docker compose -f /full/path/to/pihole/docker/unbound/docker-compose.yml up -d
    ```
 
 ### Unbound won't start
@@ -96,4 +96,3 @@ Test connectivity:
 ```bash
 dig @127.0.0.1 -p 5335 google.com
 ```
-
