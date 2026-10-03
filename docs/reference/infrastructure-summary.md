@@ -132,12 +132,6 @@ bash "/home/goce/Desktop/Cursor projects/Pi-version-control/restart services/fix
   - Jellyfin
   - KitchenOwl
 
-## Slack Notifications
-
-| Timer | Schedule | Purpose |
-|-------|----------|---------|
-| `slack-pi-monitoring.timer` | (if enabled) | Pi server monitoring |
-
 ## Backup System
 
 ### Local Backups

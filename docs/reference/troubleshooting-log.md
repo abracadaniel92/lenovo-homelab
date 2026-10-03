@@ -2,6 +2,37 @@
 
 This log documents specific issues encountered on the server and their fixes.
 
+This is lemongrab's log. The other devices keep their own in their folders:
+[Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
+
+## [2026-10-03] Removed the unused slack-pi-monitoring script and timer
+
+**Symptom:** none. Cleanup. `scripts/slack-pi-monitoring.sh` (a health report
+that despite the name posted to a Mattermost webhook) and
+`systemd/slack-pi-monitoring.{service,timer}` are not installed on the Pi, and
+the unit's `ExecStart` used the old space-containing path
+(`.../Cursor projects/Pi-version-control/scripts/...`). Homelab alerts go to
+Mattermost and ntfy; Slack is only used for GitHub.
+
+**Change (repo, branch `feature/pi-folder-cleanup`):** deleted the script and
+both units; removed their mentions from `scripts/archive/README.md`,
+`docs/reference/infrastructure-diagram.md` and the "Slack Notifications"
+section of `docs/reference/infrastructure-summary.md`.
+
+**Not changed:** `scripts/enhanced-health-check.sh:54` (read-only core) still
+says "same as slack-pi-monitoring.sh" in a comment. About 25 other files still
+have legacy Slack names (`*_SLACK_WEBHOOK_URL` fallbacks in the health scripts,
+`apps/bookmarks/secure_slack_bookmarks.py`), left for a separate cleanup.
+
+**Follow-up (manual, on lemongrab, before this reaches `main`):** `scripts/` is
+live there, so check the timer is not enabled:
+`systemctl list-timers --all | grep slack`. If it is:
+`sudo systemctl disable --now slack-pi-monitoring.timer`, then remove the unit
+files from `/etc/systemd/system/` and `daemon-reload`. This could not be checked
+from the Pi (no route to lemongrab by name).
+
+**Status:** ⏳ Repo change awaiting commit; lemongrab timer check pending.
+
 ## [2026-09-27] Cleanup: GoatCounter weekly report removed, dead boot unit, Docker prune, Cal ALLOWED_HOSTNAMES
 
 **Symptom:** `systemctl --failed` showed `docker-containers-start.service` (its

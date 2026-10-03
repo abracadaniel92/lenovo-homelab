@@ -15,6 +15,23 @@ Pi-hole provides:
 - Local DNS resolution for `*.gmojsoski.com` → lemongrab (fixes NAT hairpinning)
 - DNS query logging and statistics
 
+## What runs on the Pi
+
+| Component | Repo path | Live location / notes |
+|-----------|-----------|------------------------|
+| Pi-hole | `pihole/docker/pihole/` | Docker named volumes `pihole_pihole_config`, `pihole_dnsmasq_config` |
+| Unbound (recursive DNS, `127.0.0.1:5335`) | `pihole/docker/unbound/` | Container bind-mounts `unbound.conf` from the repo checkout, see [unbound/README.md](docker/unbound/README.md) |
+| Uptime Kuma (secondary instance) | `docker/uptime-kuma/` | Shared compose with lemongrab; Pi data lives in `docker/uptime-kuma/data/` (gitignored) |
+| fail2ban SSH jail | `pihole/fail2ban/pi.local` | `/etc/fail2ban/jail.d/pi.local` |
+| SSH key-only drop-in | `pihole/ssh/01-nopass.conf` | `/etc/ssh/sshd_config.d/01-nopass.conf`; SSH port 222 |
+
+The Unbound container reads its config straight from this repo, so moving or
+deleting `pihole/docker/unbound/unbound.conf` (including via `git checkout` of
+a branch without it) breaks DNS on the next container restart. After any such
+change, recreate it: `cd pihole/docker/unbound && docker compose up -d`.
+
+Changes and incidents on the Pi are logged in [troubleshooting-log.md](troubleshooting-log.md).
+
 ---
 
 ## Step 1: Install Docker (if not already installed)
@@ -494,10 +511,10 @@ Internet
 
 ---
 
-## Current Configuration (January 2026)
+## Current Configuration (October 2026)
 
 - **Hardware**: Raspberry Pi 4 Model B (4GB RAM)
-- **Pi-hole Version**: v6.3+ (Core v6.3, Web v6.4, FTL v6.4.1)
+- **Pi-hole Version**: Core v6.4.3, Web v6.6, FTL v6.7.1
 - **Deployment**: Docker (network_mode: host)
 - **Data Storage**: Docker volumes (persistent across container updates)
 - **Local DNS**: Configured via Admin UI (12 subdomains pointing to ThinkCentre)
@@ -508,4 +525,4 @@ Internet
 
 ---
 
-*Last updated: January 2026*
+*Last updated: October 2026*

@@ -306,7 +306,6 @@ graph TB
 
 **Systemd Timers**:
 - `enhanced-health-check.timer`: Every hour
-- `slack-pi-monitoring.timer`: Every 5 days
 - `portfolio-update.timer`: Manual trigger via `make portfolio-update`
 
 **Watchtower**:

@@ -62,9 +62,12 @@ The human-readable master for additions is `SERVICE_ADDITION_CHECKLIST.md`.
 ## Path corrections (the constitution has drifted — trust THIS list)
 
 1. **Troubleshooting log** is at `docs/reference/troubleshooting-log.md`
-   (guidelines: `docs/reference/troubleshooting-log-guidelines.md`). The
-   constitution still says `useful-files/TROUBLESHOOTING_LOG.md` — that
+   for lemongrab (guidelines: `docs/reference/troubleshooting-log-guidelines.md`).
+   The constitution still says `useful-files/TROUBLESHOOTING_LOG.md` — that
    directory no longer exists. Do NOT recreate `useful-files/`.
+   Since 2026-10-03 the Pi and the Terra each keep their own log in their
+   folder (`pihole/troubleshooting-log.md`, `terra/troubleshooting-log.md`);
+   log device work in that device's file.
 2. **Caddy config is now split**: `docker/caddy/Caddyfile` holds only globals
    + `import /etc/caddy/config.d/*.caddy` + the catch-all file server. Service
    routes live in `docker/caddy/config.d/` grouped by category
