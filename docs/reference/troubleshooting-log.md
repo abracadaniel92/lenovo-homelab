@@ -24,14 +24,22 @@ says "same as slack-pi-monitoring.sh" in a comment. About 25 other files still
 have legacy Slack names (`*_SLACK_WEBHOOK_URL` fallbacks in the health scripts,
 `apps/bookmarks/secure_slack_bookmarks.py`), left for a separate cleanup.
 
-**Follow-up (manual, on lemongrab, before this reaches `main`):** `scripts/` is
-live there, so check the timer is not enabled:
-`systemctl list-timers --all | grep slack`. If it is:
-`sudo systemctl disable --now slack-pi-monitoring.timer`, then remove the unit
-files from `/etc/systemd/system/` and `daemon-reload`. This could not be checked
-from the Pi (no route to lemongrab by name).
+**Lemongrab check (2026-10-03, before pulling to `main`):** nothing was
+installed. `systemctl list-timers --all | grep -i slack` and
+`systemctl list-unit-files 'slack-pi*'` returned nothing; no `slack-pi*` units
+or drop-ins under `/etc/systemd/system`. The only system-wide hit for
+`slack-pi` is the comment in `/usr/local/bin/enhanced-health-check.sh`. No
+running container uses `docker/pihole` or `docker/unbound`, and nothing in
+`/etc` references `fail2ban/pi.local` or `offsite-pi-backup`. No sudo cleanup
+needed.
 
-**Status:** ⏳ Repo change awaiting commit; lemongrab timer check pending.
+**Deploy:** `git pull --ff-only origin main` (e940ab4..a5f914e), tree stays on
+`main`.
+
+**Verification:** `grep -c SQLITE_TAR /opt/homelab/scripts/backup-engine.sh`
+= 1; `systemctl --failed` empty; `scripts/test-health-modules.sh` PASS.
+
+**Status:** ✅ Done.
 
 ## [2026-09-27] Cleanup: GoatCounter weekly report removed, dead boot unit, Docker prune, Cal ALLOWED_HOSTNAMES
 
