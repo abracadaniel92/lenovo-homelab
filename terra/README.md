@@ -52,6 +52,11 @@ it is the only local copy of the photos.
 | `backups/` | yes | Postgres dumps: albums, faces, metadata |
 | `thumbs/`, `encoded-video/` | **no** | Immich regenerates them; they only cost space |
 
+Also back up `/mnt/ssd/backups/` (Vaultwarden, Nextcloud, Linkwarden,
+KitchenOwl, TravelSync, FreshRSS dumps; about 530 MB on 2026-10-03). It's
+tiny next to the photos and gives those services a second offsite copy
+besides B2.
+
 Don't back up the live Postgres dir (`docker/immich/postgres`). Copying it
 while it runs gives you a corrupt copy. The dumps in `backups/` are the DB
 backup.
@@ -102,7 +107,17 @@ backup.
    the drive is missing.
 5. **Firewall:** allow SSH and port 8000 only on `wg0`. Deny everything
    inbound on the work LAN interface except what the OS needs.
-6. **Log out:** `claude logout` when done, so no session is left on a device
+6. **Watchdog:** install [`watchdog.sh`](watchdog.sh) as
+   `/usr/local/bin/terra-watchdog.sh` (0755), run by a oneshot
+   `terra-watchdog.service` + `terra-watchdog.timer` (`OnBootSec=5min`,
+   `OnUnitActiveSec=10min`). It pushes to the phone when lemongrab is offline
+   (lemongrab can't report its own power or internet cut) or when no new
+   restic snapshot has landed in 36 h. Put the ntfy topic URL the owner gives
+   you in `/etc/terra-watchdog/ntfy_topic_url` (0600, root). That's the only
+   homelab value the Terra holds, and it grants no access to lemongrab.
+   Test: `sudo systemctl start terra-watchdog.service`, then
+   `bash test-watchdog.sh` from this folder (takes about 3 min).
+7. **Log out:** `claude logout` when done, so no session is left on a device
    in the office.
 
 **Claude on the Terra must not:** ask for or store lemongrab SSH keys, the
@@ -118,7 +133,7 @@ listening on 10.8.0.X:8000 and survives a reboot".
    Vaultwarden**. Without it the backup is unreadable.
 3. `restic -r rest:http://lemongrab:<pw>@10.8.0.X:8000/lemongrab/ init`
 4. Script `scripts/backup-immich-terra.sh`: `restic backup` of the paths
-   above, `--exclude thumbs --exclude encoded-video`, exit non-zero on
+   above (Immich and `/mnt/ssd/backups/`), `--exclude thumbs --exclude encoded-video`, exit non-zero on
    failure.
 5. `backup-immich-terra.service` (`OnFailure=notify-failure@%n.service`)
    + `.timer` at 04:00 (after Immich's 02:00 dump and the 03:00 B2 sync),
@@ -145,4 +160,5 @@ restic -r <repo> forget --keep-last 1 # must FAIL: proves append-only works
 ```
 
 Also unplug the Terra's drive once and confirm the next run pushes a failure to
-the phone.
+the phone. From both sides: lemongrab's backup unit fails, and within 36 h the
+Terra watchdog says no new backup arrived.
