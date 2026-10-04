@@ -120,6 +120,17 @@ backup.
 7. **Log out:** `claude logout` when done, so no session is left on a device
    in the office.
 
+### Remote access (after setup)
+
+SSH only, through lemongrab: `ssh -J lemongrab <user>@10.8.0.X`. No RDP and
+no desktop; it's a headless box. Don't widen `AllowedIPs` or open SSH on the
+work LAN to make this shorter.
+
+To use Claude Code on the Terra remotely: `apt install tmux`, then over SSH
+run `tmux new -A -s claude`, `claude`, and log in by pasting the URL/code it
+prints. Log out (`claude logout`) when finished, same as step 7. A logged-in
+session leaves an account token on an unencrypted disk in the office.
+
 **Claude on the Terra must not:** ask for or store lemongrab SSH keys, the
 restic password, or the rclone/B2 config. Its job ends at "rest-server is
 listening on 10.8.0.X:8000 and survives a reboot".
