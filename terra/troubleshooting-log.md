@@ -4,6 +4,33 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-05: BIOS "restore on AC power loss" set to On
+
+**Change:** set in the BIOS by the owner, at the box. It boots by itself
+after an office power cut.
+
+**Still open:** drive, rest-server and watchdog (README Part A steps 2, 4, 6).
+
+## 2026-10-05: reboot test passed, comes back unattended
+
+**Goal:** close the "reboot test" open item from the base setup entry below.
+
+**Test:** rebooted at 09:53, booted 09:55. Nobody logged in at the box.
+
+**Verification (after boot, over SSH from 10.8.0.1, i.e. through the tunnel):**
+- `wg-quick@wg0`, `nftables`, `ssh`, `unattended-upgrades` all active.
+- `sleep.target` / `suspend.target` still masked.
+- `ping 10.8.0.1`: 0% loss, about 13 ms.
+- Wi-Fi `Intertec -Employees` joined at boot without a login (system-wide
+  NetworkManager profile, no per-user permissions).
+
+**Notes for a move to another office/network:** see README "Moving to
+another network". Short version: the tunnel is outbound to the DDNS name,
+so the local IP doesn't matter, but the new Wi-Fi must be saved first.
+
+**Still open:** BIOS "restore on AC power loss" (can't be checked from the
+OS); drive, rest-server and watchdog (README Part A steps 2, 4, 6).
+
 ## 2026-10-05: base setup and WireGuard to lemongrab (no data drive yet)
 
 **Goal:** make the Terra (hostname `cricket`, kept) reachable remotely before
