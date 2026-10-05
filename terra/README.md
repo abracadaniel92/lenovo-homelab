@@ -35,7 +35,7 @@ lemongrab (10.8.0.1)  --restic over WireGuard-->  Terra (10.8.0.X)
 | Thing | Value |
 |---|---|
 | WireGuard | `wg-quick@wg0`, server IP `10.8.0.1/24`, UDP `51820` |
-| Public endpoint | **TODO:** home IP or DDNS name the Terra dials |
+| Public endpoint | No-IP DDNS hostname, kept current by the home router (name not in this public repo; the Terra has it in `/etc/wireguard/wg0.conf`). The home IP is dynamic, so peers must dial the name, never an IP |
 | Immich library | `/mnt/ssd_1tb/immich-library` (about 200 to 250 GB, growing) |
 | Immich DB dumps | `/mnt/ssd_1tb/immich-library/backups/immich-db-backup-*.sql.gz`, made nightly at 02:00 by Immich itself |
 | Phone alerts | `scripts/ntfy-push.sh "<title>"`; systemd units use `OnFailure=notify-failure@%n.service` |
@@ -63,6 +63,7 @@ backup.
 
 ## Hardware
 
+- **Hostname `cricket`**, WireGuard `10.8.0.4`.
 - **Terra PC-Micro 3000 Silent Greenline** (fanless x86_64 mini PC), Debian 13
   trixie, RAM upgraded and thermal paste replaced (2026-10).
 - OS on the internal 64 GB SSD. Backups go **only** on the big HDD, never the
@@ -78,7 +79,7 @@ backup.
 
 ## Part A: on the Terra (Claude on the Terra does this)
 
-1. **Base:** update the OS, set the hostname (e.g. `terra`), enable
+1. **Base:** update the OS, hostname `cricket` (kept; "Terra" is the hardware), enable
    unattended security upgrades, SSH key-only login.
 2. **Drive:** one GPT partition, ext4, label `offsite`. Mount at
    `/mnt/offsite` by UUID with `nofail` in `/etc/fstab`. Check SMART with
@@ -119,6 +120,35 @@ backup.
    `bash test-watchdog.sh` from this folder (takes about 3 min).
 7. **Log out:** `claude logout` when done, so no session is left on a device
    in the office.
+
+### Remote access (after setup)
+
+SSH only, through lemongrab: `ssh -J lemongrab <user>@10.8.0.X`. No RDP and
+no desktop; it's a headless box. Don't widen `AllowedIPs` or open SSH on the
+work LAN to make this shorter.
+
+To use Claude Code on the Terra remotely: `apt install tmux`, then over SSH
+run `tmux new -A -s claude`, `claude`, and log in by pasting the URL/code it
+prints. Log out (`claude logout`) when finished, same as step 7. A logged-in
+session leaves an account token on an unencrypted disk in the office.
+
+### Moving to another network
+
+The Terra dials out to lemongrab's DDNS name, so its local IP and network
+don't matter. The firewall isn't tied to the LAN interface, and the endpoint
+is re-resolved every 5 min (`/etc/cron.d/terra-wg-reresolve`). What it needs:
+
+- **A saved connection.** It only joins known Wi-Fi (`Intertec -Employees`,
+  `POSOHIN`). Add the new one **before** the move, or on site:
+  `sudo nmcli dev wifi connect "<SSID>" password "<pass>"`. That saves a
+  system-wide profile that joins at boot with nobody logged in. Ethernet
+  (`Wired connection 1`) connects anywhere with DHCP, no setup needed.
+- **Outbound UDP 51820.** A guest network with a captive portal (login page)
+  or that blocks UDP won't bring the tunnel up. Someone has to be at the box
+  then. Don't work around it by opening SSH on the LAN.
+
+Check after the move: `ping 10.8.0.1` from the Terra, or `ssh goce@10.8.0.4`
+from lemongrab.
 
 **Claude on the Terra must not:** ask for or store lemongrab SSH keys, the
 restic password, or the rclone/B2 config. Its job ends at "rest-server is
