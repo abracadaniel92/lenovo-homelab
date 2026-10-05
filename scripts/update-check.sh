@@ -15,22 +15,26 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 newer=() unchecked=()
+declare -A names                                         # image ref -> its container names
+while read -r img name; do names[$img]+="${names[$img]:+, }$name"; done < <(docker ps --format '{{.Image}} {{.Names}}')
 
-for ref in $(docker ps --format '{{.Image}}' | sort -u); do
+for ref in $(printf '%s\n' "${!names[@]}" | sort); do
     [[ "$ref" == *:* ]] || continue                       # bare image IDs, untagged local builds
     have=$(docker image inspect -f '{{join .RepoDigests " "}}' "$ref" 2>/dev/null)
     [ -n "$have" ] || continue                           # built locally, never pulled
     want=$(timeout 30 docker buildx imagetools inspect "$ref" --format '{{json .Manifest.Digest}}' 2>&1 | tr -d '"')
     case "$want" in
-        sha256:*) [[ "$have" == *"$want"* ]] || newer+=("${ref##*/}") ;;
+        sha256:*) [[ "$have" == *"$want"* ]] || newer+=("• ${names[$ref]} (${ref##*/})") ;;
         *"does not exist"*) ;;                           # local build (paperless-webserver:local)
-        *) unchecked+=("${ref##*/}") ;;                  # registry down or rate-limited (Docker Hub 429)
+        *) unchecked+=("• ${names[$ref]} (${ref##*/})") ;;   # registry down or rate-limited (Docker Hub 429)
     esac
 done
 
 [ ${#newer[@]} -gt 0 ] || [ ${#unchecked[@]} -gt 0 ] || { [ "${1:-}" = --print ] && echo "all up to date"; exit 0; }
 
-title="📦 Image updates: ${newer[*]:-none}"
-[ ${#unchecked[@]} -eq 0 ] || title+=" | could not check: ${unchecked[*]}"
+msg="📦 ${#newer[@]} container(s) have a newer image"
+[ ${#newer[@]} -eq 0 ] || msg+=$'\n\nUpdate:\n'"$(printf '%s\n' "${newer[@]}")"
+[ ${#unchecked[@]} -eq 0 ] || msg+=$'\n\nCould not check (registry busy, retry with update-check.sh --print):\n'"$(printf '%s\n' "${unchecked[@]}")"
+msg+=$'\n\nNext: one at a time, read release notes, follow the update-homelab-service runbook. Pinned versions are not checked.'
 
-if [ "${1:-}" = --print ]; then echo "$title"; else NTFY_PRIORITY=default "$SCRIPT_DIR/ntfy-push.sh" "$title"; fi
+if [ "${1:-}" = --print ]; then echo "$msg"; else NTFY_PRIORITY=default "$SCRIPT_DIR/ntfy-push.sh" "$msg"; fi

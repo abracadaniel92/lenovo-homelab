@@ -5,6 +5,77 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-05] Clearer weekly update push; image updates for redis, nextcloud, caddy, HA, immich
+
+**Symptom:** the weekly `update-check.timer` push (Mon 10:00) was one cramped
+line, `📦 Image updates: caddy:latest home-assistant:stable ...`, naming images
+but not containers and giving no next step.
+
+**Change (live = repo, `scripts/` runs via `/opt/homelab`):**
+`scripts/update-check.sh` now sends a multi-line body: a count, an "Update:"
+list as `• <container(s)> (<image>)`, a separate "Could not check" list, and a
+"Next:" line pointing at the `update-homelab-service` runbook and noting that
+pinned tags are not checked. Still no paths or logs (topic is public ntfy.sh).
+Preview without pushing: `./scripts/update-check.sh --print`.
+
+**Morning's list (10:00 run, confirmed by a 14:30 re-run):** caddy:latest,
+home-assistant:stable, immich-server:v3 + immich-machine-learning:v3,
+nextcloud:35-apache, redis:8 (paperless-redis). stirling-pdf:latest could not
+be checked (Docker Hub 429). Agreed order: redis + nextcloud today, the rest
+this evening (caddy, then Home Assistant, then Immich after release notes).
+
+**Redis + Nextcloud attempt, ~14:45:**
+- Fresh Nextcloud backup first: `bash scripts/backup-engine.sh nextcloud` →
+  `/mnt/ssd/backups/nextcloud/nextcloud-20261005-144408.tar.gz`, verified.
+  Nextcloud was 35.0.1, no pending DB upgrade.
+- `docker compose pull broker` (`/home/docker-projects/paperless`) and
+  `docker compose pull app` (`/home/apps/nextcloud`) both failed with
+  `429 Too Many Requests`. Three back-to-back `update-check.sh` runs (one
+  registry request per image, ~30 images each) had used up the 100/h anonymous
+  quota.
+- Side effect: `up -d broker` still recreated paperless-redis on the SAME old
+  image. Paperless lost the broker for ~2 s and reconnected by itself
+  (`redis-cli ping` → PONG, webserver healthy). Nextcloud untouched.
+
+**Outcome (afternoon):** notification change done and live. Nothing updated
+until the evening run below.
+
+**Next (evening):** quota is refilled by then. Re-run the pulls, then verify:
+```bash
+cd /home/docker-projects/paperless && docker compose pull broker && docker compose up -d broker
+cd /home/apps/nextcloud && docker compose pull app && docker compose up -d app
+docker exec -u www-data nextcloud-app php occ status   # expect 35.0.x, needsDbUpgrade: false
+./scripts/verify-services.sh
+```
+Lesson: don't run `update-check.sh` more than once right before pulling, since
+each run spends ~30 of the 100 hourly Docker Hub requests. `mirror.gcr.io` is
+the approved fallback if a pull hits 429.
+
+**Evening run, ~17:05–17:15 (all done, all patch-level):**
+- paperless-redis: pulled + recreated, now Redis 8.10.2, `PONG`, webserver healthy.
+- nextcloud-app: still 35.0.1 (rebuilt base image from 2026-09-24).
+  `docker compose up -d app` said "Running" and did NOT switch to the newly
+  pulled image; `up -d --force-recreate --no-deps app` did. `occ status`:
+  35.0.1, needsDbUpgrade false, `status.php` 200 via Caddy.
+- caddy: v2.11.4 → v2.11.6 (`/home/goce/Desktop/Cursor projects/Pi-version-control/docker/caddy`).
+  Validated the live config with the new image first
+  (`docker run --rm --volumes-from caddy caddy:latest caddy validate ...`).
+- homeassistant: 2026.9.3 → 2026.9.4. The compose file uses profiles, so plain
+  `docker compose pull` says "No service selected"; use
+  `docker compose --profile utilities pull homeassistant` / `up -d homeassistant`.
+  No HA backup job exists; took a one-off config tar first:
+  `/mnt/ssd/backups/homeassistant/ha-config-20261005-pre-2026.9.4.tar.gz` (36 MB).
+  The Kasa errors for 192.168.1.22 in its log predate the update (device offline).
+- immich server + ML: v3.2.2 → v3.2.4 (bug fixes, memory-leak fix, no breaking
+  changes). Covered by Immich's own 02:00 DB dump in
+  `/mnt/ssd_1tb/immich-library/backups/`. Healthy, migrations ran clean.
+
+**Verification:** `verify-services.sh` all green except budget/css 404 (removed
+services still in its list, known drift). Final `update-check.sh --print`:
+0 newer; outline-redis, paperless-redis, ws-scrcpy, stirling-pdf could not be
+checked (429 again after the pulls). stirling-pdf is the only one never checked
+today; next Monday's push will cover it.
+
 ## [2026-10-03] Removed the unused slack-pi-monitoring script and timer
 
 **Symptom:** none. Cleanup. `scripts/slack-pi-monitoring.sh` (a health report
