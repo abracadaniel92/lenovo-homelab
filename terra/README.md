@@ -35,7 +35,7 @@ lemongrab (10.8.0.1)  --restic over WireGuard-->  Terra (10.8.0.X)
 | Thing | Value |
 |---|---|
 | WireGuard | `wg-quick@wg0`, server IP `10.8.0.1/24`, UDP `51820` |
-| Public endpoint | **TODO:** home IP or DDNS name the Terra dials |
+| Public endpoint | No-IP DDNS hostname, kept current by the home router (name not in this public repo; the Terra has it in `/etc/wireguard/wg0.conf`). The home IP is dynamic, so peers must dial the name, never an IP |
 | Immich library | `/mnt/ssd_1tb/immich-library` (about 200 to 250 GB, growing) |
 | Immich DB dumps | `/mnt/ssd_1tb/immich-library/backups/immich-db-backup-*.sql.gz`, made nightly at 02:00 by Immich itself |
 | Phone alerts | `scripts/ntfy-push.sh "<title>"`; systemd units use `OnFailure=notify-failure@%n.service` |
