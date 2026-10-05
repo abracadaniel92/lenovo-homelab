@@ -74,22 +74,6 @@ portfolio-update:
 	@echo "   Reload Caddy if you changed docker/caddy/config.d/10-gmojsoski-home.caddy:"
 	@echo "   docker exec caddy caddy reload --config /etc/caddy/Caddyfile"
 
-# Update Centar Srbija Stil (css.gmojsoski.com): pull main and rebuild Docker
-css-update:
-	@echo "🔄 Updating css.gmojsoski.com from GitHub..."
-	@HERE="$(MAKEFILE_DIR)"; \
-	if [ -f "$$HERE/scripts/update-css.sh" ]; then \
-		bash "$$HERE/scripts/update-css.sh"; \
-	elif [ -f "/usr/local/bin/update-css.sh" ]; then \
-		bash /usr/local/bin/update-css.sh; \
-	else \
-		echo "❌ Error: update-css.sh not found"; \
-		echo "   Tried: $$HERE/scripts/update-css.sh"; \
-		echo "   Tried: /usr/local/bin/update-css.sh"; \
-		exit 1; \
-	fi
-	@echo "✅ CSS site update complete. Log: $(MAKEFILE_DIR)/logs/css-update.log"
-
 # Mattermost service management (usage: make lab-mattermost-[start|stop|restart|logs|status])
 lab-mattermost:
 	@echo "💬 Mattermost Service Management"

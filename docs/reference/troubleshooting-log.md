@@ -5,6 +5,25 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-05] Removed budget/css leftovers from verify-services and tooling
+
+**Symptom:** `verify-services.sh` always ended with "CRITICAL: 2 services are
+DOWN" because it still checked budget.gmojsoski.com and css.gmojsoski.com,
+both removed from the stack earlier (commit 88ace93), so both returned 404.
+
+**Change (live = repo, `scripts/` runs via `/opt/homelab`):** removed the two
+hostnames from the `SUBDOMAINS` list (user approved). Also deleted the orphaned
+`scripts/update-css.sh`, `scripts/css-update`, the `css-update` Makefile target,
+and their mentions in `docs/reference/lab-commands.md`,
+`docs/how-to-guides/setup.md` and the CLAUDE.md drift list. No Caddy or tunnel
+routing existed for either, so no routing changed. The README table had
+already been cleaned.
+
+**Not done (needs sudo):** `sudo rm /usr/local/bin/css-update` (installed copy
+of the deleted wrapper; it would now fail with "No rule to make target").
+
+**Verification:** `./scripts/verify-services.sh` → "All services are healthy".
+
 ## [2026-10-05] Clearer weekly update push; image updates for redis, nextcloud, caddy, HA, immich
 
 **Symptom:** the weekly `update-check.timer` push (Mon 10:00) was one cramped

@@ -127,12 +127,6 @@ before diagnosing anything; your incident may already be documented.
 
 ## Known drift / open items (as of 2026-07-06)
 
-- **README service table lists removed services**: Actual Budget
-  (budget.gmojsoski.com) and Centar Srbija Stil (css.gmojsoski.com) were
-  removed from the stack (commit 88ace93) but still appear in `README.md`.
-  The `css-update` Makefile target, `scripts/update-css.sh`, and
-  `scripts/css-update` are likewise orphaned. Removing them needs the user's
-  OK (README rows are append-only-protected).
 - **`docker/caddy/site/` holds the OLD portfolio** (vanilla HTML/JS). The
   live site is now built from the separate `portfolio_v2` repo via
   `scripts/update-portfolio.sh` → synced to `/mnt/ssd/docker-projects/caddy/site`

@@ -52,7 +52,6 @@ The Caddyfile is split into service-specific config files for maintainability an
 - **Service configs**: `docker/caddy/config.d/` — split by category:
   - `00-global.caddy` — global error handling
   - `10-gmojsoski-home.caddy` — personal homepage (gmojsoski.com / www → `/srv/site`)
-  - `15-centar-srbija-stil.caddy` — css.gmojsoski.com (static site)
   - `20-media.caddy` — media services (Jellyfin, Paperless, Vaultwarden, Immich)
   - `30-storage.caddy` — storage (Nextcloud, TravelSync, Gokapi)
   - `40-communication.caddy` — communication (Mattermost, Planning Poker)
