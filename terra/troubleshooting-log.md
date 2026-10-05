@@ -4,6 +4,13 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-05: BIOS "restore on AC power loss" set to On
+
+**Change:** set in the BIOS by the owner, at the box. It boots by itself
+after an office power cut.
+
+**Still open:** drive, rest-server and watchdog (README Part A steps 2, 4, 6).
+
 ## 2026-10-05: reboot test passed, comes back unattended
 
 **Goal:** close the "reboot test" open item from the base setup entry below.
