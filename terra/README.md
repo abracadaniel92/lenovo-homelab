@@ -132,6 +132,24 @@ run `tmux new -A -s claude`, `claude`, and log in by pasting the URL/code it
 prints. Log out (`claude logout`) when finished, same as step 7. A logged-in
 session leaves an account token on an unencrypted disk in the office.
 
+### Moving to another network
+
+The Terra dials out to lemongrab's DDNS name, so its local IP and network
+don't matter. The firewall isn't tied to the LAN interface, and the endpoint
+is re-resolved every 5 min (`/etc/cron.d/terra-wg-reresolve`). What it needs:
+
+- **A saved connection.** It only joins known Wi-Fi (`Intertec -Employees`,
+  `POSOHIN`). Add the new one **before** the move, or on site:
+  `sudo nmcli dev wifi connect "<SSID>" password "<pass>"`. That saves a
+  system-wide profile that joins at boot with nobody logged in. Ethernet
+  (`Wired connection 1`) connects anywhere with DHCP, no setup needed.
+- **Outbound UDP 51820.** A guest network with a captive portal (login page)
+  or that blocks UDP won't bring the tunnel up. Someone has to be at the box
+  then. Don't work around it by opening SSH on the LAN.
+
+Check after the move: `ping 10.8.0.1` from the Terra, or `ssh goce@10.8.0.4`
+from lemongrab.
+
 **Claude on the Terra must not:** ask for or store lemongrab SSH keys, the
 restic password, or the rclone/B2 config. Its job ends at "rest-server is
 listening on 10.8.0.X:8000 and survives a reboot".
