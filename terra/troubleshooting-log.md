@@ -6,7 +6,7 @@ the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshootin
 
 ## 2026-10-05: base setup and WireGuard to lemongrab (no data drive yet)
 
-**Goal:** make the Terra (hostname still `cricket`) reachable remotely before
+**Goal:** make the Terra (hostname `cricket`, kept) reachable remotely before
 the 1 TB drive arrives. README Part A steps 1, 3, 5. No rest-server yet.
 
 **Change (live on the Terra):**
@@ -17,7 +17,8 @@ the 1 TB drive arrives. README Part A steps 1, 3, 5. No rest-server yet.
   15 min idle, which would make the box unreachable); WireGuard key pair in
   `/etc/wireguard/terra.key` (public `vFiy9IqrhAV+jIkbApPKh5uP5vYXK9gHOTKZmxJu+hs=`).
 - `~/.ssh/authorized_keys` for `goce`: `goce@lemongrab` and the phone's
-  Termius key.
+  Termius key (`phone-termius-2026-10-05`; an older phone key was removed).
+  Phone access: Termius host `10.8.0.4:22` with lemongrab as jump host.
 - `terra/setup-wg.sh <DDNS name>`: `/etc/wireguard/wg0.conf` from
   `terra/wg0.conf` (address `10.8.0.4/32`, `AllowedIPs = 10.8.0.1/32`,
   keepalive 25), `wg-quick@wg0` enabled, and
@@ -38,4 +39,4 @@ the 1 TB drive arrives. README Part A steps 1, 3, 5. No rest-server yet.
 `ssh goce@10.8.0.4` from lemongrab logs in.
 
 **Still open:** reboot test (comes back unattended?); BIOS "restore on AC
-power loss"; hostname; drive, rest-server and watchdog (README Part A steps 2, 4, 6).
+power loss"; drive, rest-server and watchdog (README Part A steps 2, 4, 6).

@@ -63,6 +63,7 @@ backup.
 
 ## Hardware
 
+- **Hostname `cricket`**, WireGuard `10.8.0.4`.
 - **Terra PC-Micro 3000 Silent Greenline** (fanless x86_64 mini PC), Debian 13
   trixie, RAM upgraded and thermal paste replaced (2026-10).
 - OS on the internal 64 GB SSD. Backups go **only** on the big HDD, never the
@@ -78,7 +79,7 @@ backup.
 
 ## Part A: on the Terra (Claude on the Terra does this)
 
-1. **Base:** update the OS, set the hostname (e.g. `terra`), enable
+1. **Base:** update the OS, hostname `cricket` (kept; "Terra" is the hardware), enable
    unattended security upgrades, SSH key-only login.
 2. **Drive:** one GPT partition, ext4, label `offsite`. Mount at
    `/mnt/offsite` by UUID with `nofail` in `/etc/fstab`. Check SMART with
