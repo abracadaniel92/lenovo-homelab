@@ -1,4 +1,6 @@
 [Unit]
+After=network-online.target
+Wants=network-online.target
 Description=Slack Bookmarks Flask Service
 After=network.target
 
@@ -15,4 +17,3 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-

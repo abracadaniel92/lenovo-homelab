@@ -48,8 +48,14 @@ Then `scripts/mirror-live-compose.sh` copied 15 live compose files into
 `docker/`. Findings: the repo's vaultwarden SSO block and nextcloud/uptime-kuma
 healthchecks never existed live; Authelia's stack exists but no container
 runs; `travelsync` and `DocumentsToCalendar-1` both declare container
-`documents-to-calendar` (only the latter runs). Still open: 4 drifted systemd
-units; disable `hdd-health-check.timer` (HDDs unplugged 2026-09-26).
+`documents-to-calendar` (only the latter runs).
+
+**Also 2026-10-08, systemd units:** copied live's `network-online.target`
+ordering into repo `bookmarks`, `gokapi`, `planning-poker`. Deliberately left
+different: planning-poker `HOST_PASSWORD` (repo keeps placeholder, public),
+bookmarks `EnvironmentFile=` (repo is ahead; live unit lacks it, service runs
+fine), `portfolio-update.timer` description (repo accurate, timer disabled).
+`hdd-health-check.timer` disabled (HDDs unplugged 2026-09-26).
 
 ## [2026-10-05] Removed budget/css leftovers from verify-services and tooling
 

@@ -1,6 +1,7 @@
 [Unit]
+After=network-online.target docker.service docker-containers-start.service
+Wants=network-online.target docker.service
 Description=Planning Poker Service
-After=network.target
 
 [Service]
 Type=simple
@@ -16,4 +17,3 @@ Environment="PATH=/home/goce/.nvm/versions/node/v20.19.6/bin:/usr/local/bin:/usr
 
 [Install]
 WantedBy=multi-user.target
-

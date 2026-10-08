@@ -1,4 +1,6 @@
 [Unit]
+After=network-online.target
+Wants=network-online.target
 Description=Gokapi
 After=network.target
 
@@ -10,4 +12,3 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
-
