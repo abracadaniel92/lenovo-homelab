@@ -57,6 +57,23 @@ bookmarks `EnvironmentFile=` (repo is ahead; live unit lacks it, service runs
 fine), `portfolio-update.timer` description (repo accurate, timer disabled).
 `hdd-health-check.timer` disabled (HDDs unplugged 2026-09-26).
 
+**Next steps (open as of 2026-10-08):**
+1. Immich off-site backup, once the new drive arrives (biggest gap: photos
+   exist only on lemongrab).
+2. After ~2026-10-12, delete `docker-compose.yml.bak-20261008` and
+   `.env.bak-20261008` in `/home/docker-projects/{kitchenowl,paperless,vaultwarden}`
+   and `/home/apps/nextcloud` (they hold the plaintext secrets).
+3. Vaultwarden `ADMIN_TOKEN` is plaintext; replace with an argon2 hash
+   (`docker exec -it vaultwarden /vaultwarden hash`) in its `.env`.
+4. Authelia (`:9091`): start it or delete `/home/docker-projects/authelia`.
+5. Remove the leftover `travelsync` stack (duplicates the
+   `documents-to-calendar` container name; only DocumentsToCalendar-1 runs).
+6. Close risky LAN ports instead of a host firewall: bind Portainer
+   (9000/9443) and ws-scrcpy (8233) to 127.0.0.1 or stop them; disable RDP
+   (3389) if unused. A full host firewall was judged not worth it: Docker
+   bypasses ufw, and Caddy reaches services via `172.17.0.1:PORT`.
+7. On the Pi: confirm `sudo sshd -T` shows `passwordauthentication no`.
+
 ## [2026-10-05] Removed budget/css leftovers from verify-services and tooling
 
 **Symptom:** `verify-services.sh` always ended with "CRITICAL: 2 services are
