@@ -9,4 +9,3 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
-

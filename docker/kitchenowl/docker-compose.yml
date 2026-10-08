@@ -1,0 +1,23 @@
+services:
+  kitchenowl:
+    image: tombursch/kitchenowl:latest
+    container_name: kitchenowl
+    restart: always
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    ports:
+      - "8092:8080" # Host:8092 -> Container:8080 (HTTP server)
+    volumes:
+      - ./data:/data:rw  # Database is stored at /data/database.db inside container
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - BASE_URL=https://shopping.gmojsoski.com
+    network_mode: bridge
+    # Health check to ensure container is working
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

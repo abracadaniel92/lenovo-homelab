@@ -37,10 +37,19 @@ scripts were all older than the repo (`update-portfolio.sh` was January's,
 still building the old portfolio; its timer is disabled so no harm).
 `sudo scripts/link-usr-local-bin.sh` replaced them with symlinks into
 `/opt/homelab/scripts/`, old copies kept as `*.sh.old`. Verified with `cmp`
-against the repo. Still open: 6 live compose stacks missing from the repo and
-11 differing (repo is PUBLIC, scrub secrets before mirroring), 4 drifted
-systemd units, and `hdd-health-check.timer` still runs daily although the
-HDDs were unplugged on 2026-09-26.
+against the repo.
+
+**Also 2026-10-08, compose files mirrored:** inline secrets in kitchenowl
+(JWT_SECRET), paperless (PAPERLESS_DBPASS), vaultwarden (ADMIN_TOKEN) and
+nextcloud (POSTGRES_PASSWORD) moved into each live stack's `.env` (0600);
+`docker compose config` rendered identically before/after, so no restart.
+Originals kept as `*.bak-20261008` (contain secrets, delete after a few days).
+Then `scripts/mirror-live-compose.sh` copied 15 live compose files into
+`docker/`. Findings: the repo's vaultwarden SSO block and nextcloud/uptime-kuma
+healthchecks never existed live; Authelia's stack exists but no container
+runs; `travelsync` and `DocumentsToCalendar-1` both declare container
+`documents-to-calendar` (only the latter runs). Still open: 4 drifted systemd
+units; disable `hdd-health-check.timer` (HDDs unplugged 2026-09-26).
 
 ## [2026-10-05] Removed budget/css leftovers from verify-services and tooling
 

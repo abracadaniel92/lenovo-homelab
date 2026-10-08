@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    build: /mnt/ssd/docker-projects/DocumentsToCalendar-1
     container_name: documents-to-calendar
     ports:
       - "8000:8000"
@@ -15,14 +15,9 @@ services:
       - CREDENTIALS_JSON=${CREDENTIALS_JSON}
       - GOOGLE_CALENDAR_TOKEN_PATH=/app/data/token.pickle
       - GOOGLE_CALENDAR_HEADLESS=${GOOGLE_CALENDAR_HEADLESS:-true}
-      - EMAIL_ADDRESS=${EMAIL_ADDRESS}
-      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
-      - EMAIL_IMAP_SERVER=${EMAIL_IMAP_SERVER:-imap.gmail.com}
-      - EMAIL_IMAP_PORT=${EMAIL_IMAP_PORT:-993}
-      - EMAIL_AUTO_CHECK=${EMAIL_AUTO_CHECK:-false}
-      - EMAIL_CHECK_INTERVAL=${EMAIL_CHECK_INTERVAL:-300}
     volumes:
-      - ./uploads:/app/uploads
-      - ./temp:/app/temp
-      - ./data:/app/data
+      - /mnt/ssd/docker-projects/DocumentsToCalendar-1/uploads:/app/uploads
+      - /mnt/ssd/docker-projects/DocumentsToCalendar-1/temp:/app/temp
+      - /mnt/ssd/docker-projects/DocumentsToCalendar-1/data:/app/data
+      # Note: token.pickle will be created automatically by the app in data/
     restart: unless-stopped

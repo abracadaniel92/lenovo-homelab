@@ -3,9 +3,6 @@ services:
     image: jellyfin/jellyfin:10.11  # pinned: 12.x breaks the Bookshelf plugin (Books library) until it ships a 12 build
     container_name: jellyfin
     restart: always
-    profiles:
-      - media
-      - all
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
     ports:
