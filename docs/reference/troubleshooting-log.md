@@ -5,6 +5,43 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-08] Caddy access logs with real visitor IPs; healthchecks.io dead man's switch
+
+**Symptom:** No record of who hits the public sites (Caddy had no `log`
+directive), and every local alert runs on lemongrab itself, so a dead timer,
+dead server or dead uplink goes silent (how the 8-month outage went unnoticed).
+
+**Change (repo = live, Caddy mounts the repo's `docker/caddy/`):**
+- `docker/caddy/Caddyfile`: global `servers { trusted_proxies static
+  private_ranges; client_ip_headers Cf-Connecting-IP X-Forwarded-For }` and a
+  `log` block in `:80` writing JSON to `/data/access.log` (=
+  `docker/caddy/data/access.log`, /home NVMe, roll 50 MiB x 5). File is
+  root-only: read with `docker exec caddy tail /data/access.log`.
+- `scripts/health-check-engine.sh`: pings the URL in gitignored
+  `scripts/healthcheck_ping_url` at the end of each hourly run. Inactive until
+  that file exists.
+
+**Gotcha:** the Caddyfile is a single-file bind mount. Editing it replaces the
+inode, so the running container keeps the OLD file and `caddy validate` /
+`caddy reload` silently test the old config. Validate with
+`docker cp docker/caddy/Caddyfile caddy:/tmp/Caddyfile.new && docker exec caddy
+caddy validate --config /tmp/Caddyfile.new --adapter caddyfile`, then
+`docker restart caddy`.
+
+**Verification:** log lines show `client_ip` = public IP, `remote_ip` =
+172.18.0.1; `verify-services.sh` all healthy. healthchecks.io received the
+23:41 hourly run's ping (run exited 0).
+
+**Also 2026-10-08, /usr/local/bin drift removed:** the four hand-copied
+scripts were all older than the repo (`update-portfolio.sh` was January's,
+still building the old portfolio; its timer is disabled so no harm).
+`sudo scripts/link-usr-local-bin.sh` replaced them with symlinks into
+`/opt/homelab/scripts/`, old copies kept as `*.sh.old`. Verified with `cmp`
+against the repo. Still open: 6 live compose stacks missing from the repo and
+11 differing (repo is PUBLIC, scrub secrets before mirroring), 4 drifted
+systemd units, and `hdd-health-check.timer` still runs daily although the
+HDDs were unplugged on 2026-09-26.
+
 ## [2026-10-05] Removed budget/css leftovers from verify-services and tooling
 
 **Symptom:** `verify-services.sh` always ended with "CRITICAL: 2 services are

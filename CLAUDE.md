@@ -46,10 +46,12 @@ once and killed health checks, backups and auto-recovery for eight months. Never
 reintroduce a space-containing path into a unit file, cron line or script.
 See `docs/reference/troubleshooting-log.md` entry 2026-09-25.
 
-**Still copied, not symlinked** (these DO drift, mirror them by hand):
-`/usr/local/bin/enhanced-health-check.sh`, `hdd-health-check.sh`,
-`sync-backups-to-b2.sh`, `update-portfolio.sh`. Deploy with
-`sudo install -m 0755 scripts/<name>.sh /usr/local/bin/<name>.sh`.
+**`/usr/local/bin` scripts are symlinks too since 2026-10-08**
+(`enhanced-health-check.sh`, `hdd-health-check.sh`, `sync-backups-to-b2.sh`,
+`update-portfolio.sh` -> `/opt/homelab/scripts/`), set up by
+`scripts/link-usr-local-bin.sh`. So they are live code as well; never
+`sudo install` a copy over them again. Pre-symlink copies sit beside them as
+`*.sh.old`.
 
 ## Skills that already exist (use them, don't improvise)
 

@@ -219,3 +219,11 @@ else
 fi
 
 log "Modular health check run complete"
+
+# Dead man's switch: healthchecks.io alerts if this ping stops arriving, which
+# catches what no local alert can (timer broken, server down, uplink down).
+# URL lives in scripts/healthcheck_ping_url (gitignored). No file = no ping.
+ping_url=$(cat "$SCRIPT_DIR/healthcheck_ping_url" 2>/dev/null)
+if [ -n "$ping_url" ]; then
+    curl -fsS -m 10 --retry 3 "$ping_url" >/dev/null || log "ERROR: healthchecks.io ping failed"
+fi
