@@ -6,6 +6,36 @@ Uptime Kuma). Newest first. Same format as the lemongrab log at
 the Terra has its own at [`terra/troubleshooting-log.md`](../terra/troubleshooting-log.md).
 Pi entries from before 2026-10-03 are in the lemongrab log.
 
+## [2026-10-13] Removed unused Cloudflare WARP client
+
+**Symptom:** low free RAM. `warp-svc` (~530 MB RSS) and `warp-taskbar`
+(~220 MB) were the largest processes on the Pi, together about 20% of its 4 GB.
+WARP was installed around 2026-01-10 but never registered (`warp-cli status`:
+`Registration Missing`), so it tunnelled nothing. It started at every boot
+anyway, with the tray app autostarting in the desktop session.
+
+**Change (live):**
+```bash
+pkill -u goce warp-taskbar
+sudo systemctl disable --now warp-svc
+sudo apt-get purge -y cloudflare-warp
+sudo apt-get autoremove -y
+sudo rm -f /etc/apt/sources.list.d/cloudflare-client.list \
+  /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+sudo rm -rf /var/lib/cloudflare-warp
+```
+`autoremove` also took WARP's tray/TPM libraries (libwebkit2gtk, libtss2-*,
+libayatana-appindicator3, etc.) and `chromium-sandbox`, which had only been held
+by WARP. Chromium is installed and recommends that package, so it was put back:
+`sudo apt install chromium-sandbox`.
+
+**Not affected:** nothing on the Pi used WARP. Remote access is SSH on :222;
+Pi-hole and Uptime Kuma are LAN-only.
+
+**Verification:** no `warp` processes, `warp-svc.service` not found, no WARP
+autostart entry or apt source left. Memory used went from 1.5 GiB to ~900 MiB;
+available went from 2.2 GiB to 2.8 GiB. No OOM kills in the 16 days before.
+
 ## [2026-10-03] Folder move left Unbound pointing at a deleted config; Pi folder filled in
 
 **Symptom:** none visible yet, caught before it bit. Commit e940ab4 moved the Pi
