@@ -5,6 +5,38 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-12] Host apt upgrade (Docker 29.9) and 11 container image updates
+
+**Trigger:** weekly update-check push listed 11 containers behind; earlier the
+same day `apt upgrade` moved docker-ce 29.8.2 -> 29.9.0 and containerd.io
+2.3.6 -> 2.4.1 (daemon restart; all containers came back on their own).
+
+**Change (live compose dirs, one service at a time, `pull` + `up -d`):**
+- Same version, rebuilt image: paperless-redis (redis 8.10.2), nextcloud-postgres
+  (16.15), nextcloud-app (35.0.1, `occ status` clean, no DB upgrade).
+- Patches: uptime-kuma 2.5.5 -> 2.5.6, freshrss 1.30.0 -> 1.30.1, portainer
+  2.45.1 -> 2.45.2, caddy 2.11.6 -> 2.11.7 (`caddy validate` first),
+  cloudflared 2026.9.3 -> 2026.10.0 (4 tunnel connections registered).
+- Minor: homepage 2.4.0 -> 2.5.0, ws-scrcpy (image from 2025-11 -> 2026-10-05).
+- Home Assistant 2026.9.4 -> 2026.10.1. Breaking changes checked: username
+  already lowercase, no state conditions using `for` + attribute, MQTT change
+  only hits non-admin manual calls.
+
+**Backups first:** `scripts/backup-engine.sh nextcloud`; HA config tarball at
+`/mnt/ssd/backups/homeassistant/ha-config-2026.9.4-20261012-1816.tar.gz`
+(no `backup.d` conf exists for HA yet).
+
+**Verification:** `verify-services.sh` after caddy, cloudflared and at the end:
+all healthy. 34/35 containers up (clawdbot-gateway exited 5 months ago).
+
+**Pre-existing, not caused by this:**
+- ws-scrcpy logs `failed to resolve host: 'android-emulator'`: the emulator
+  container does not exist; started with `--no-deps` so it stayed that way.
+- HA `xiaomi_miot` cloud login fails (`need_verify`, code 70016) since at least
+  2026-10-05; needs re-login/verification in the HA UI.
+- Not checked (registry rate limit): immich_server, immich_machine_learning,
+  stirling-pdf.
+
 ## [2026-10-08] Caddy access logs with real visitor IPs; healthchecks.io dead man's switch
 
 **Symptom:** No record of who hits the public sites (Caddy had no `log`
