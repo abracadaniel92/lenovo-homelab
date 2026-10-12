@@ -20,8 +20,8 @@ stack to be removed completely.
 - No public routing existed (no Caddy block, no tunnel hostname), so nothing
   else was affected.
 
-**Pending:** `sudo rm -rf /home/docker-projects/android-emulator` (2.5 GB of
-root-owned emulator data and ADB keys; needs sudo with a password).
+- Live data: `sudo rm -rf /home/docker-projects/android-emulator` (2.5 GB of
+  emulator data and ADB keys), run by the owner; verified gone.
 
 ## [2026-10-12] Host apt upgrade (Docker 29.9) and 11 container image updates
 
