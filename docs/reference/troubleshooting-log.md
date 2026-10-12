@@ -5,6 +5,24 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-13] Removed Android emulator + ws-scrcpy stack
+
+**Trigger:** ws-scrcpy was the top CPU user (~2%) while its emulator container
+was not even running (it looped `adb connect` forever). The owner asked for the
+stack to be removed completely.
+
+**Change:**
+- Live: `docker compose down --rmi all -v` from `/opt/homelab/docker/android-emulator`
+  (the stack ran from the repo path). Container, network and the
+  `shmayro/scrcpy-web` image are gone; port 8233 is free.
+- Repo: deleted `docker/android-emulator/`, removed its rows from `README.md`,
+  `docs/reference/port-map.md`, `docs/reference/lan-and-vpn-service-urls.md`.
+- No public routing existed (no Caddy block, no tunnel hostname), so nothing
+  else was affected.
+
+**Pending:** `sudo rm -rf /home/docker-projects/android-emulator` (2.5 GB of
+root-owned emulator data and ADB keys; needs sudo with a password).
+
 ## [2026-10-12] Host apt upgrade (Docker 29.9) and 11 container image updates
 
 **Trigger:** weekly update-check push listed 11 containers behind; earlier the
