@@ -1,10 +1,29 @@
 {
 	email contact@gmojsoski.com
 	auto_https off
+
+	# All public traffic arrives via cloudflared -> localhost:8080 -> docker
+	# proxy, so the TCP peer is always a private address. Trust it and take the
+	# visitor IP from Cloudflare's header, or every log line says 172.x.
+	servers {
+		trusted_proxies static private_ranges
+		client_ip_headers Cf-Connecting-IP X-Forwarded-For
+	}
 }
 
 # Homelab HTTP on :80 — per-host handlers in config.d/; default is /srv/site
 :80 {
+	# Access log (2026-10-08). /data = docker/caddy/data on /home NVMe, gitignored.
+	# Caddy redacts Authorization/Cookie headers by default; URL query strings
+	# (share tokens) are still logged. Capped at ~250 MB by roll_size x roll_keep.
+	log {
+		output file /data/access.log {
+			roll_size 50MiB
+			roll_keep 5
+		}
+		format json
+	}
+
 	# Prevent caching of error responses
 	handle_errors {
 		header Cache-Control "no-store, no-cache, must-revalidate, max-age=0"

@@ -3,10 +3,6 @@ services:
     image: docker.io/library/redis:8
     container_name: paperless-redis
     restart: unless-stopped
-    profiles:
-      - productivity
-      - databases
-      - all
     mem_limit: 512m
     memswap_limit: 512m
     cpus: '0.5'
@@ -16,15 +12,12 @@ services:
       - default
 
   webserver:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    build: .
+    image: paperless-webserver:local
     container_name: paperless-webserver
     restart: unless-stopped
-    profiles:
-      - productivity
-      - all
     depends_on:
-      broker:
-        condition: service_started
+      - broker
     ports:
       - "8097:8000"
     volumes:
@@ -39,7 +32,7 @@ services:
       PAPERLESS_DBHOST: nextcloud-postgres
       PAPERLESS_DBNAME: paperless
       PAPERLESS_DBUSER: nextcloud
-      PAPERLESS_DBPASS: change_me_strong
+      PAPERLESS_DBPASS: ${PAPERLESS_DBPASS}
       PAPERLESS_DBPORT: 5432
     mem_limit: 2g
     memswap_limit: 2g
@@ -57,4 +50,3 @@ networks:
   nextcloud-net:
     external: true
     name: nextcloud_nextcloud-net
-

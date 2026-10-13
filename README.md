@@ -49,7 +49,6 @@ Reverse proxy is **Caddy** (`localhost:8080`), fronted by a **Cloudflare Tunnel*
 | Home Assistant | local only | Home automation |
 | Stirling PDF | local only (`:8095`) | PDF toolkit |
 | Kiwix | local only (`:8089`) | Offline Wikipedia/library |
-| Android Emulator | local only (`:8233`) | ws-scrcpy browser control |
 | Uptime Kuma / Portainer / Homepage | local only | Monitoring / Docker UI / dashboard |
 
 Systemd-managed: **Planning Poker** (poker.gmojsoski.com), **Bookmarks** (bookmarks.gmojsoski.com).

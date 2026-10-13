@@ -46,10 +46,12 @@ once and killed health checks, backups and auto-recovery for eight months. Never
 reintroduce a space-containing path into a unit file, cron line or script.
 See `docs/reference/troubleshooting-log.md` entry 2026-09-25.
 
-**Still copied, not symlinked** (these DO drift, mirror them by hand):
-`/usr/local/bin/enhanced-health-check.sh`, `hdd-health-check.sh`,
-`sync-backups-to-b2.sh`, `update-portfolio.sh`. Deploy with
-`sudo install -m 0755 scripts/<name>.sh /usr/local/bin/<name>.sh`.
+**`/usr/local/bin` scripts are symlinks too since 2026-10-08**
+(`enhanced-health-check.sh`, `hdd-health-check.sh`, `sync-backups-to-b2.sh`,
+`update-portfolio.sh` -> `/opt/homelab/scripts/`), set up by
+`scripts/link-usr-local-bin.sh`. So they are live code as well; never
+`sudo install` a copy over them again. Pre-symlink copies sit beside them as
+`*.sh.old`.
 
 ## Skills that already exist (use them, don't improvise)
 
@@ -127,24 +129,19 @@ before diagnosing anything; your incident may already be documented.
 
 ## Known drift / open items (as of 2026-07-06)
 
-- **README service table lists removed services**: Actual Budget
-  (budget.gmojsoski.com) and Centar Srbija Stil (css.gmojsoski.com) were
-  removed from the stack (commit 88ace93) but still appear in `README.md`.
-  The `css-update` Makefile target, `scripts/update-css.sh`, and
-  `scripts/css-update` are likewise orphaned. Removing them needs the user's
-  OK (README rows are append-only-protected).
 - **`docker/caddy/site/` holds the OLD portfolio** (vanilla HTML/JS). The
   live site is now built from the separate `portfolio_v2` repo via
   `scripts/update-portfolio.sh` → synced to `/mnt/ssd/docker-projects/caddy/site`
   on the server. The repo's `site/` copy is stale by design of the new
   pipeline — don't edit it expecting to change gmojsoski.com.
-- **Authentik** appears in `docs/reference/lan-and-vpn-service-urls.md`
-  (`:9091`) but has no `docker/authentik/` stack in the repo — either it runs
-  unversioned on the server or the doc is aspirational. Verify on the server
-  before assuming SSO exists.
-- `kitchenowl/`, `linkwarden/`, `gokapi/` and some others have backup
-  scripts + Caddy routes but no compose dir under `docker/` — they run from
-  live paths not fully mirrored in the repo. Don't assume `docker/` is the
+- **SSO on `:9091` is Authelia, not Authentik**, and it is NOT running
+  (checked 2026-10-08: stack exists at `/home/docker-projects/authelia`,
+  mirrored to `docker/authelia/`, but no container). Don't assume SSO exists.
+- Stacks under `/home/docker-projects/` and `/home/apps/nextcloud` run from
+  those live paths. Their compose files are mirrored into `docker/<name>/` by
+  `scripts/mirror-live-compose.sh` (live is truth; secrets stay in each live
+  `.env`, never inline: the repo is PUBLIC). `gokapi/` and a few others still
+  have no compose dir under `docker/`. Don't assume `docker/` is the
   complete service inventory; `docs/reference/infrastructure-summary.md` and
   the Caddy `config.d/` snippets are closer to truth.
 - The `restart services/` directory has a space in its name — quote paths.
