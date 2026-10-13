@@ -23,6 +23,23 @@ stack to be removed completely.
 - Live data: `sudo rm -rf /home/docker-projects/android-emulator` (2.5 GB of
   emulator data and ADB keys), run by the owner; verified gone.
 
+## [2026-10-13] Immich 3.2.4 -> 3.3.1
+
+**Change (live = repo, `docker/immich/`):** `docker compose pull` + `up -d` for
+immich-server and immich-machine-learning (tag `v3` moved). Release notes for
+3.3.0 and 3.3.1 have no breaking changes; DB migrations ran clean on start.
+
+**Backup first:** `pg_dumpall` to
+`/mnt/ssd/backups/immich/immich-db-v3.2.4-20261013-1446.sql.gz` (196 MB;
+no `backup.d` conf exists for Immich yet).
+
+**Verification:** `/api/server/version` = 3.3.1, container healthy,
+`verify-services.sh` all healthy.
+
+**Still behind (not updated):** vaultwarden 1.37.3 -> 1.37.4 (security
+release, pinned tag), outline 1.10.1 -> 1.11.0, stirling-pdf 3.0.0 -> 3.1.0,
+jellyfin 10.11.11 (12.2 is out, major jump).
+
 ## [2026-10-12] Host apt upgrade (Docker 29.9) and 11 container image updates
 
 **Trigger:** weekly update-check push listed 11 containers behind; earlier the
