@@ -23,7 +23,7 @@ stack to be removed completely.
 - Live data: `sudo rm -rf /home/docker-projects/android-emulator` (2.5 GB of
   emulator data and ADB keys), run by the owner; verified gone.
 
-## [2026-10-13] Immich 3.2.4 -> 3.3.1
+## [2026-10-13] Immich 3.3.1, Vaultwarden 1.37.4, Outline 1.11.0
 
 **Change (live = repo, `docker/immich/`):** `docker compose pull` + `up -d` for
 immich-server and immich-machine-learning (tag `v3` moved). Release notes for
@@ -36,9 +36,21 @@ no `backup.d` conf exists for Immich yet).
 **Verification:** `/api/server/version` = 3.3.1, container healthy,
 `verify-services.sh` all healthy.
 
-**Still behind (not updated):** vaultwarden 1.37.3 -> 1.37.4 (security
-release, pinned tag), outline 1.10.1 -> 1.11.0, stirling-pdf 3.0.0 -> 3.1.0,
-jellyfin 10.11.11 (12.2 is out, major jump).
+**Same day, follow-ups:**
+- Vaultwarden 1.37.3 -> 1.37.4 (security release). Pinned tag bumped in the
+  live `/home/docker-projects/vaultwarden/docker-compose.yml` and the repo
+  mirror. `backup-engine.sh vaultwarden` first. None of the upgrade notes
+  apply (no `IP_HEADER`, `EXPERIMENTAL_CLIENT_FEATURE_FLAGS` or Duo settings).
+  `/api/version` = 1.37.4, healthy.
+- Outline 1.10.1 -> 1.11.0. `pg_dumpall` first to
+  `/mnt/ssd/backups/outline/outline-db-v1.10.1-20261013-1451.sql.gz`.
+  3 DB migrations ran clean, healthy.
+- Stirling PDF 3.0.0 -> 3.1.0 NOT done: Docker Hub pull rate limit (429).
+  Still on 3.0.0, untouched. Retry `docker compose pull && up -d` in
+  `docker/stirling-pdf/` after the limit refills (about an hour).
+- Jellyfin 10.11.11 left alone (12.2 is out, major jump).
+
+`verify-services.sh` all healthy after each.
 
 ## [2026-10-12] Host apt upgrade (Docker 29.9) and 11 container image updates
 
