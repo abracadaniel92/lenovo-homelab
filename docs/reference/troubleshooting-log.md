@@ -5,6 +5,215 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-13] Removed Android emulator + ws-scrcpy stack
+
+**Trigger:** ws-scrcpy was the top CPU user (~2%) while its emulator container
+was not even running (it looped `adb connect` forever). The owner asked for the
+stack to be removed completely.
+
+**Change:**
+- Live: `docker compose down --rmi all -v` from `/opt/homelab/docker/android-emulator`
+  (the stack ran from the repo path). Container, network and the
+  `shmayro/scrcpy-web` image are gone; port 8233 is free.
+- Repo: deleted `docker/android-emulator/`, removed its rows from `README.md`,
+  `docs/reference/port-map.md`, `docs/reference/lan-and-vpn-service-urls.md`.
+- No public routing existed (no Caddy block, no tunnel hostname), so nothing
+  else was affected.
+
+- Live data: `sudo rm -rf /home/docker-projects/android-emulator` (2.5 GB of
+  emulator data and ADB keys), run by the owner; verified gone.
+
+## [2026-10-12] Host apt upgrade (Docker 29.9) and 11 container image updates
+
+**Trigger:** weekly update-check push listed 11 containers behind; earlier the
+same day `apt upgrade` moved docker-ce 29.8.2 -> 29.9.0 and containerd.io
+2.3.6 -> 2.4.1 (daemon restart; all containers came back on their own).
+
+**Change (live compose dirs, one service at a time, `pull` + `up -d`):**
+- Same version, rebuilt image: paperless-redis (redis 8.10.2), nextcloud-postgres
+  (16.15), nextcloud-app (35.0.1, `occ status` clean, no DB upgrade).
+- Patches: uptime-kuma 2.5.5 -> 2.5.6, freshrss 1.30.0 -> 1.30.1, portainer
+  2.45.1 -> 2.45.2, caddy 2.11.6 -> 2.11.7 (`caddy validate` first),
+  cloudflared 2026.9.3 -> 2026.10.0 (4 tunnel connections registered).
+- Minor: homepage 2.4.0 -> 2.5.0, ws-scrcpy (image from 2025-11 -> 2026-10-05).
+- Home Assistant 2026.9.4 -> 2026.10.1. Breaking changes checked: username
+  already lowercase, no state conditions using `for` + attribute, MQTT change
+  only hits non-admin manual calls.
+
+**Backups first:** `scripts/backup-engine.sh nextcloud`; HA config tarball at
+`/mnt/ssd/backups/homeassistant/ha-config-2026.9.4-20261012-1816.tar.gz`
+(no `backup.d` conf exists for HA yet).
+
+**Verification:** `verify-services.sh` after caddy, cloudflared and at the end:
+all healthy. 34/35 containers up (clawdbot-gateway exited 5 months ago).
+
+**Pre-existing, not caused by this:**
+- ws-scrcpy logs `failed to resolve host: 'android-emulator'`: the emulator
+  container does not exist; started with `--no-deps` so it stayed that way.
+- HA `xiaomi_miot` cloud login fails (`need_verify`, code 70016) since at least
+  2026-10-05; needs re-login/verification in the HA UI.
+- Not checked (registry rate limit): immich_server, immich_machine_learning,
+  stirling-pdf.
+
+## [2026-10-08] Caddy access logs with real visitor IPs; healthchecks.io dead man's switch
+
+**Symptom:** No record of who hits the public sites (Caddy had no `log`
+directive), and every local alert runs on lemongrab itself, so a dead timer,
+dead server or dead uplink goes silent (how the 8-month outage went unnoticed).
+
+**Change (repo = live, Caddy mounts the repo's `docker/caddy/`):**
+- `docker/caddy/Caddyfile`: global `servers { trusted_proxies static
+  private_ranges; client_ip_headers Cf-Connecting-IP X-Forwarded-For }` and a
+  `log` block in `:80` writing JSON to `/data/access.log` (=
+  `docker/caddy/data/access.log`, /home NVMe, roll 50 MiB x 5). File is
+  root-only: read with `docker exec caddy tail /data/access.log`.
+- `scripts/health-check-engine.sh`: pings the URL in gitignored
+  `scripts/healthcheck_ping_url` at the end of each hourly run. Inactive until
+  that file exists.
+
+**Gotcha:** the Caddyfile is a single-file bind mount. Editing it replaces the
+inode, so the running container keeps the OLD file and `caddy validate` /
+`caddy reload` silently test the old config. Validate with
+`docker cp docker/caddy/Caddyfile caddy:/tmp/Caddyfile.new && docker exec caddy
+caddy validate --config /tmp/Caddyfile.new --adapter caddyfile`, then
+`docker restart caddy`.
+
+**Verification:** log lines show `client_ip` = public IP, `remote_ip` =
+172.18.0.1; `verify-services.sh` all healthy. healthchecks.io received the
+23:41 hourly run's ping (run exited 0).
+
+**Also 2026-10-08, /usr/local/bin drift removed:** the four hand-copied
+scripts were all older than the repo (`update-portfolio.sh` was January's,
+still building the old portfolio; its timer is disabled so no harm).
+`sudo scripts/link-usr-local-bin.sh` replaced them with symlinks into
+`/opt/homelab/scripts/`, old copies kept as `*.sh.old`. Verified with `cmp`
+against the repo.
+
+**Also 2026-10-08, compose files mirrored:** inline secrets in kitchenowl
+(JWT_SECRET), paperless (PAPERLESS_DBPASS), vaultwarden (ADMIN_TOKEN) and
+nextcloud (POSTGRES_PASSWORD) moved into each live stack's `.env` (0600);
+`docker compose config` rendered identically before/after, so no restart.
+Originals kept as `*.bak-20261008` (contain secrets, delete after a few days).
+Then `scripts/mirror-live-compose.sh` copied 15 live compose files into
+`docker/`. Findings: the repo's vaultwarden SSO block and nextcloud/uptime-kuma
+healthchecks never existed live; Authelia's stack exists but no container
+runs; `travelsync` and `DocumentsToCalendar-1` both declare container
+`documents-to-calendar` (only the latter runs).
+
+**Also 2026-10-08, systemd units:** copied live's `network-online.target`
+ordering into repo `bookmarks`, `gokapi`, `planning-poker`. Deliberately left
+different: planning-poker `HOST_PASSWORD` (repo keeps placeholder, public),
+bookmarks `EnvironmentFile=` (repo is ahead; live unit lacks it, service runs
+fine), `portfolio-update.timer` description (repo accurate, timer disabled).
+`hdd-health-check.timer` disabled (HDDs unplugged 2026-09-26).
+
+**Next steps (open as of 2026-10-08):**
+1. Immich off-site backup, once the new drive arrives (biggest gap: photos
+   exist only on lemongrab).
+2. After ~2026-10-12, delete `docker-compose.yml.bak-20261008` and
+   `.env.bak-20261008` in `/home/docker-projects/{kitchenowl,paperless,vaultwarden}`
+   and `/home/apps/nextcloud` (they hold the plaintext secrets).
+3. Vaultwarden `ADMIN_TOKEN` is plaintext; replace with an argon2 hash
+   (`docker exec -it vaultwarden /vaultwarden hash`) in its `.env`.
+4. Authelia (`:9091`): start it or delete `/home/docker-projects/authelia`.
+5. Remove the leftover `travelsync` stack (duplicates the
+   `documents-to-calendar` container name; only DocumentsToCalendar-1 runs).
+6. Close risky LAN ports instead of a host firewall: bind Portainer
+   (9000/9443) and ws-scrcpy (8233) to 127.0.0.1 or stop them; disable RDP
+   (3389) if unused. A full host firewall was judged not worth it: Docker
+   bypasses ufw, and Caddy reaches services via `172.17.0.1:PORT`.
+7. On the Pi: confirm `sudo sshd -T` shows `passwordauthentication no`.
+
+## [2026-10-05] Removed budget/css leftovers from verify-services and tooling
+
+**Symptom:** `verify-services.sh` always ended with "CRITICAL: 2 services are
+DOWN" because it still checked budget.gmojsoski.com and css.gmojsoski.com,
+both removed from the stack earlier (commit 88ace93), so both returned 404.
+
+**Change (live = repo, `scripts/` runs via `/opt/homelab`):** removed the two
+hostnames from the `SUBDOMAINS` list (user approved). Also deleted the orphaned
+`scripts/update-css.sh`, `scripts/css-update`, the `css-update` Makefile target,
+and their mentions in `docs/reference/lab-commands.md`,
+`docs/how-to-guides/setup.md` and the CLAUDE.md drift list. No Caddy or tunnel
+routing existed for either, so no routing changed. The README table had
+already been cleaned.
+
+**Not done (needs sudo):** `sudo rm /usr/local/bin/css-update` (installed copy
+of the deleted wrapper; it would now fail with "No rule to make target").
+
+**Verification:** `./scripts/verify-services.sh` → "All services are healthy".
+
+## [2026-10-05] Clearer weekly update push; image updates for redis, nextcloud, caddy, HA, immich
+
+**Symptom:** the weekly `update-check.timer` push (Mon 10:00) was one cramped
+line, `📦 Image updates: caddy:latest home-assistant:stable ...`, naming images
+but not containers and giving no next step.
+
+**Change (live = repo, `scripts/` runs via `/opt/homelab`):**
+`scripts/update-check.sh` now sends a multi-line body: a count, an "Update:"
+list as `• <container(s)> (<image>)`, a separate "Could not check" list, and a
+"Next:" line pointing at the `update-homelab-service` runbook and noting that
+pinned tags are not checked. Still no paths or logs (topic is public ntfy.sh).
+Preview without pushing: `./scripts/update-check.sh --print`.
+
+**Morning's list (10:00 run, confirmed by a 14:30 re-run):** caddy:latest,
+home-assistant:stable, immich-server:v3 + immich-machine-learning:v3,
+nextcloud:35-apache, redis:8 (paperless-redis). stirling-pdf:latest could not
+be checked (Docker Hub 429). Agreed order: redis + nextcloud today, the rest
+this evening (caddy, then Home Assistant, then Immich after release notes).
+
+**Redis + Nextcloud attempt, ~14:45:**
+- Fresh Nextcloud backup first: `bash scripts/backup-engine.sh nextcloud` →
+  `/mnt/ssd/backups/nextcloud/nextcloud-20261005-144408.tar.gz`, verified.
+  Nextcloud was 35.0.1, no pending DB upgrade.
+- `docker compose pull broker` (`/home/docker-projects/paperless`) and
+  `docker compose pull app` (`/home/apps/nextcloud`) both failed with
+  `429 Too Many Requests`. Three back-to-back `update-check.sh` runs (one
+  registry request per image, ~30 images each) had used up the 100/h anonymous
+  quota.
+- Side effect: `up -d broker` still recreated paperless-redis on the SAME old
+  image. Paperless lost the broker for ~2 s and reconnected by itself
+  (`redis-cli ping` → PONG, webserver healthy). Nextcloud untouched.
+
+**Outcome (afternoon):** notification change done and live. Nothing updated
+until the evening run below.
+
+**Next (evening):** quota is refilled by then. Re-run the pulls, then verify:
+```bash
+cd /home/docker-projects/paperless && docker compose pull broker && docker compose up -d broker
+cd /home/apps/nextcloud && docker compose pull app && docker compose up -d app
+docker exec -u www-data nextcloud-app php occ status   # expect 35.0.x, needsDbUpgrade: false
+./scripts/verify-services.sh
+```
+Lesson: don't run `update-check.sh` more than once right before pulling, since
+each run spends ~30 of the 100 hourly Docker Hub requests. `mirror.gcr.io` is
+the approved fallback if a pull hits 429.
+
+**Evening run, ~17:05–17:15 (all done, all patch-level):**
+- paperless-redis: pulled + recreated, now Redis 8.10.2, `PONG`, webserver healthy.
+- nextcloud-app: still 35.0.1 (rebuilt base image from 2026-09-24).
+  `docker compose up -d app` said "Running" and did NOT switch to the newly
+  pulled image; `up -d --force-recreate --no-deps app` did. `occ status`:
+  35.0.1, needsDbUpgrade false, `status.php` 200 via Caddy.
+- caddy: v2.11.4 → v2.11.6 (`/home/goce/Desktop/Cursor projects/Pi-version-control/docker/caddy`).
+  Validated the live config with the new image first
+  (`docker run --rm --volumes-from caddy caddy:latest caddy validate ...`).
+- homeassistant: 2026.9.3 → 2026.9.4. The compose file uses profiles, so plain
+  `docker compose pull` says "No service selected"; use
+  `docker compose --profile utilities pull homeassistant` / `up -d homeassistant`.
+  No HA backup job exists; took a one-off config tar first:
+  `/mnt/ssd/backups/homeassistant/ha-config-20261005-pre-2026.9.4.tar.gz` (36 MB).
+  The Kasa errors for 192.168.1.22 in its log predate the update (device offline).
+- immich server + ML: v3.2.2 → v3.2.4 (bug fixes, memory-leak fix, no breaking
+  changes). Covered by Immich's own 02:00 DB dump in
+  `/mnt/ssd_1tb/immich-library/backups/`. Healthy, migrations ran clean.
+
+**Verification:** `verify-services.sh` all green except budget/css 404 (removed
+services still in its list, known drift). Final `update-check.sh --print`:
+0 newer; outline-redis, paperless-redis, ws-scrcpy, stirling-pdf could not be
+checked (429 again after the pulls). stirling-pdf is the only one never checked
+today; next Monday's push will cover it.
+
 ## [2026-10-03] Removed the unused slack-pi-monitoring script and timer
 
 **Symptom:** none. Cleanup. `scripts/slack-pi-monitoring.sh` (a health report

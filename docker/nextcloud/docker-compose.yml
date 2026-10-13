@@ -9,30 +9,23 @@ services:
     environment:
       POSTGRES_DB: nextcloud
       POSTGRES_USER: nextcloud
-      POSTGRES_PASSWORD: change_me_strong
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./db:/var/lib/postgresql/data
     networks:
       - nextcloud-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nextcloud -d nextcloud"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   app:
     image: nextcloud:35-apache
     container_name: nextcloud-app
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     restart: always
     environment:
       POSTGRES_HOST: db
       POSTGRES_DB: nextcloud
       POSTGRES_USER: nextcloud
-      POSTGRES_PASSWORD: change_me_strong
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       NEXTCLOUD_TRUSTED_DOMAINS: cloud.gmojsoski.com
       NEXTCLOUD_OVERWRITEHOST: cloud.gmojsoski.com
       NEXTCLOUD_OVERWRITEPROTOCOL: https
