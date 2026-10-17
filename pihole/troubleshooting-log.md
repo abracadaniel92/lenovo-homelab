@@ -6,6 +6,57 @@ Uptime Kuma). Newest first. Same format as the lemongrab log at
 the Terra has its own at [`terra/troubleshooting-log.md`](../terra/troubleshooting-log.md).
 Pi entries from before 2026-10-03 are in the lemongrab log.
 
+## [2026-10-17] Moved to a 128 GB SD card, cut SD writes, nightly backup to lemongrab
+
+**SD card:** cloned the 29 GB boot card onto a 128 GB card with `rpi-clone`
+(`~/clone-sd.sh`) and swapped. Root grew to 114 GB, same PARTUUID
+(`7e08cf8b`), so `cmdline.txt` and fstab needed no change. The old 29 GB card is
+kept as a bootable fallback. The new card reports a generic ID (manfid `0x9f`,
+`SD128`) and is slow (~28 MB/s read, ~10 MB/s write) but has been filled to
+~110 GB before, so its capacity is real.
+
+**SD wear (`~/sd-wear.sh`):**
+- Pi-hole `database.DBinterval` 60 → 1800 s (set with `pihole-FTL --config`,
+  stored in `pihole.toml` on the volume). `maxDBdays` was already 7.
+- `/etc/docker/daemon.json`: default `json-file` logs capped at 10m × 3. Only
+  applies to new containers; pihole and unbound were not recreated (their logs
+  are a few hundred KB).
+- Uptime Kuma monitor history set to 3 days in its UI.
+- Already in place: `noatime`, zram swap, `/tmp` on tmpfs, journald 50M /
+  `SyncIntervalSec=15m`, `fstrim.timer`.
+- Note: Docker's `data-root` is `/mnt/ssd/docker/docker`, but no SSD is mounted
+  on the Pi; it is a plain directory on the SD card.
+
+**Backup:** new `/usr/local/sbin/pi-backup.sh`, run by `pi-backup.service` /
+`pi-backup.timer` (02:30 + up to 10 min). Builds a ~50 MB
+`pi-YYYYMMDD-HHMMSS.tar.zst` in `/tmp` and rsyncs it to lemongrab port 223 with
+the root key `/root/.ssh/pi-backup`. lemongrab's receiver (rrsync `-wo`, 14-day
+prune, B2 offsite, 36 h freshness alert) is logged in the lemongrab log, same
+date. Contents: `/etc`, `/var/spool/cron`, both Pi-hole volumes (`gravity.db`
+via SQLite online backup; query DB `pihole-FTL.db` excluded), `kuma.db` (online
+backup), `~/Desktop`, `~/.ssh`, `~/.claude`, dotfiles, `dpkg --get-selections`
+and `docker inspect` of all containers. Includes credentials by choice.
+
+**Repo:** live files mirrored into `pihole/backup/` (`pi-backup.sh`,
+`pi-backup.service`, `pi-backup.timer`). Deploy changes with
+`sudo install -m 0755 pihole/backup/pi-backup.sh /usr/local/sbin/` and copy the
+units to `/etc/systemd/system/` + `systemctl daemon-reload`.
+
+**Verification:** first run (`sudo systemctl start pi-backup.service`) uploaded
+`pi-20261017-180317.tar.zst` (48 MB); goce confirmed it in
+`/mnt/ssd_1tb/backups/pi` on lemongrab. `systemctl list-timers pi-backup.timer`
+shows the next run. The Pi key is write-only, so arrivals can only be checked
+on lemongrab (or via its Mattermost freshness alert).
+
+**Lessons:**
+- The repo's `pihole/docker/pihole/docker-compose.yml` still has placeholder
+  `WEBPASSWORD`/`FTLCONF_LOCAL_IPV4`. Do not recreate Pi-hole from it; the live
+  container's settings are in each backup's `meta/docker-inspect.json`.
+- The 2026-10-03 entry's "no custom systemd units, timers or cron jobs" is no
+  longer true: `pi-backup.service`/`.timer` now exist.
+
+**Status:** ✅ Running on the 128 GB card; nightly backup enabled.
+
 ## [2026-10-13] Removed unused Cloudflare WARP client
 
 **Symptom:** low free RAM. `warp-svc` (~530 MB RSS) and `warp-taskbar`

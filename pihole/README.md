@@ -24,6 +24,7 @@ Pi-hole provides:
 | Uptime Kuma (secondary instance) | `docker/uptime-kuma/` | Shared compose with lemongrab; Pi data lives in `docker/uptime-kuma/data/` (gitignored) |
 | fail2ban SSH jail | `pihole/fail2ban/pi.local` | `/etc/fail2ban/jail.d/pi.local` |
 | SSH key-only drop-in | `pihole/ssh/01-nopass.conf` | `/etc/ssh/sshd_config.d/01-nopass.conf`; SSH port 222 |
+| Nightly backup to lemongrab | `pihole/backup/` | `/usr/local/sbin/pi-backup.sh`, `/etc/systemd/system/pi-backup.{service,timer}` (02:30); lands in lemongrab `/mnt/ssd_1tb/backups/pi`, see [`scripts/backup.d/pi.conf`](../scripts/backup.d/pi.conf) |
 
 The Unbound container reads its config straight from this repo, so moving or
 deleting `pihole/docker/unbound/unbound.conf` (including via `git checkout` of
