@@ -26,7 +26,10 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting B2 sync..." | tee -a "$LOG_FILE"
 # only offsite copy with it. Superseded and deleted files now land in a dated
 # folder instead of being erased. It must sit on the same crypt remote as the
 # destination (non-overlapping path) so rclone can move files server side.
+# --copy-links follows symlinks: backups/pi -> /mnt/ssd_1tb/backups/pi keeps the
+# Pi's nightly archives off the root disk but still carries them offsite.
 rclone sync "$BACKUP_DIR/" "$REMOTE/" \
+  --copy-links \
   --exclude "nextcloud-data-extra-*/data/**" \
   --delete-after \
   --backup-dir "$SUPERSEDED/$(date +%Y-%m-%d)" \

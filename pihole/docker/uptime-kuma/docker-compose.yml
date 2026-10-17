@@ -1,0 +1,15 @@
+# Pi's secondary Uptime Kuma. Separate from lemongrab's docker/uptime-kuma/,
+# which mirror-live-compose.sh overwrites from lemongrab. Data in ./data
+# (gitignored); kuma.db is included in the Pi's nightly backup.
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      TZ: 'Europe/Skopje'
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock

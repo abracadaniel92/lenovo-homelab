@@ -52,13 +52,16 @@ for conf in "$BACKUP_CONF_DIR"/*.conf; do
         age_h=$(( ( $(date +%s) - $(stat -c %Y "$newest") ) / 3600 ))
         if [ "$age_h" -gt "$max_age" ]; then
             echo "• ${SERVICE_NAME:-$FILENAME_PREFIX}: newest backup is ${age_h}h old (limit ${max_age}h) — $(basename "$newest")"
-        elif [ ! -f "$newest.ok" ]; then
+        elif [ "${REQUIRE_OK:-yes}" != no ] && [ ! -f "$newest.ok" ]; then
             # backup-engine.sh writes the sidecar only after the archive passes
             # a real read (tar -tzf, or PRAGMA integrity_check for SQLite). Its
             # absence means the backup either failed verification or was written
             # by a version that did not verify. Fresh-but-unverified is the gap
             # this module used to have: mtime alone cannot tell a good archive
             # from a corrupt one written on schedule.
+            # REQUIRE_OK=no is for archives built elsewhere (the Pi), which
+            # arrive without a sidecar.
+            # ponytail: those are only checked for age, not contents.
             echo "• ${SERVICE_NAME:-$FILENAME_PREFIX}: newest backup is UNVERIFIED (no .ok sidecar): $(basename "$newest")"
         fi
     )

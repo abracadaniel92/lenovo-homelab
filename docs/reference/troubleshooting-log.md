@@ -5,6 +5,100 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-17] Pi nightly backup: receiver on lemongrab (WD disk)
+
+**Goal:** the Pi (Pi-hole host) now builds a ~50 MB `pi-YYYYMMDD-HHMMSS.tar.zst`
+nightly (`pi-backup.timer` 02:30 on the Pi) and rsyncs it here over SSH :223.
+Setup script and README came over on a USB stick from the Pi-side session.
+
+**Change (live):** ran a modified `pi-backup-receiver.sh` (target moved off the
+root disk, which `/mnt/ssd` is just a folder on):
+- `/mnt/ssd_1tb/backups/pi` (goce, 0750) on the WD disk.
+- Symlink `/mnt/ssd/backups/pi` -> that dir, so the B2 sync sees it.
+- One line in `~goce/.ssh/authorized_keys`: key `pi-backup@goce`,
+  `restrict,from="192.168.1.98,192.168.1.137",command="/usr/bin/rrsync -wo /mnt/ssd_1tb/backups/pi"`
+  (write-only into that dir, no shell, Pi IPs only).
+- `/etc/cron.d/pi-backup-prune`: deletes `pi-*.tar.zst` older than 14 days, 04:15.
+
+**Change (repo = live via /opt/homelab):**
+- `scripts/sync-backups-to-b2.sh`: `--copy-links` so rclone follows the
+  symlink. No other symlinks under `/mnt/ssd/backups`, so nothing else changes.
+- `scripts/backup.d/pi.conf`: freshness monitoring only (`MAX_AGE_HOURS=36`,
+  `REQUIRE_OK="no"`). The engine never runs it (not in
+  `backup-all-critical.sh`). `60-offsite-freshness.sh` picks it up too (60 h).
+- `health.d/50-backup-freshness.sh`: `REQUIRE_OK=no` skips the `.ok` sidecar
+  check, since the Pi does not write one. Test case added to
+  `scripts/test-backup-freshness.sh`.
+
+**Verification:** dir, symlink, key line and cron file checked;
+`rclone lsf --copy-links --dirs-only /mnt/ssd/backups/` lists `pi/`;
+`bash scripts/test-backup-freshness.sh` and `test-offsite-freshness.sh` PASS.
+
+**Gotchas:** the archive holds credentials (password hashes, SSH host keys,
+Pi-hole TLS key); owner's choice, B2 copy is rclone-crypt. Restic
+(`backup-immich-terra.sh`) stores the symlink as a symlink, so the Terra copy
+does NOT contain Pi backups; B2 is their only offsite.
+
+**Still open:** first real upload from the Pi, then enable `pi-backup.timer`
+there. Until it lands, the hourly health check reports "Raspberry Pi: NO backup".
+
+## [2026-10-17] Terra offsite drive: seeded over USB on lemongrab
+
+**Goal:** the Immich offsite copy on the Terra (`terra/README.md`). The first
+~135 GB would take days over the home upload, so the restic repo is seeded
+here over USB and the drive moves to the Terra on 2026-10-19.
+
+**Drive:** Toshiba MQ04ABD200 2 TB (2.5" laptop HDD, SMR) in a Verbatim USB
+enclosure, `ata-TOSHIBA_MQ04ABD200_56HRP1HST`. SMART at arrival: PASSED,
+0 power-on hours, 0 reallocated/pending, `Load_Cycle_Count` 9. Long self-test
+skipped (new from the store).
+
+**Change (live):** `scripts/seed-terra-offsite.sh` (one-off, runs itself in
+tmux `seed`): installs restic, creates `/root/.config/restic/terra.pass`
+(copy in Vaultwarden), formats the drive GPT + ext4 label `offsite`, inits
+the repo at `/mnt/offsite/restic/lemongrab` (the path rest-server
+`--private-repos` serves for user `lemongrab`), runs
+`scripts/backup-immich-terra.sh` against it, `restic check`, unmounts, ntfy
+push. The backup script backs up `library/ upload/ profile/ backups/` of the
+Immich library and `/mnt/ssd/backups`; thumbs and encoded-video are skipped.
+
+**Not done here on purpose:** APM 254 against head parking. It resets on power
+loss, so it goes on the Terra (README Part A step 2, with the `hdparm.conf`
+entry).
+
+**Outcome:** seed finished 2026-10-17. `restic check`: no errors. One
+snapshot `254ffab1` (16:47:59, host lemongrab, 133.029 GiB, all five paths).
+Drive unmounted, ready to move.
+
+**Still open:** on the Terra: fstab, `chown -R
+restic:restic /mnt/offsite/restic`, APM, rest-server, watchdog; on lemongrab:
+`terra.repo`, timer, health module (README Part B).
+
+## [2026-10-17] Immich HDD head parking stopped (APM 254)
+
+**Symptom:** SMART on the Immich drive (WD10SPZX, 2.5" laptop drive,
+`/mnt/ssd_1tb`) showed `Load_Cycle_Count` 282k after 9.4k power-on hours, rated
+~600k. The drive's power saving parked the heads every ~2 min (~30/hour), which
+would have hit the rating in roughly 1.2 years.
+
+**Change (live):** `scripts/fix-hdd-head-parking.sh` sets `hdparm -B 254` (APM
+max performance, no head parking) now and persists it in `/etc/hdparm.conf`
+for boot. First run saves a baseline count to
+`/var/lib/hdd-load-cycle.baseline`; later runs print growth since then.
+
+**Verification:**
+```
+sudo /opt/homelab/scripts/fix-hdd-head-parking.sh
+ APM_level      = 254
+Load cycles: +0 in 215 min (before the fix: ~30/hour)
+```
+
+**Outcome:** Head parking stopped. Load cycles are no longer the drive's wear
+limit. It is still a laptop drive running 24/7 and the Immich offsite backup
+still waits on the new drive, so keep an eye on SMART
+(`Reallocated_Sector_Ct`, `Current_Pending_Sector`). Re-run the script after a
+reboot to confirm the setting stuck.
+
 ## [2026-10-13] Removed Android emulator + ws-scrcpy stack
 
 **Trigger:** ws-scrcpy was the top CPU user (~2%) while its emulator container
@@ -22,6 +116,35 @@ stack to be removed completely.
 
 - Live data: `sudo rm -rf /home/docker-projects/android-emulator` (2.5 GB of
   emulator data and ADB keys), run by the owner; verified gone.
+
+## [2026-10-13] Immich 3.3.1, Vaultwarden 1.37.4, Outline 1.11.0
+
+**Change (live = repo, `docker/immich/`):** `docker compose pull` + `up -d` for
+immich-server and immich-machine-learning (tag `v3` moved). Release notes for
+3.3.0 and 3.3.1 have no breaking changes; DB migrations ran clean on start.
+
+**Backup first:** `pg_dumpall` to
+`/mnt/ssd/backups/immich/immich-db-v3.2.4-20261013-1446.sql.gz` (196 MB;
+no `backup.d` conf exists for Immich yet).
+
+**Verification:** `/api/server/version` = 3.3.1, container healthy,
+`verify-services.sh` all healthy.
+
+**Same day, follow-ups:**
+- Vaultwarden 1.37.3 -> 1.37.4 (security release). Pinned tag bumped in the
+  live `/home/docker-projects/vaultwarden/docker-compose.yml` and the repo
+  mirror. `backup-engine.sh vaultwarden` first. None of the upgrade notes
+  apply (no `IP_HEADER`, `EXPERIMENTAL_CLIENT_FEATURE_FLAGS` or Duo settings).
+  `/api/version` = 1.37.4, healthy.
+- Outline 1.10.1 -> 1.11.0. `pg_dumpall` first to
+  `/mnt/ssd/backups/outline/outline-db-v1.10.1-20261013-1451.sql.gz`.
+  3 DB migrations ran clean, healthy.
+- Stirling PDF 3.0.0 -> 3.1.0 NOT done: Docker Hub pull rate limit (429).
+  Still on 3.0.0, untouched. Retry `docker compose pull && up -d` in
+  `docker/stirling-pdf/` after the limit refills (about an hour).
+- Jellyfin 10.11.11 left alone (12.2 is out, major jump).
+
+`verify-services.sh` all healthy after each.
 
 ## [2026-10-12] Host apt upgrade (Docker 29.9) and 11 container image updates
 
