@@ -1,6 +1,37 @@
 # Terra: offsite backup box at work
 
-**Status:** planned, not built yet (written 2026-09-27).
+**Status (2026-10-17):** base, WireGuard (`10.8.0.4`), firewall, reboot test
+and BIOS power-on are done (`troubleshooting-log.md` here). The data drive is
+seeded on lemongrab and moves to the Terra on Monday 2026-10-19. Not done yet:
+drive mount, rest-server, watchdog, then lemongrab's Part B.
+
+## Start here (Claude on the Terra, 2026-10-19)
+
+The drive is a **Toshiba MQ04ABD200 2 TB in a Verbatim USB enclosure**,
+`/dev/disk/by-id/ata-TOSHIBA_MQ04ABD200_56HRP1HST`, one ext4 partition
+labelled `offsite`. It already holds the restic repo
+`restic/lemongrab/` with one snapshot (`254ffab1`, 133 GiB, `restic check`
+clean). **Do not format, `mkfs`, `restic init` or write into it.** You
+can't read it anyway: the restic password stays on lemongrab.
+
+Do, in order, and log each in `troubleshooting-log.md` (this folder):
+1. Plug in, `lsblk -f`, confirm label `offsite`. `smartctl -H -A` on the
+   by-id path, record `Load_Cycle_Count` and temperature.
+2. Part A step 2: fstab by UUID with `nofail`, mount `/mnt/offsite`, APM 254
+   + `/etc/hdparm.conf`, `chown -R restic-rest-server:restic-rest-server
+   /mnt/offsite/restic` (after step 3 below creates that user).
+3. Part A step 4 (rest-server), step 6 (watchdog), step 7 (log out).
+4. Reboot, confirm the drive mounts and rest-server listens on
+   `10.8.0.4:8000` (`ss -tlnp`). From lemongrab:
+   `curl -u lemongrab:<pw> http://10.8.0.4:8000/lemongrab/config -o /dev/null -w '%{http_code}'`
+   gives 200.
+5. Hand the owner the htpasswd password for `lemongrab`. The rest (Part B) is
+   done from lemongrab.
+
+Expect one false alarm: the seed snapshot is from 2026-10-17, so the watchdog's
+"no new backup in 36 h" push fires as soon as it runs, and every 6 h until
+lemongrab's Part B timer lands its first snapshot. That is the alert working,
+not a fault.
 
 The Terra, a small PC at the office (see Hardware), holds a second offsite copy of the Immich photo
 library. With Backblaze B2 that makes three copies: lemongrab, the Terra, B2.
@@ -13,7 +44,7 @@ up: the Terra must never get access to lemongrab.
 ## Design
 
 ```
-lemongrab (10.8.0.1)  --restic over WireGuard-->  Terra (10.8.0.X)
+lemongrab (10.8.0.1)  --restic over WireGuard-->  Terra (10.8.0.4)
   holds: restic password                            holds: encrypted blobs only
   runs:  nightly systemd timer                      runs:  rest-server --append-only
 ```
@@ -39,7 +70,7 @@ lemongrab (10.8.0.1)  --restic over WireGuard-->  Terra (10.8.0.X)
 | Immich library | `/mnt/ssd_1tb/immich-library` (about 200 to 250 GB, growing) |
 | Immich DB dumps | `/mnt/ssd_1tb/immich-library/backups/immich-db-backup-*.sql.gz`, made nightly at 02:00 by Immich itself |
 | Phone alerts | `scripts/ntfy-push.sh "<title>"`; systemd units use `OnFailure=notify-failure@%n.service` |
-| restic | not installed yet |
+| restic | 0.18.0 installed 2026-10-17; password in `/root/.config/restic/terra.pass` + Vaultwarden |
 
 Note: despite its name, `/mnt/ssd_1tb` is a spinning WD HDD (`WD10SPZX`), and
 it is the only local copy of the photos.
@@ -68,10 +99,10 @@ backup.
   trixie, RAM upgraded and thermal paste replaced (2026-10).
 - OS on the internal 64 GB SSD. Backups go **only** on the big HDD, never the
   SSD.
-- The HDD: the new 1 TB drive or a bigger one. If it's the 1 TB, it's first used
-  as the clone target for recovering the failing old 1 TB drive, so wipe it
-  only after that recovery is finished. Prefer an internal SATA bay if the case
-  has one; USB enclosures drop out more often.
+- The HDD: Toshiba MQ04ABD200 2 TB (bought 2026-10, SMR) in a USB enclosure,
+  seeded on lemongrab (log 2026-10-17 in `docs/reference/troubleshooting-log.md`).
+  USB enclosures drop out more often than SATA; the `nofail` mount and
+  `RequiresMountsFor=` keep that from writing backups onto the SSD.
 - Fanless case: check the HDD temperature in SMART after a full first backup
   (keep it under about 50 °C).
 - BIOS: set "restore on AC power loss" to **On**, so it boots by itself after
@@ -92,11 +123,11 @@ backup.
    (`<by-id path> {`, `apm = 254`, `}` on three lines) to `/etc/hdparm.conf`. If `hdparm -B` says unsupported through the USB
    enclosure, record `Load_Cycle_Count` and recheck after a week.
    The repo is seeded on lemongrab before the move (log 2026-10-17), so
-   format nothing: just `chown -R restic:restic /mnt/offsite/restic`.
+   format nothing: just `chown -R restic-rest-server:restic-rest-server /mnt/offsite/restic`.
 3. **WireGuard client:** generate the Terra's key pair on the Terra (the private key
    never leaves it). Give its **public** key to the owner so it can be
    added on lemongrab (Part B step 1). The config uses:
-   - `Address = 10.8.0.X/32` (X assigned in Part B)
+   - `Address = 10.8.0.4/32`
    - `[Peer]` lemongrab public key, `Endpoint = <public endpoint>:51820`
    - `AllowedIPs = 10.8.0.1/32` (only the server, not the whole home LAN)
    - `PersistentKeepalive = 25` (keeps the tunnel up behind the work NAT)
@@ -104,17 +135,29 @@ backup.
    Enable `wg-quick@wg0`. Test with `ping 10.8.0.1`. If it fails, work may
    block outbound UDP 51820, so tell the owner rather than working around
    it.
-4. **rest-server:** `apt install restic-rest-server` (packaged in
-   trixie). Run it as a dedicated
-   `restic` system user via systemd:
+4. **rest-server:** `apt install restic-rest-server apache2-utils` (trixie
+   package 0.13.0, checked 2026-10-17). It ships the binary
+   `restic-rest-server`, the system user `restic-rest-server`, the unit
+   `restic-rest-server.service` (reads `/etc/default/restic-rest-server`,
+   refuses to start while `BACKUP_DIR` is unset) and
+   `/etc/restic-rest-server/users.htpasswd` (root:restic-rest-server 0640).
+   Set in `/etc/default/restic-rest-server`:
    ```
-   rest-server --path /mnt/offsite/restic --listen 10.8.0.X:8000 \
-               --append-only --private-repos --htpasswd-file /etc/rest-server/.htpasswd
+   LISTEN = 10.8.0.4:8000
+   BACKUP_DIR = /mnt/offsite/restic
+   ARGS = "--append-only --private-repos --htpasswd-file /etc/restic-rest-server/users.htpasswd"
    ```
-   Create one htpasswd user `lemongrab` and hand its password to the owner.
-   The unit must start `After=wg-quick@wg0.service` and
-   `RequiresMountsFor=/mnt/offsite`, so it never writes to the OS SSD when
-   the drive is missing.
+   User: `htpasswd -B /etc/restic-rest-server/users.htpasswd lemongrab`, and
+   hand that password to the owner. Drop-in
+   `systemctl edit restic-rest-server`:
+   ```
+   [Unit]
+   Wants=wg-quick@wg0.service
+   After=wg-quick@wg0.service
+   RequiresMountsFor=/mnt/offsite
+   ```
+   so it can bind the WireGuard IP and never writes to the OS SSD when the
+   drive is missing. Then `systemctl enable --now restic-rest-server`.
 5. **Firewall:** allow SSH and port 8000 only on `wg0`. Deny everything
    inbound on the work LAN interface except what the OS needs.
 6. **Watchdog:** install [`watchdog.sh`](watchdog.sh) as
@@ -132,7 +175,7 @@ backup.
 
 ### Remote access (after setup)
 
-SSH only, through lemongrab: `ssh -J lemongrab <user>@10.8.0.X`. No RDP and
+SSH only, through lemongrab: `ssh -J lemongrab <user>@10.8.0.4`. No RDP and
 no desktop; it's a headless box. Don't widen `AllowedIPs` or open SSH on the
 work LAN to make this shorter.
 
@@ -161,16 +204,16 @@ from lemongrab.
 
 **Claude on the Terra must not:** ask for or store lemongrab SSH keys, the
 restic password, or the rclone/B2 config. Its job ends at "rest-server is
-listening on 10.8.0.X:8000 and survives a reboot".
+listening on 10.8.0.4:8000 and survives a reboot".
 
 ## Part B: on lemongrab (done from this repo)
 
 1. Add the Terra as a WireGuard peer in `/etc/wireguard/wg0.conf` (its public
-   key, `AllowedIPs = 10.8.0.X/32`), pick a free X, `wg syncconf`.
+   key, `AllowedIPs = 10.8.0.4/32`), pick a free X, `wg syncconf`.
 2. `apt install restic`. Generate a restic password to
    `/root/.config/restic/terra.pass` (0600) **and save a copy in
    Vaultwarden**. Without it the backup is unreadable.
-3. `restic -r rest:http://lemongrab:<pw>@10.8.0.X:8000/lemongrab/ init`
+3. `restic -r rest:http://lemongrab:<pw>@10.8.0.4:8000/lemongrab/ init`
 4. Script `scripts/backup-immich-terra.sh`: `restic backup` of the paths
    above (Immich and `/mnt/ssd/backups/`), `--exclude thumbs --exclude encoded-video`, exit non-zero on
    failure.
