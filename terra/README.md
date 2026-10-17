@@ -84,6 +84,15 @@ backup.
 2. **Drive:** one GPT partition, ext4, label `offsite`. Mount at
    `/mnt/offsite` by UUID with `nofail` in `/etc/fstab`. Check SMART with
    `smartctl -H -A` and record the baseline.
+   The drive is a Toshiba MQ04ABD200 2.5" laptop HDD, which parks its heads
+   aggressively like lemongrab's WD did (log 2026-10-17). Stop that with APM
+   254, now and on every boot (APM resets on power loss):
+   `apt install hdparm`, `hdparm -B 254 /dev/disk/by-id/ata-TOSHIBA_MQ04ABD200_56HRP1HST`,
+   and append the same block format `scripts/fix-hdd-head-parking.sh` writes
+   (`<by-id path> {`, `apm = 254`, `}` on three lines) to `/etc/hdparm.conf`. If `hdparm -B` says unsupported through the USB
+   enclosure, record `Load_Cycle_Count` and recheck after a week.
+   The repo is seeded on lemongrab before the move (log 2026-10-17), so
+   format nothing: just `chown -R restic:restic /mnt/offsite/restic`.
 3. **WireGuard client:** generate the Terra's key pair on the Terra (the private key
    never leaves it). Give its **public** key to the owner so it can be
    added on lemongrab (Part B step 1). The config uses:

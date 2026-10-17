@@ -5,6 +5,34 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-17] Terra offsite drive: seeded over USB on lemongrab
+
+**Goal:** the Immich offsite copy on the Terra (`terra/README.md`). The first
+~135 GB would take days over the home upload, so the restic repo is seeded
+here over USB and the drive moves to the Terra on 2026-10-19.
+
+**Drive:** Toshiba MQ04ABD200 2 TB (2.5" laptop HDD, SMR) in a Verbatim USB
+enclosure, `ata-TOSHIBA_MQ04ABD200_56HRP1HST`. SMART at arrival: PASSED,
+0 power-on hours, 0 reallocated/pending, `Load_Cycle_Count` 9. Long self-test
+skipped (new from the store).
+
+**Change (live):** `scripts/seed-terra-offsite.sh` (one-off, runs itself in
+tmux `seed`): installs restic, creates `/root/.config/restic/terra.pass`
+(copy in Vaultwarden), formats the drive GPT + ext4 label `offsite`, inits
+the repo at `/mnt/offsite/restic/lemongrab` (the path rest-server
+`--private-repos` serves for user `lemongrab`), runs
+`scripts/backup-immich-terra.sh` against it, `restic check`, unmounts, ntfy
+push. The backup script backs up `library/ upload/ profile/ backups/` of the
+Immich library and `/mnt/ssd/backups`; thumbs and encoded-video are skipped.
+
+**Not done here on purpose:** APM 254 against head parking. It resets on power
+loss, so it goes on the Terra (README Part A step 2, with the `hdparm.conf`
+entry).
+
+**Still open:** seed result (`restic check`); on the Terra: fstab, `chown -R
+restic:restic /mnt/offsite/restic`, APM, rest-server, watchdog; on lemongrab:
+`terra.repo`, timer, health module (README Part B).
+
 ## [2026-10-17] Immich HDD head parking stopped (APM 254)
 
 **Symptom:** SMART on the Immich drive (WD10SPZX, 2.5" laptop drive,
