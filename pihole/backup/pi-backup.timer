@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly Pi backup to lemongrab (before its 03:00 B2 sync)
+
+[Timer]
+OnCalendar=*-*-* 02:30
+RandomizedDelaySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

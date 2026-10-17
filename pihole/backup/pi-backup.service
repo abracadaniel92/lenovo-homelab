@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up Pi config and data to lemongrab
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pi-backup.sh
+Nice=10
+IOSchedulingClass=idle

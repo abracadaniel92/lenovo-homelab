@@ -21,9 +21,10 @@ Pi-hole provides:
 |-----------|-----------|------------------------|
 | Pi-hole | `pihole/docker/pihole/` | Docker named volumes `pihole_pihole_config`, `pihole_dnsmasq_config` |
 | Unbound (recursive DNS, `127.0.0.1:5335`) | `pihole/docker/unbound/` | Container bind-mounts `unbound.conf` from the repo checkout, see [unbound/README.md](docker/unbound/README.md) |
-| Uptime Kuma (secondary instance) | `docker/uptime-kuma/` | Shared compose with lemongrab; Pi data lives in `docker/uptime-kuma/data/` (gitignored) |
+| Uptime Kuma v2 (secondary instance) | `pihole/docker/uptime-kuma/` | Pi's own compose since 2026-10-17 (lemongrab's is `docker/uptime-kuma/`); data in `pihole/docker/uptime-kuma/data/` (gitignored), port 3001 |
 | fail2ban SSH jail | `pihole/fail2ban/pi.local` | `/etc/fail2ban/jail.d/pi.local` |
 | SSH key-only drop-in | `pihole/ssh/01-nopass.conf` | `/etc/ssh/sshd_config.d/01-nopass.conf`; SSH port 222 |
+| Nightly backup to lemongrab | `pihole/backup/` | `/usr/local/sbin/pi-backup.sh`, `/etc/systemd/system/pi-backup.{service,timer}` (02:30); lands in lemongrab `/mnt/ssd_1tb/backups/pi`, see [`scripts/backup.d/pi.conf`](../scripts/backup.d/pi.conf) |
 
 The Unbound container reads its config straight from this repo, so moving or
 deleting `pihole/docker/unbound/unbound.conf` (including via `git checkout` of
@@ -69,16 +70,17 @@ The docker-compose.yml file is located in this repository at `pihole/docker/piho
 - Uses `network_mode: host` for direct DNS access (ports 53, 80)
 - Docker volumes for data persistence (not bind mounts)
 - Timezone: `Europe/Skopje` (update if needed)
-- Upstream DNS: Cloudflare (`1.1.1.1`, `1.0.0.1`)
+- Upstream DNS: Unbound on the same Pi (`127.0.0.1#5335`), DNSSEC-validating
 
-**Important:** Update the following before starting:
-1. `WEBPASSWORD`: Set a secure password for the admin interface
-2. `FTLCONF_LOCAL_IPV4`: Set to your Pi's IP address
+**Pi-hole v6 settings live in `pihole.toml` on the `pihole_config` volume**, not
+in the compose file (v6 ignores the old `WEBPASSWORD`, `FTLCONF_LOCAL_IPV4` and
+`PIHOLE_DNS_` variables). On a fresh install, after the first start:
 
 ```bash
 cd /path/to/repo/pihole/docker/pihole
-# Edit docker-compose.yml and update WEBPASSWORD and FTLCONF_LOCAL_IPV4
-nano docker-compose.yml
+docker compose up -d
+docker exec pihole pihole setpassword                       # admin password
+docker exec pihole pihole-FTL --config dns.upstreams '["127.0.0.1#5335"]'
 ```
 
 ---
@@ -197,7 +199,7 @@ nslookup jellyfin.gmojsoski.com
 ## Pi-hole Admin Interface
 
 - **URL:** `http://[REDACTED_INTERNAL_IP_2]/admin`
-- **Password:** Whatever you set in `WEBPASSWORD` (default: `changeme`)
+- **Password:** set with `docker exec pihole pihole setpassword` (stored in `pihole.toml`)
 
 ### Useful Admin Pages
 - **Dashboard:** Query statistics and blocking stats
@@ -507,14 +509,14 @@ Internet
 | Config Location | `pihole/docker/pihole/` (in repository) |
 | Local DNS | Configured via Admin UI (Local DNS → DNS Records) |
 | Docker Volumes | `pihole_config`, `dnsmasq_config` (persistent) |
-| Upstream DNS | `1.1.1.1`, `1.0.0.1` (Cloudflare) |
+| Upstream DNS | Unbound `127.0.0.1#5335` (DNSSEC) |
 
 ---
 
 ## Current Configuration (October 2026)
 
 - **Hardware**: Raspberry Pi 4 Model B (4GB RAM)
-- **Pi-hole Version**: Core v6.4.3, Web v6.6, FTL v6.7.1
+- **Pi-hole Version**: Core v6.5, Web v6.6.1, FTL v6.8
 - **Deployment**: Docker (network_mode: host)
 - **Data Storage**: Docker volumes (persistent across container updates)
 - **Local DNS**: Configured via Admin UI (12 subdomains pointing to ThinkCentre)

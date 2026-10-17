@@ -10,11 +10,14 @@ services:
     volumes:
       - pihole_config:/etc/pihole
       - dnsmasq_config:/etc/dnsmasq.d
+    # Pi-hole v6 keeps all settings (password, upstreams, interface) in
+    # /etc/pihole/pihole.toml on the pihole_config volume. Change them in the
+    # web UI or with `docker exec pihole pihole-FTL --config <key> <value>`.
+    # The v5 variables WEBPASSWORD, FTLCONF_LOCAL_IPV4 and PIHOLE_DNS_ are
+    # ignored by v6. An FTLCONF_* variable here would override pihole.toml and
+    # lock that setting in the UI, so keep them out unless that is the intent.
     environment:
-      TZ: 'Europe/Skopje'  # Updated to match system timezone
-      WEBPASSWORD: 'CHANGE_THIS_PASSWORD'  # Set a secure password for the web interface
-      FTLCONF_LOCAL_IPV4: '192.168.1.XXX'  # Pi IP address - UPDATE WITH YOUR PI'S IP
-      PIHOLE_DNS_: '127.0.0.1#5335'  # Upstream DNS (Unbound recursive resolver)
+      TZ: 'Europe/Skopje'
 
 volumes:
   pihole_config:
