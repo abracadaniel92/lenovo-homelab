@@ -77,6 +77,11 @@ NOTIFIED=""
 # shellcheck source=/dev/null
 source "$PLUGIN"
 check "fresh but unverified is reported" "$(grep -c UNVERIFIED <<<"$NOTIFIED")" "1"
+echo 'REQUIRE_OK="no"' >> "$TMP/backup.d/fresh.conf"
+NOTIFIED=""
+# shellcheck source=/dev/null
+source "$PLUGIN"
+check "REQUIRE_OK=no skips the sidecar" "${NOTIFIED:-<none>}" "<none>"
 touch "$TMP/fresh_dir/fresh-20260925-000000.tar.gz.ok"
 
 # A backup exactly at its limit must not alarm; one hour past it must.
