@@ -15,13 +15,13 @@ Copy this checklist and track progress as you go:
 - [ ] 1. Confirm scope with user (port, storage, subdomain, stack)
 - [ ] 2. Port allocation: check `sudo ss -tulpn` for conflicts (avoid 5000, 9000)
 - [ ] 3. Create docker/<service>/docker-compose.yml with bridge network + restart: unless-stopped
-- [ ] 4. Add @service block to docker/caddy/Caddyfile (append-only, standard template)
+- [ ] 4. Add @service block to the right docker/caddy/config.d/NN-category.caddy (append-only, standard template)
 - [ ] 5. Add ingress rule to cloudflare/config.yml AND ~/.cloudflared/config.yml (edit each separately, NEVER cp one over the other)
 - [ ] 6. Restart Caddy then cloudflared (in that order)
 - [ ] 7. Triple-check verification (internal, proxy, external)
 - [ ] 8. Append the new domain to scripts/verify-services.sh SUBDOMAINS array
 - [ ] 9. Add service description to README.md
-- [ ] 10. Log a TROUBLESHOOTING_LOG.md entry only if anything non-standard happened
+- [ ] 10. Add port to docs/reference/port-map.md; log a troubleshooting-log entry only if anything non-standard happened
 ```
 
 ## 1. Confirm scope
@@ -29,7 +29,7 @@ Copy this checklist and track progress as you go:
 Before writing any config, ask the user (if not specified):
 - Subdomain name (e.g. `service.gmojsoski.com`)
 - Internal port (preferred range 8000-8100)
-- Where does the service's data live? — primary NVMe vs `/mnt/ssd_1tb` vs mergerfs `/mnt/storage`. NEVER assume.
+- Where does the service's data live? — NVMe `/home` vs `/mnt/ssd_1tb` (1 TB HDD). NEVER assume.
 - Is this a media server (Jellyfin/Plex/Navidrome class)? If yes, skip gzip in Caddy.
 
 ## 2. Port allocation
@@ -44,12 +44,12 @@ Avoid: `5000` (AirPlay), `9000` (Portainer). Preferred range: `8000-8100`.
 
 Create `docker/<service>/docker-compose.yml`. Defaults:
 - **Network**: standard bridge — do NOT use `network_mode: host` unless absolutely necessary.
-- **Volumes**: map data into the storage location agreed in step 1 (typically `/mnt/ssd/docker-projects/<service>/data` or wherever the user chose).
+- **Volumes**: map data into the storage location agreed in step 1 (typically `/home/docker-projects/<service>/` or wherever the user chose; secrets in a live `.env`, never in the compose file: the repo is public).
 - **Restart**: `restart: unless-stopped`.
 
 ## 4. Caddy block
 
-Append to `docker/caddy/Caddyfile`. Use this EXACT template — no header overrides unless docs explicitly require them:
+Append to the matching snippet in `docker/caddy/config.d/` (`10-gmojsoski-home`, `20-media`, `30-storage`, `40-communication`, `50-utilities`), not the root `Caddyfile`. Use this EXACT template — no header overrides unless docs explicitly require them:
 
 ```caddyfile
 @service_name host service.gmojsoski.com
@@ -135,11 +135,11 @@ Append the new subdomain to the `SUBDOMAINS` array in `scripts/verify-services.s
 
 ## 9. Update README.md
 
-Add a description of the new service (what it does, port, subdomain) to the appropriate section.
+Add a row to the service table (what it does, subdomain or `local only`). Also add the port to `docs/reference/port-map.md`.
 
 ## 10. Log only if needed
 
-Standard, smooth additions do NOT need a `TROUBLESHOOTING_LOG.md` entry. Only log if:
+Standard, smooth additions do NOT need a troubleshooting-log entry. Only log if:
 - Something broke during the addition
 - A non-standard fix was applied
 - Lessons were learned worth keeping
@@ -148,7 +148,7 @@ If logging, follow the format in the `log-troubleshooting-entry` skill.
 
 ## Rollback (if it breaks things)
 
-1. Delete the lines you added to `Caddyfile` and `~/.cloudflared/config.yml`.
+1. Delete the lines you added to the `config.d/` snippet and `~/.cloudflared/config.yml`.
 2. `docker compose restart caddy`
 3. `./restart\ services/fix-external-access.sh`
 4. `./scripts/verify-services.sh` to confirm green.

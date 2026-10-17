@@ -9,10 +9,11 @@ Follow this checklist whenever adding a new service to the homelab. This ensures
 ## 1. Docker Compose Configuration
 - [ ] **Network Mode**: Unless absolutely necessary, DO NOT use `network_mode: host`. Use standard bridge networks.
 - [ ] **Port Conflicts**: Check if the port is already in use (`sudo ss -tulpn | grep :<PORT>`).
-- [ ] **Data Persistence**: Ensure volumes are mapped to `/mnt/ssd/docker-projects/<service>/data` (or similar) to avoid data loss.
+- [ ] **Data Persistence**: Ensure volumes are mapped to `/home/docker-projects/<service>/` or `/mnt/ssd_1tb/...` (ask which) to avoid data loss. Secrets go in a live `.env`, never in the compose file (the repo is public).
 - [ ] **Restart Policy**: Always set `restart: unless-stopped`.
 
-## 2. Caddy Configuration (`docker/caddy/Caddyfile`)
+## 2. Caddy Configuration (`docker/caddy/config.d/NN-category.caddy`)
+- [ ] **Where**: add the block to the matching category snippet in `docker/caddy/config.d/`, not the root `Caddyfile` (that holds only globals, the import and the catch-all).
 - [ ] **Standard Proxy Block**: Use the standard template. Do NOT add `header_up Host {host}` unless the specific application documentation explicitly demands it for a reverse proxy.
     ```caddyfile
     @service_name host service.gmojsoski.com
@@ -73,7 +74,7 @@ Follow this checklist whenever adding a new service to the homelab. This ensures
 
 ### 3. Logging
 **Troubleshooting Log**: Only log here if you encountered *problems* or had to do non-standard fix.
-**Standard Additions**: No need to log smooth additions in TROUBLESHOOTING_LOG.md. Just update `README.md`.
+**Standard Additions**: No need to log smooth additions in `docs/reference/troubleshooting-log.md`. Just update the `README.md` service table and `docs/reference/port-map.md`.
 
 ### 4. Port Allocation
 **Preferred Range**: 8000-8100 is your current active range.
@@ -82,7 +83,7 @@ Follow this checklist whenever adding a new service to the homelab. This ensures
 
 ### 5. Rollback Procedure
 If a new service breaks things:
-1.  **Revert**: Delete the lines you added to `Caddyfile` and `config.yml`.
+1.  **Revert**: Delete the lines you added to the `config.d/` snippet and `~/.cloudflared/config.yml`.
 2.  **Reset**: Run `docker compose restart caddy`.
 3.  **Recover**: Run `./restart services/fix-external-access.sh` (this resets the tunnel cleanly).
 4.  **Verify**: Run `./scripts/verify-services.sh` to confirm you are back to green.

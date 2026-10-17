@@ -1,11 +1,11 @@
 ---
 name: log-troubleshooting-entry
-description: Append a properly-formatted entry to the homelab TROUBLESHOOTING_LOG.md following the project's entry template. Use when the user says "log this fix", "add a troubleshooting entry", "document this incident", "log to TROUBLESHOOTING_LOG", or after a non-standard fix has been applied and should be preserved as a learning record.
+description: Add a properly-formatted entry to the right device's troubleshooting log (lemongrab, Pi or Terra) following the project's entry template. Use when the user says "log this fix", "add a troubleshooting entry", "document this incident", "log to the troubleshooting log", or after a non-standard fix has been applied and should be preserved as a learning record.
 ---
 
 # Log Troubleshooting Entry
 
-The `docs/reference/troubleshooting-log.md` is the homelab's **learning diary** — not just a problem log. It captures issues, fixes, successful projects, lessons learned, and configuration changes.
+Each device has its own log: lemongrab `docs/reference/troubleshooting-log.md`, Pi `pihole/troubleshooting-log.md`, Terra `terra/troubleshooting-log.md`. Log device work in that device's file. The log is the homelab's **learning diary** — not just a problem log. It captures issues, fixes, successful projects, lessons learned, and configuration changes.
 
 ## When to log
 
@@ -29,38 +29,22 @@ If unsure whether it counts as production-affecting or incident resolution, **lo
 
 ## Entry template
 
-Append to [TROUBLESHOOTING_LOG.md](../../../docs/reference/troubleshooting-log.md) using this exact structure:
+Add the entry at the **top** of the log (newest first, right under the intro). Recent entries use this compact shape; read the top two and match them:
 
 ```markdown
-## [YYYY-MM-DD] Descriptive Title
+## [YYYY-MM-DD] Descriptive title
 
-**Date:** YYYY-MM-DD
-**Action:** What was done
-**Result:** Outcome of the action
+**Symptom / Goal:** what was wrong or wanted.
 
-### Root Cause / Background (if applicable)
-- Why this was needed
-- What led to this change
+**Change (live):** what changed on the host, with live paths.
 
-### Solution Applied / Implementation
-1. Step-by-step what was done
-2. Commands run
-3. Files modified
+**Change (repo = live via /opt/homelab):** repo files touched (`scripts/` is live).
 
-### Verification
-- How success was verified
-- Test results
+**Verification:** commands run and their output.
 
-### Lessons Learned / Key Takeaways
-- Important insights
-- Best practices
-- What to remember for next time
+**Gotchas:** anything non-obvious (optional).
 
-### Files Involved
-- List of files created/modified
-- Configuration locations
-
-**Status**: Status description
+**Outcome / Still open:** fixed, mitigated, or what's left.
 ```
 
 ## Authoring rules
@@ -70,7 +54,8 @@ Append to [TROUBLESHOOTING_LOG.md](../../../docs/reference/troubleshooting-log.m
 3. **Include actual commands**: the command history is the most valuable part. Paste real `docker logs`, `curl`, `systemctl` invocations.
 4. **Document mistakes too**: failed approaches are learning data. Note what you tried that didn't work and why.
 5. **Cross-reference**: link to related prior entries, related runbooks (`MONITORING_AND_RECOVERY.md`, `CLOUDFLARE_MONITORING.md`), or commits.
-6. **Append-only**: add at the bottom or in chronological position. Never edit or delete existing entries.
+6. **Append-only**: new entries go at the top. Never edit or delete existing entries.
+7. **Public repo**: no passwords, tokens, webhook or ntfy URLs.
 
 ## Workflow
 
@@ -78,10 +63,11 @@ Append to [TROUBLESHOOTING_LOG.md](../../../docs/reference/troubleshooting-log.m
 - [ ] 1. Confirm with user the fix is worth logging (skip if trivial)
 - [ ] 2. Read the last 1-2 entries to match tone/depth
 - [ ] 3. Draft entry using the template above
-- [ ] 4. Append to TROUBLESHOOTING_LOG.md (do not modify existing entries)
-- [ ] 5. Show the user the appended block for confirmation
+- [ ] 4. Add it at the top of the device's log (do not modify existing entries)
+- [ ] 5. Show the user the new block for confirmation
+- [ ] 6. Blog-worthy story? Follow CLAUDE.md habit 7 (docs/blog-ideas.md)
 ```
 
 ## Reference
 
-For the full guidelines authored by the user, see [TROUBLESHOOTING_LOG_GUIDELINES.md](../../../docs/reference/troubleshooting-log-guidelines.md).
+For the full guidelines authored by the user, see [troubleshooting-log-guidelines.md](../../../docs/reference/troubleshooting-log-guidelines.md).
