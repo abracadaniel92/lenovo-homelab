@@ -128,7 +128,6 @@ Everything is indexed in **[docs/README.md](docs/README.md)**. Highlights:
 | LAN / VPN service URLs | [reference/lan-and-vpn-service-urls.md](docs/reference/lan-and-vpn-service-urls.md) |
 | Incident log (lemongrab) | [reference/troubleshooting-log.md](docs/reference/troubleshooting-log.md) |
 | Incident logs (Pi, Terra) | [pihole/](pihole/troubleshooting-log.md), [terra/](terra/troubleshooting-log.md) |
-| Blog ideas from this work | [blog-ideas.md](docs/blog-ideas.md) |
 
 ## Repository layout
 
@@ -158,7 +157,7 @@ See **[SECURITY.md](SECURITY.md)** (also under GitHub **Security → Policy**). 
 - **Renovate**: automated PRs for Docker image updates.
 - **pre-commit**: YAML/shell checks on commit.
 - **Commits and branches**: small atomic commits (one logical change each, with its log entry). lemongrab commits straight to `main`; other machines open a PR from `feature/<date>-<name>` into `main` (never squash-merged). See the `prepare-pull-request` skill.
-- **AI agents**: start with [CLAUDE.md](CLAUDE.md) and [`.cursor/rules/`](.cursor/rules/). Runbooks are in `.cursor/skills/`; agents propose changes to their own guidance in `.cursor/proposals/` and the owner reviews them weekly (`lesson-review`).
+- **AI agents**: start with [CLAUDE.md](CLAUDE.md) and [`.cursor/rules/`](.cursor/rules/). Runbooks are in `.cursor/skills/`; agents propose changes to their own guidance in `.cursor/proposals/` and blog post ideas in `.cursor/blog/`; the owner reviews both weekly (`weekly-review`).
 
 ## License
 

@@ -41,7 +41,6 @@ Quick lookup & technical detail:
 - [health-check-status.md](reference/health-check-status.md) — health check configuration status
 - [lan-and-vpn-service-urls.md](reference/lan-and-vpn-service-urls.md) — LAN/VPN service URL cheat sheet
 - [learnings-from-repos.md](reference/learnings-from-repos.md) — learnings from analyzing other repos
-- [blog-ideas.md](blog-ideas.md) — homelab stories worth a gmojsoski.com blog post
 
 ## Other devices
 
