@@ -9,7 +9,7 @@ DEST_USER=goce
 KEY=/root/.ssh/pi-backup
 HOME_DIR=/home/goce
 PIHOLE=/mnt/ssd/docker/docker/volumes/pihole_pihole_config/_data
-KUMA="$HOME_DIR/Desktop/Cursor/Pi-version-control/Pi-version-control/docker/uptime-kuma/data"
+KUMA="$HOME_DIR/Desktop/Cursor/Pi-version-control/Pi-version-control/pihole/docker/uptime-kuma/data"
 
 STAMP=$(date +%Y%m%d-%H%M%S)
 WORK=$(mktemp -d /tmp/pi-backup.XXXXXX)

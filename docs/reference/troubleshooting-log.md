@@ -66,7 +66,11 @@ Immich library and `/mnt/ssd/backups`; thumbs and encoded-video are skipped.
 loss, so it goes on the Terra (README Part A step 2, with the `hdparm.conf`
 entry).
 
-**Still open:** seed result (`restic check`); on the Terra: fstab, `chown -R
+**Outcome:** seed finished 2026-10-17. `restic check`: no errors. One
+snapshot `254ffab1` (16:47:59, host lemongrab, 133.029 GiB, all five paths).
+Drive unmounted, ready to move.
+
+**Still open:** on the Terra: fstab, `chown -R
 restic:restic /mnt/offsite/restic`, APM, rest-server, watchdog; on lemongrab:
 `terra.repo`, timer, health module (README Part B).
 
