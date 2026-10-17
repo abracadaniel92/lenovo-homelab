@@ -45,7 +45,13 @@ Add the entry at the **top** of the log (newest first, right under the intro). R
 **Gotchas:** anything non-obvious (optional).
 
 **Outcome / Still open:** fixed, mitigated, or what's left.
+
+**Reverse if:** (only for a decision NOT to do something, or to leave something as is)
+the checkable condition that would reopen it.
 ```
+
+The weekly review sweeps "Still open" and "Reverse if" lines, so keep them to one item per
+bullet and specific enough to check.
 
 ## Authoring rules
 
@@ -56,6 +62,9 @@ Add the entry at the **top** of the log (newest first, right under the intro). R
 5. **Cross-reference**: link to related prior entries, related runbooks (`MONITORING_AND_RECOVERY.md`, `CLOUDFLARE_MONITORING.md`), or commits.
 6. **Append-only**: new entries go at the top. Never edit or delete existing entries.
 7. **Public repo**: no passwords, tokens, webhook or ntfy URLs.
+8. **Verified vs assumed**: state facts you checked (with the command), and mark anything you
+   did not check as `(not verified)`. A wrong "fact" in the log gets copied everywhere (the
+   "1TB SATA SSD" was really an HDD for months).
 
 ## Workflow
 
@@ -65,7 +74,7 @@ Add the entry at the **top** of the log (newest first, right under the intro). R
 - [ ] 3. Draft entry using the template above
 - [ ] 4. Add it at the top of the device's log (do not modify existing entries)
 - [ ] 5. Show the user the new block for confirmation
-- [ ] 6. Blog-worthy story? Follow CLAUDE.md habit 7 (docs/blog-ideas.md)
+- [ ] 6. Blog-worthy story? Follow `.cursor/rules/blog-capture.mdc`
 ```
 
 ## Reference

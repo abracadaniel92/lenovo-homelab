@@ -54,12 +54,16 @@ applies only the ones the user approves.
 5. **Sweep.** After the queue is clear (or when asked), look across `applied/` and
    `decisions.md` and report suggestions, not changes:
    - **Repeated lessons.** The same point in two or more skills' proposals is a candidate for
-     `CLAUDE.md` or `homelab-governance.mdc` instead of scattered `SKILL.md` notes.
+     `CLAUDE.md` or `homelab-governance.mdc` instead of scattered `SKILL.md` notes. Promotion
+     gate (from stiki): suggest it only if it recurred AND would change a decision the agent
+     makes. A fact that is merely true stays where it is; `CLAUDE.md` is loaded every session
+     and every line costs attention.
    - **Stale skills.** `git log -1 --format=%cs -- .cursor/skills/<name>/SKILL.md` for each
      skill. One unchanged for months, while the troubleshooting logs show lots of activity in
      its area, deserves a read for drift.
 
-6. **Commit** only if the user asks; mention that nothing here is live code.
+6. **Commit** the review as one commit, `Lesson review <date>: N applied, N rejected` (the edits
+   and the moves together). Push only if the user says so.
 
 ## Output style
 

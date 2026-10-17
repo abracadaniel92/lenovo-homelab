@@ -70,7 +70,8 @@ See `docs/reference/troubleshooting-log.md` entry 2026-09-25.
 `.cursor/skills/` has step-by-step runbooks — follow the matching one:
 `add-homelab-service`, `update-homelab-service`, `troubleshoot-service-down`,
 `homelab-backup-restore`, `homelab-storage-migration`,
-`log-troubleshooting-entry`, `prepare-pull-request`, `lesson-review`.
+`log-troubleshooting-entry`, `prepare-pull-request`, `lesson-review`,
+`blog-review`, `weekly-review`.
 The human-readable master for additions is `SERVICE_ADDITION_CHECKLIST.md`.
 
 ## Paths that moved (fixed in the constitution on 2026-10-17)
@@ -183,10 +184,10 @@ before diagnosing anything; your incident may already be documented.
    rule or this file misled you, or the user corrects how you work, don't
    edit the guidance. Drop a proposal in `.cursor/proposals/pending/` and
    carry on; the user reviews them with the `lesson-review` skill.
-7. **Blog candidates**: after finishing a substantial piece of work (a
-   non-obvious root cause, a silent failure found, a migration, a new
-   device or service), ask whether it makes a good post for the gmojsoski.com
-   blog. If yes, end the reply with one line, `Blog candidate: <title>, <the
-   angle>`, and add the same line plus the log entry date to
-   `docs/blog-ideas.md`. Skip routine updates and restarts. Public repo: no
-   secrets or internal IPs in the idea line.
+7. **Blog capture** (`.cursor/rules/blog-capture.mdc`): when finished work
+   makes a good story (hidden root cause, silent failure, before/after
+   number, migration), write a candidate to `.cursor/blog/pending/` and end
+   the reply with `Blog candidate: <title>`. The owner approves or rejects
+   them with the `blog-review` skill.
+8. **Weekly review**: "weekly review" runs the `weekly-review` skill
+   (lessons, blog candidates, open items and reverse conditions).
