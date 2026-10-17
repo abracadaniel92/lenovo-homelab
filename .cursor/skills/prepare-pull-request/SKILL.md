@@ -1,210 +1,167 @@
 ---
 name: prepare-pull-request
-description: Prepare a pull request for the homelab repo — sync the working branch with origin/main, scan staged or committed changes for secrets (API keys, passwords, tokens, private keys, webhook URLs), run hygiene checks, and draft the gh pr create command. Use when the user says "open a PR", "prepare a pull request", "ready to merge", "sync with main", "scan for secrets", "check the commit for credentials", or "before I push".
+description: Commit and publish work in the homelab repo safely - small atomic commits while working, a secret scan, then either a direct push (lemongrab) or a pull request (Pi, Terra, dev machine), plus the deploy step after merge. Use when the user says "commit this", "open a PR", "prepare a pull request", "push", "ready to merge", "sync with main", "scan for secrets", "check the commit for credentials", or "before I push".
 ---
 
-# Prepare Pull Request
+# Commit and Publish (prepare-pull-request)
 
-Two-phase pre-PR workflow: (1) bring the branch up to date with `origin/main`, (2) scan the diff for secrets and other hygiene issues. Refuse to draft the PR command until both phases pass.
+Small commits while you work, one scan before anything leaves the machine, and a
+publish step that respects where you are. On lemongrab a push is cheap but a
+`checkout` or `pull` is a deploy (see `CLAUDE.md`).
 
-## Workflow
+## 1. Where am I? (publication mode)
 
+Run `hostname` first. The machine decides how work is published:
+
+| Machine | Mode | Why |
+|---|---|---|
+| `lemongrab` | **Direct**: commit on `main`, push `main` at the end of the task | The working tree is live; the change already happened. The commit records it. Switching branches mid-task would revert live scripts. |
+| `pihole`, `cricket` (Terra), dev machine | **PR**: `feature/<yyyy-mm-dd>-<short-name>` branch, PR into `main` | Their checkout is not production (except Unbound on the Pi), so review costs nothing. |
+
+The user can ask for a PR from lemongrab too: `git switch -c feature/<name>` is
+safe (no files change). Never `git checkout` an *existing* other branch there.
+
+`develop` is not used (12 commits behind `main` as of 2026-10-17). Don't target it.
+
+## 2. Atomic commits while working
+
+Commit after each step that works, not once at the end. The goal: anyone reading
+`git log` later can see what changed, in what order, and revert one step alone.
+
+One commit is **one logical change**:
+- One service, one fix, one doc update. Two unrelated fixes = two commits, even
+  if you made them together.
+- It passes pre-commit on its own and leaves nothing half-done (a script and the
+  config it needs go together).
+- A production change carries its troubleshooting-log entry **in the same
+  commit**, so the log and the change can't drift apart.
+- Pure moves/renames are their own commit, never mixed with edits.
+
+Stage exactly that change: `git add <paths>` (or `git add -p` for a file with
+two changes). Never `git add -A` blindly; check `git status` first.
+
+**Message** (match the existing history):
 ```
-- [ ] 1. Read current branch + status; confirm not on main
-- [ ] 2. Fetch origin and check how main has moved
-- [ ] 3. Sync strategy (rebase vs merge) — ask if ambiguous
-- [ ] 4. Resolve any conflicts surgically (don't touch unrelated services)
-- [ ] 5. Run secret scan against the diff
-- [ ] 6. Run hygiene checks (large files, .env, gitignored leaks, debug prints)
-- [ ] 7. Run pre-commit if configured
-- [ ] 8. Summarize the changes
-- [ ] 9. Draft gh pr create command for user to run
+<Area>: <what changed, as an outcome>; log <yyyy-mm-dd>
+                                              <- blank line
+<optional body: live path vs repo path, why, anything non-obvious>
 ```
+- Area is the device or service: `Pi:`, `Terra:`, `Caddy:`, `Immich:`, `B2 sync:`.
+  lemongrab-wide work can skip it.
+- The subject says the result, not the activity: "Pi-hole upstream to Unbound
+  (was Google)", not "update compose".
+- Add `; log <date>` when there is a troubleshooting-log entry, so the commit and
+  the entry find each other.
+- Say "live" vs "repo only" in the body when it isn't obvious.
 
-## 1. Branch state
+Don't squash or reorder commits that are already pushed. Before pushing you may
+fold a typo fix into its parent (`git commit --fixup <sha>` then
+`GIT_SEQUENCE_EDITOR=: git rebase -i --autosquash origin/main`), but keeping
+small commits is the point; don't merge them into one big one.
 
-```bash
-git status
-git branch --show-current
-git log --oneline origin/main..HEAD
-```
-
-If currently on `main`: stop and ask the user whether they want to (a) push directly to `main` (homelab norm for hotfixes — but require explicit confirmation), or (b) create a feature branch.
-
-## 2. Check for upstream movement
+## 3. Before publishing: sync
 
 ```bash
 git fetch origin
-git log --oneline HEAD..origin/main          # commits on main not in HEAD
-git log --oneline origin/main..HEAD          # commits on HEAD not on main
+git log --oneline HEAD..origin/main    # commits on main you don't have
 ```
 
-If `HEAD..origin/main` is empty, the branch is already up to date — skip to step 5.
+- Nothing new on `main`: continue.
+- New commits, nothing pushed yet: `git rebase origin/main`.
+- New commits, branch already pushed: `git merge origin/main` locally.
+- **Never** open a "sync" PR from `main` into a feature branch. Those back-merge
+  PRs (#105 to #111) added noise and auto-titles ("Merge pull request #109...")
+  that say nothing.
+- On lemongrab, `git pull --ff-only` is a deploy: fine when you mean it, then
+  run `grep -c SQLITE_TAR /opt/homelab/scripts/backup-engine.sh` (expect 1).
 
-## 3. Sync strategy
+Conflicts: resolve only inside the files of this change (surgical rule). If a
+conflict shows work is needed elsewhere, STOP and ask.
 
-Ask the user once if not specified:
+## 4. Scan (mandatory before any push)
 
-- **Rebase** (preferred for clean linear history): `git rebase origin/main`
-- **Merge** (preserves merge commits): `git merge origin/main`
-
-Default: rebase. Switch to merge if the branch is shared with others or has been pushed already with rebase-incompatible history.
-
-NEVER `git push --force` to `main`. Force-push on a feature branch is acceptable only after explicit user confirmation, and prefer `--force-with-lease` over `--force`.
-
-## 4. Conflict resolution (surgical rule)
-
-Per the homelab governance rule: when resolving conflicts in a service-specific change, do NOT also touch unrelated services. If a conflict reveals that work elsewhere is required, STOP and ASK the user.
+The repo is **public**. `.gitignore` covers `.env`, keys, `health_webhook_url`,
+`ntfy_topic_url`, `healthcheck_ping_url` and cloudflared JSON, but secrets still
+leak inline.
 
 ```bash
-git status                                    # see conflicted files
-# resolve each file
-git add <file>
-git rebase --continue   # or git merge --continue
+gitleaks git --no-banner --log-opts="origin/main..HEAD"     # installed, v8.30
+pre-commit run --from-ref origin/main --to-ref HEAD         # private keys, large files, yaml, shellcheck
 ```
 
-## 5. Secret scan (mandatory before PR)
-
-The homelab `.gitignore` already excludes `.env`, `*.key`, `*.pem`, `credentials.json`, `health_webhook_url`, and cloudflared JSON files. The scan still runs because secrets can leak via:
-- Hardcoded tokens in committed scripts or compose files
-- Webhook URLs pasted inline
-- New file types not yet covered by `.gitignore`
-
-### Try real tools first (preferred)
-
-Detect what's installed and use the best available:
+Then this regex pass for homelab-specific leaks gitleaks may miss:
 
 ```bash
-if command -v gitleaks &>/dev/null; then
-    gitleaks detect --no-git --staged --verbose
-    gitleaks protect --staged --verbose      # alternate
-elif command -v trufflehog &>/dev/null; then
-    trufflehog git file://. --since-commit origin/main --only-verified
-elif command -v detect-secrets &>/dev/null; then
-    git diff origin/main..HEAD | detect-secrets scan --string
-fi
+git diff origin/main..HEAD | rg -n -e \
+    'ntfy\.sh/[A-Za-z0-9_-]{6,}' \
+    -e 'hc-ping\.com/[0-9a-f-]{20,}' \
+    -e 'PrivateKey\s*=' \
+    -e '(?i)(api[_-]?key|secret|passwd|password|token|admin_token)\s*[:=]\s*["'"'"']?[A-Za-z0-9_/+=$.-]{16,}' \
+    -e '(?i)bearer\s+[A-Za-z0-9_/+=.-]{20,}' \
+    -e '-----BEGIN [A-Z ]*PRIVATE KEY-----'
+git diff --name-only origin/main..HEAD | rg -i '\.env$|credentials|\.key$|\.pem$|\.bak-'
 ```
 
-If none are installed and the user wants persistent scanning, suggest installing one of them under `/home` (per the workspace storage-preference rule) — for example `pipx install detect-secrets` or download `gitleaks` to `~/.local/bin/`. Do NOT install without confirmation.
+**Any hit:** stop and show the line. If it is real:
+1. Remove it from the commit (rewrite the unpushed commit; if already pushed, it is public).
+2. **Rotate the secret.** Assume it is compromised, even if it was only pushed for a minute.
+3. Re-scan.
 
-### Regex fallback (always run this)
+Placeholders (`changeme`, `<token>`, templates) can be acknowledged and skipped.
 
-Even when a real scanner is present, run the curated `rg` patterns below against the diff as a belt-and-suspenders check. Include this exact command:
+## 5. Publish
 
+**Direct (lemongrab):**
 ```bash
-git diff origin/main..HEAD | rg -n --color=always -e \
-    'AKIA[0-9A-Z]{16}' \
-    -e 'gh[ps]_[A-Za-z0-9]{36}' \
-    -e 'glpat-[A-Za-z0-9_-]{20}' \
-    -e 'xox[baprs]-[A-Za-z0-9-]{10,}' \
-    -e 'sk-[A-Za-z0-9]{20,}' \
-    -e '-----BEGIN ((RSA|EC|OPENSSH|DSA|PGP) )?PRIVATE KEY-----' \
-    -e 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+' \
-    -e 'https://hooks\.slack\.com/services/[A-Z0-9/]+' \
-    -e 'https://discord(app)?\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+' \
-    -e '(?i)(api[_-]?key|apikey|access[_-]?key|secret|passwd|password|token)\s*[:=]\s*["'"'"']?[A-Za-z0-9_/+=-]{16,}["'"'"']?' \
-    -e '(?i)bearer\s+[A-Za-z0-9_/+=.-]{20,}'
+git log --oneline origin/main..HEAD   # show the user what goes out
+git push origin main                  # only after the user OKs the push
 ```
 
-What each pattern catches:
-
-| Pattern | Catches |
-|---|---|
-| `AKIA…` | AWS access key ID |
-| `ghp_/ghs_` | GitHub personal/server tokens |
-| `glpat-…` | GitLab personal access tokens |
-| `xox[baprs]-…` | Slack tokens |
-| `sk-…` | OpenAI / Stripe-style API keys |
-| `-----BEGIN … PRIVATE KEY-----` | RSA, EC, OpenSSH, DSA, PGP private keys |
-| `eyJ…` | JWTs (header.payload.signature) |
-| Slack/Discord webhook URLs | Webhook secrets |
-| Generic `key=value` with 16+ char value | Catch-all for `API_KEY=…`, `password=…`, `token=…` |
-| `bearer …` | Authorization headers |
-
-**If ANY pattern matches**: stop. Show the user the line(s), confirm whether it's a real secret or a false positive. If real:
-1. Remove from the diff (`git restore --staged`, edit the file, re-add)
-2. Add the file to `.gitignore` if appropriate
-3. **Rotate the secret** — assume it's compromised
-4. Re-scan before proceeding
-
-False positives (e.g. `gokapi/config.json.template` placeholder) can be acknowledged and the scan re-run.
-
-## 6. Hygiene checks
-
+**PR (other machines):**
 ```bash
-# Files larger than 1 MB in the diff (likely shouldn't be in git)
-git diff --stat origin/main..HEAD | awk '$NF ~ /M$/ || $(NF-1) > 1000'
+git push -u origin HEAD
+gh pr create --base main --title "<outcome, same style as a commit subject>" --body "$(cat <<'EOF'
+## What changed
+- <one line per commit or group of commits>
 
-# .env or credential files accidentally added
-git diff --name-only origin/main..HEAD | rg -i '\.env|credentials|secret|\.key$|\.pem$|health_webhook_url'
+## Live vs repo
+- <what was already changed live, on which machine; what is repo only>
 
-# Leftover debug/dev artifacts
-git diff origin/main..HEAD | rg -n --color=always -e \
-    'console\.log' \
-    -e '\bbreakpoint\(\)' \
-    -e '\bipdb\b' \
-    -e '\bpdb\.set_trace' \
-    -e 'TODO.*FIXME|FIXME.*XXX'
-```
+## Log entries
+- <device> log <yyyy-mm-dd>: <title>
 
-Anything that hits should be discussed with the user before continuing.
-
-## 7. Run pre-commit (if available)
-
-The repo has `.pre-commit-config.yaml` with `detect-private-key`, `check-added-large-files`, `yamllint`, `shellcheck`, etc.
-
-```bash
-if command -v pre-commit &>/dev/null; then
-    pre-commit run --from-ref origin/main --to-ref HEAD
-fi
-```
-
-If `pre-commit` is not installed, mention it but don't block.
-
-## 8. Summarize the changes
-
-```bash
-git log --oneline origin/main..HEAD
-git diff --stat origin/main..HEAD
-```
-
-Draft a concise summary: services touched, type of change (feat/fix/docs/refactor), risk level. Cross-check against the surgical-rule files (Caddyfile globals, `~/.cloudflared/config.yml`, `enhanced-health-check.sh`, `systemd/*`) — if any of those are touched, flag it loudly so the user can confirm intent.
-
-## 9. Draft the gh pr create command
-
-```bash
-git push -u origin HEAD                      # only if user confirmed
-
-gh pr create --title "<concise title>" --body "$(cat <<'EOF'
-## Summary
-<1-3 bullets on what changed and why>
-
-## Services touched
-- <service>: <change>
+## After merge (deploy)
+- <exact steps, see below, or "none: docs only">
 
 ## Verification
-- [ ] scripts/verify-services.sh green
-- [ ] curl checks for any new/changed subdomain
-- [ ] No secrets in diff (gitleaks/regex scan clean)
-
-## Notes
-<anything reviewer should know>
+- [ ] gitleaks + regex scan clean
+- [ ] pre-commit passes
+- [ ] <verify-services.sh / curl / test script as relevant>
 EOF
 )"
 ```
+Show the command first; run `gh pr create` only after the user confirms.
 
-Show the command to the user; do NOT execute `gh pr create` without explicit confirmation.
+**Merge with "Create a merge commit" or "Rebase and merge", never "Squash".**
+Squash turns the small commits back into one big one.
+
+## 6. After merge: deploy where needed
+
+| Changed | Do after merge |
+|---|---|
+| `scripts/`, `docker/caddy/` (lemongrab reads them from the checkout) | On lemongrab: `git fetch && git pull --ff-only` on `main`, then the `SQLITE_TAR` check; for Caddy, validate and restart |
+| `pihole/docker/unbound/` | On the Pi: `git switch main && git pull --ff-only`, then `cd pihole/docker/unbound && docker compose up -d` |
+| Live paths outside the repo | Nothing: they were changed live first; the PR only records them |
+| Docs only | Nothing |
+
+On lemongrab, after a PR you opened from there merges, move back with one
+command so the tree is never on stale `main`: `git fetch && git switch -C main origin/main`.
+Then delete the merged branch (`git branch -d feature/<name>`).
 
 ## Hard rules
 
-- NEVER `git push --force` to `main`. Always `--force-with-lease` and only on feature branches with explicit user OK.
-- NEVER bypass pre-commit hooks (`--no-verify`) unless the user explicitly asks for it.
-- NEVER auto-commit secrets you found "to fix later". Halt and surface them.
-- If a secret is found, **the secret is compromised** — instruct the user to rotate it, not just remove it from the diff.
-- Stay surgical: don't reformat unrelated files, don't fix lints in code outside the diff.
-
-## Reference
-
-- Repo `.gitignore` already excludes the standard sensitive files
-- Pre-commit config: `.pre-commit-config.yaml`
-- Surgical rule and read-only files: see governance rule (`homelab-governance.mdc`)
+- Never `git push --force` to `main`. On a feature branch only with the user's OK, and `--force-with-lease`.
+- Never `--no-verify` unless the user asks.
+- Never commit a secret "to fix later". Stop and surface it.
+- Never `git checkout`/`switch` to an existing older branch on lemongrab or on the Pi.
+- Stay surgical: no reformatting or lint fixes outside the change.
