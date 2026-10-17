@@ -6,6 +6,60 @@ Uptime Kuma). Newest first. Same format as the lemongrab log at
 the Terra has its own at [`terra/troubleshooting-log.md`](../terra/troubleshooting-log.md).
 Pi entries from before 2026-10-03 are in the lemongrab log.
 
+## [2026-10-17] Pi-hole was using Google DNS, not Unbound; Pi-hole and Kuma upgraded; zram-only swap
+
+**Symptom:** `docker exec pihole pihole-FTL --config dns.upstreams` showed
+`[ 8.8.8.8, 8.8.4.4 ]`. Every LAN lookup went to Google; Unbound was running
+but unused. Cause: the compose file set `PIHOLE_DNS_: '127.0.0.1#5335'`, a v5
+variable that Pi-hole v6 ignores. The same applies to its `WEBPASSWORD` and
+`FTLCONF_LOCAL_IPV4` placeholders, so they never reset anything either; v6
+keeps all settings in `pihole.toml` on the `pihole_config` volume.
+
+**Changes:**
+- `pihole/docker/pihole/docker-compose.yml`: removed the three v5 variables,
+  added a comment on where v6 settings live. Recreated from this (current) path:
+  `docker compose pull && docker compose up -d`. Pi-hole is now Core v6.5,
+  Web v6.6.1, FTL v6.8. Password, 3 adlists and ~897k gravity domains carried
+  over (same `pihole` project, same named volumes).
+- `pihole/docker/unbound/unbound.conf`: `auto-trust-anchor-file:
+  "/var/unbound/root.key"` (DNSSEC validation; the file ships with the
+  klutchell image) and `cache-min-ttl` 3600 → 300, so moved services are not
+  pinned to stale IPs for an hour. Checked with `unbound-checkconf`, then
+  `docker compose restart unbound`.
+- Upstream switched: `docker exec pihole pihole-FTL --config dns.upstreams
+  '["127.0.0.1#5335"]'`. Revert: same command with `'["8.8.8.8","8.8.4.4"]'`.
+- Uptime Kuma 1.23.17 → 2.5.6, moved to its own compose at
+  `pihole/docker/uptime-kuma/` (resolves the open item from 2026-10-03). Data
+  moved from `docker/uptime-kuma/data/` to `pihole/docker/uptime-kuma/data/`.
+  v1 data saved first as `~/kuma-v1-data-20261017.tar.zst`. The v2 aggregate
+  table migration took ~7 min for 10 monitors (3-day history); the UI shows only
+  a progress page until it finishes ("cannot get settings" meanwhile).
+  `pihole/backup/pi-backup.sh` `KUMA=` path updated and reinstalled.
+- Swap: `/etc/rpi/swap.conf.d/90-zram-only.conf` sets `Mechanism=zram`. The
+  default `zram+file` wrote idle zram pages to the 2 GB `/var/swap` on the SD
+  card (`rpi-zram-writeback.timer`). Takes effect at next boot, which also
+  removes `/var/swap`.
+- ModemManager left running and CUPS kept on purpose (printer in daily use).
+
+**Verification:**
+- `docker exec pihole dig @127.0.0.1 -p 5335 cloudflare.com` has the `ad` flag;
+  `dnssec-failed.org` returns SERVFAIL.
+- 12 uncached domains through Pi-hole resolved in 55–260 ms, 0 failures; the
+  Pi-hole log shows `forwarded ... to 127.0.0.1#5335`.
+- Kuma: 10/10 monitors up after migration; `keepDataPeriodDays` still 3.
+- `pi-20261017-183354.tar.zst` (49 MB) uploaded with the new Kuma path.
+
+**Lessons:**
+- After a Pi-hole major upgrade, check the effective config
+  (`pihole-FTL --config`), not the compose env; ignored variables fail silently.
+- Do not use `docker/uptime-kuma/` on the Pi: it is lemongrab's mirrored compose.
+
+**Pending (owner):** firmware and OS updates, then reboot:
+`sudo rpi-eeprom-update -a && sudo apt update && sudo apt full-upgrade -y && sudo reboot`.
+After the reboot, check `swapon --show` (zram0 only) and that `/var/swap` is gone.
+
+**Status:** ✅ Done, except the pending reboot.
+
 ## [2026-10-17] Moved to a 128 GB SD card, cut SD writes, nightly backup to lemongrab
 
 **SD card:** cloned the 29 GB boot card onto a 128 GB card with `rpi-clone`
