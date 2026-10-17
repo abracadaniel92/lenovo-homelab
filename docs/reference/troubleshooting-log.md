@@ -5,6 +5,31 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-17] Immich HDD head parking stopped (APM 254)
+
+**Symptom:** SMART on the Immich drive (WD10SPZX, 2.5" laptop drive,
+`/mnt/ssd_1tb`) showed `Load_Cycle_Count` 282k after 9.4k power-on hours, rated
+~600k. The drive's power saving parked the heads every ~2 min (~30/hour), which
+would have hit the rating in roughly 1.2 years.
+
+**Change (live):** `scripts/fix-hdd-head-parking.sh` sets `hdparm -B 254` (APM
+max performance, no head parking) now and persists it in `/etc/hdparm.conf`
+for boot. First run saves a baseline count to
+`/var/lib/hdd-load-cycle.baseline`; later runs print growth since then.
+
+**Verification:**
+```
+sudo /opt/homelab/scripts/fix-hdd-head-parking.sh
+ APM_level      = 254
+Load cycles: +0 in 215 min (before the fix: ~30/hour)
+```
+
+**Outcome:** Head parking stopped. Load cycles are no longer the drive's wear
+limit. It is still a laptop drive running 24/7 and the Immich offsite backup
+still waits on the new drive, so keep an eye on SMART
+(`Reallocated_Sector_Ct`, `Current_Pending_Sector`). Re-run the script after a
+reboot to confirm the setting stuck.
+
 ## [2026-10-13] Removed Android emulator + ws-scrcpy stack
 
 **Trigger:** ws-scrcpy was the top CPU user (~2%) while its emulator container
