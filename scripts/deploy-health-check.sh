@@ -10,7 +10,7 @@
 
 set -e
 
-SCRIPT_SOURCE="/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/enhanced-health-check.sh"
+SCRIPT_SOURCE="/opt/homelab/scripts/enhanced-health-check.sh"
 SCRIPT_DEST="/usr/local/bin/enhanced-health-check.sh"
 
 echo "🚀 Deploying Enhanced Health Check to Production"

@@ -2,7 +2,7 @@
 
 # Configuration
 SUBDOMAINS=("gmojsoski.com" "jellyfin.gmojsoski.com" "cloud.gmojsoski.com" "vault.gmojsoski.com" "paperless.gmojsoski.com" "mattermost.gmojsoski.com" "linkwarden.gmojsoski.com" "immich.gmojsoski.com" "rss.gmojsoski.com" "cal.gmojsoski.com")
-LOG_FILE="/home/goce/Desktop/Cursor projects/Pi-version-control/logs/verification.log"
+LOG_FILE="/opt/homelab/logs/verification.log"
 
 mkdir -p "$(dirname "$LOG_FILE")"
 
