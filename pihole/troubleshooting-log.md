@@ -6,6 +6,24 @@ Uptime Kuma). Newest first. Same format as the lemongrab log at
 the Terra has its own at [`terra/troubleshooting-log.md`](../terra/troubleshooting-log.md).
 Pi entries from before 2026-10-03 are in the lemongrab log.
 
+## [2026-10-18] Weekly review: open items
+
+First per-machine weekly review on the Pi. Items checked against live state.
+
+**Closed:**
+- Firmware/OS updates and reboot (from log 2026-10-17): rebooted 2026-10-17
+  18:37; `swapon --show` lists zram0 only; `/var/swap` is gone.
+- Uptime Kuma off lemongrab's compose (from log 2026-10-03): runs
+  `louislam/uptime-kuma:2` with data in `pihole/docker/uptime-kuma/data`.
+- `sshd` password auth (from lemongrab log 2026-10-08 item 7, never logged
+  here): disabled by the owner; `sshd -T` shows `passwordauthentication no`.
+
+**Drift:** pihole, unbound, uptime-kuma up; upstream `127.0.0.1#5335`;
+`pi-backup.timer` last ran 2026-10-18 02:32; Unbound mounts `unbound.conf`
+from this checkout. 5 apt packages upgradable.
+
+**Carried over:** none.
+
 ## [2026-10-17] Pi-hole was using Google DNS, not Unbound; Pi-hole and Kuma upgraded; zram-only swap
 
 **Symptom:** `docker exec pihole pihole-FTL --config dns.upstreams` showed

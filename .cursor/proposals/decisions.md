@@ -6,6 +6,7 @@ evidence.
 
 | Date | Outcome | File changed | What changed, or why rejected |
 |------|---------|---------------|-------------------------------|
+| 2026-10-18 | Applied | `CLAUDE.md` | Pi bullet names the real hostname `goce` (was `pihole`), so the `hostname` check matches. |
 | 2026-10-18 | Applied | `blog-review/SKILL.md` | Step 1: grep portfolio_v2 published posts and drafts for overlap before asking |
 | 2026-10-18 | Applied | `CLAUDE.md` | Commands the owner must run stay one short line (Termius on the phone wraps long ones) |
 | 2026-10-17 | Applied | `update-homelab-service/SKILL.md` | Step 7: `up -d` can leave the old image running; use `--force-recreate --no-deps` and check the version. |

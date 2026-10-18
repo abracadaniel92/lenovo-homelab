@@ -26,7 +26,7 @@ repo-only until the user tells you otherwise.
   everything you do is **repo/VCS-only by definition**. You cannot restart
   services, run `verify-services.sh`, or touch live configs from here. Say so
   explicitly when a change needs a follow-up step on the server to take effect.
-- **On the Pi (`pihole`):** the checkout is also live for DNS. Unbound
+- **On the Pi (hostname `goce`, the Pi-hole box):** the checkout is also live for DNS. Unbound
   bind-mounts `pihole/docker/unbound/unbound.conf` from it, so a branch switch
   or pull that touches that folder needs
   `cd pihole/docker/unbound && docker compose up -d` afterwards. Never use
