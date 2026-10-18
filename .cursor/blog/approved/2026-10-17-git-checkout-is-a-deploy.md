@@ -1,6 +1,6 @@
 # When `git checkout` is a deploy
 
-**Angle:** If services read config from your git working tree, a branch switch is a production change.
+**Angle:** If services read config from your git working tree, a branch switch is a production change. Lead with the Pi (new); the server half is already a paragraph in /blog/space-in-path-killed-homelab-automation, so summarize and link it.
 
 **Story beats:**
 - Configs and scripts run straight from the repo checkout
@@ -14,9 +14,9 @@
 **Public check:** Nothing
 
 **Outline:**
-1. My repo checkout is production (bind mounts, the /opt/homelab symlink)
-2. The Pi: a branch switch deleted the file Unbound was running from
-3. The server: an old branch silently reverted the backup script
+1. The Pi: a branch switch deleted the file Unbound was running from
+2. Why: Unbound bind-mounts its config straight from the repo checkout
+3. Not the first time: the server's backup script (short, link to the published post)
 4. Rules now: stay on main, commit there, verify after any branch operation
 5. How to find which of your directories are live
 

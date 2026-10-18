@@ -5,6 +5,9 @@ candidate.
 
 | Date | Outcome | Candidate | Note or reason |
 |------|---------|-----------|----------------|
+| 2026-10-18 | Published | space-in-path-killed-backups | Already live since 2026-10-08 as /blog/space-in-path-killed-homelab-automation |
+| 2026-10-18 | Split out (soon) | who-watches-the-watchman | Not in the published space-in-path post; TIL follow-up to it |
+| 2026-10-18 | Re-angled | git-checkout-is-a-deploy | Server half already in the published space-in-path post; lead with the Pi |
 | 2026-10-18 | Merged | who-watches-the-watchman into space-in-path-killed-backups | Closing section of the same story; too small alone |
 | 2026-10-18 | Approved (soon) | three-copies-photo-library | Long post; wait for the new backup drive (online 2026-10-19); public check matters most here |
 | 2026-10-18 | Approved (next) | space-in-path-killed-backups | Long post, includes merged health-check audit; backstory for #2 and #11 |

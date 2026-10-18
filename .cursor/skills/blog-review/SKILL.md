@@ -12,7 +12,10 @@ where the owner decides. Same shape as `lesson-review`.
 
 1. **List the queue.** Read every file in `.cursor/blog/pending/` (ignore `.gitkeep`). One line
    each: date, slug, title. Point out candidates that overlap (same incident, or the same idea
-   from two angles) so the owner can merge them.
+   from two angles) so the owner can merge them. Also grep the published and draft posts in
+   the `portfolio_v2` repo (`blog/*.md`, `blog/drafts/*.md`) for each candidate's key terms. A
+   candidate already told there is not new: say which post and how much it covers (whole
+   story, one paragraph, or a link-worthy mention) before asking.
 
 2. **One at a time.** Show the full candidate, then give a short verdict against the bar below,
    so the owner gets an opinion, not just a form. Ask: **approve, reject, merge, or skip**.

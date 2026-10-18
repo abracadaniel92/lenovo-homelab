@@ -14,7 +14,7 @@
 
 **Evidence:** lemongrab log 2026-09-25, lemongrab log 2026-09-26 ("Audit of the health-check modular migration", "Review of the 2026-09-25 repair"), lemongrab log 2026-10-08 (healthchecks.io)
 
-**Merged from:** health-check-could-never-fail (2026-10-18), who-watches-the-watchman (2026-10-18)
+**Merged from:** health-check-could-never-fail (2026-10-18). who-watches-the-watchman was merged in, then split back out the same day (not in the published post).
 
 **Public check:** No secrets; real path is fine. Leave out: the healthchecks.io ping URL
 
@@ -31,4 +31,4 @@
 
 **Priority:** next (backstory for git-checkout-is-a-deploy; publish before or with it)
 
-**Published:**
+**Published:** 2026-10-08, https://gmojsoski.com/blog/space-in-path-killed-homelab-automation (written before this candidate existed; covers the outage, the health-check audit and the `git checkout` paragraph, NOT the dead man's switch)

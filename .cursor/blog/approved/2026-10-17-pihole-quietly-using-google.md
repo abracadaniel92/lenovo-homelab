@@ -22,6 +22,6 @@
 
 **Effort:** post (short)
 
-**Priority:** next
+**Priority:** next, first in the queue (strongest fully new story)
 
 **Published:**
