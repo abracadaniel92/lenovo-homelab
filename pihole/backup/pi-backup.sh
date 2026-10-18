@@ -28,8 +28,10 @@ done
 dpkg --get-selections > "$S/meta/dpkg-selections.txt"
 crontab -l -u goce > "$S/meta/crontab-goce.txt" 2>/dev/null || true
 docker ps -a --format '{{.Names}}\t{{.Image}}\t{{.Status}}' > "$S/meta/docker-ps.txt"
+# shellcheck disable=SC2046  # one arg per container id
 docker inspect $(docker ps -aq) > "$S/meta/docker-inspect.json"
 
+# shellcheck disable=SC2046  # one arg per ~/*.sh file
 tar -C / --zstd -cf "$WORK/pi-$STAMP.tar.zst" \
     --exclude="${PIHOLE#/}/gravity*.db" --exclude="${PIHOLE#/}/pihole-FTL.db*" \
     --exclude="${PIHOLE#/}/listsCache" \
@@ -45,7 +47,8 @@ tar -C / --zstd -cf "$WORK/pi-$STAMP.tar.zst" \
     home/goce/.claude \
     home/goce/.bashrc home/goce/.profile \
     $(cd / && ls -d home/goce/*.sh 2>/dev/null) \
-    -C "$WORK" "pi-$STAMP"
+    -C "$WORK" "pi-$STAMP" \
+    || [ $? -eq 1 ]  # 1 = "file changed as we read it" (live /etc, ~/.claude); only 2 is fatal
 
 rsync -t --chmod=F600 -e "ssh -i $KEY -p $DEST_PORT -o BatchMode=yes" \
     "$WORK/pi-$STAMP.tar.zst" "$DEST_USER@$DEST_HOST:"
