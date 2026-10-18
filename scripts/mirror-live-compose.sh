@@ -21,6 +21,7 @@ for d in "${STACKS[@]}"; do
     n=$(basename "$d")
     mkdir -p "$REPO/docker/$n"
     cp "$d/docker-compose.yml" "$REPO/docker/$n/docker-compose.yml"
+    [ ! -f "$d/Dockerfile" ] || cp "$d/Dockerfile" "$REPO/docker/$n/Dockerfile"
 done
 
 cd "$REPO"
