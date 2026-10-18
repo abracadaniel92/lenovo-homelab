@@ -13,10 +13,15 @@
 
 **Public check:** Leave out: LAN IPs
 
-**Outline:** (filled in at approval)
+**Outline:**
+1. The compose file said: upstream = my local Unbound
+2. Pi-hole v6 ignores `PIHOLE_DNS_`; every query went to Google
+3. The one command that shows the truth: `pihole-FTL --config dns.upstreams`
+4. The fix: upstream in the v6 config, DNSSEC on, `dnssec-failed.org` returns SERVFAIL
+5. After a major upgrade, check the effective config, not the file you wrote
 
-**Effort:** (filled in at approval)
+**Effort:** post (short)
 
-**Priority:** (filled in at approval)
+**Priority:** next
 
 **Published:**

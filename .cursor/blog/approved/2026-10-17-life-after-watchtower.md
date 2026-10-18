@@ -13,10 +13,15 @@
 
 **Public check:** Leave out: ntfy topic
 
-**Outline:** (filled in at approval)
+**Outline:**
+1. Watchtower stopped running months ago, and it's unmaintained
+2. The replacement: a weekly ntfy list of newer images, one service at a time
+3. Trap 1: rate-limiting myself on Docker Hub
+4. Trap 2: `up -d` that didn't switch images; compose profiles that hide services
+5. The checklist that keeps manual updates honest
 
-**Effort:** (filled in at approval)
+**Effort:** post
 
-**Priority:** (filled in at approval)
+**Priority:** soon
 
 **Published:**

@@ -13,10 +13,15 @@
 
 **Public check:** Nothing
 
-**Outline:** (filled in at approval)
+**Outline:**
+1. My repo checkout is production (bind mounts, the /opt/homelab symlink)
+2. The Pi: a branch switch deleted the file Unbound was running from
+3. The server: an old branch silently reverted the backup script
+4. Rules now: stay on main, commit there, verify after any branch operation
+5. How to find which of your directories are live
 
-**Effort:** (filled in at approval)
+**Effort:** post
 
-**Priority:** (filled in at approval)
+**Priority:** next (target: publish by end of October 2026)
 
 **Published:**

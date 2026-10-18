@@ -5,6 +5,55 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-18] Weekly review: open items
+
+First weekly review. Items checked against live state where possible.
+
+**Closed:**
+- Pi nightly backup (from log 2026-10-17): `pi-20261018-023204.tar.zst` arrived
+  02:32, so the Pi timer runs.
+- `/usr/local/bin/css-update` (from log 2026-10-05): already gone.
+- ws-scrcpy port 8233 (from log 2026-10-08 item 6): closed, stack removed 2026-10-13.
+- `.bak-20261008` files with plaintext secrets (from log 2026-10-08 item 2):
+  deleted (4 compose backups, paperless `.env.bak`). The kitchenowl,
+  vaultwarden and nextcloud `.env.bak` were already gone.
+- Vaultwarden `ADMIN_TOKEN` plaintext (from log 2026-10-08 item 3): admin page
+  never used (no `data/config.json`), so the `ADMIN_TOKEN` line was removed from
+  the live `.env` and the container recreated. `/admin` now says "disabled";
+  `/alive` 200 locally and via vault.gmojsoski.com. Revert: add the line back,
+  `docker compose up -d --force-recreate`.
+- Authelia (from log 2026-10-08 item 4): deleted. Live
+  `/home/docker-projects/authelia` (never ran), repo `docker/authelia/`, its
+  `mirror-live-compose.sh` entry, and the `@auth` (auth.gmojsoski.com → :9091)
+  block in `docker/caddy/config.d/50-utilities.caddy` (owner approved; no
+  tunnel hostname, no DNS, nothing on 9091, so no visible impact). Caddy
+  validated and restarted; `verify-services.sh`: all healthy.
+- travelsync (from log 2026-10-08 item 5): **that item was backwards.**
+  `/home/docker-projects/travelsync` (= `/mnt/ssd/docker-projects/travelsync`)
+  is the live stack the `documents-to-calendar` container runs from (its data,
+  DB, `.env`). The leftover was `DocumentsToCalendar-1` (old compose +
+  Dockerfile, Dec 2025): removed from the repo and the mirror script; live
+  folder removal left to the owner (`rm -rf /home/docker-projects/DocumentsToCalendar-1`).
+- Pi `sshd` password auth (from log 2026-10-08 item 7): owner disabled it; to be
+  logged in the Pi log.
+- Pi firmware/OS update and reboot (from Pi log 2026-10-17): owner says done.
+- Pi Uptime Kuma off lemongrab's compose (from Pi log 2026-10-03): done
+  2026-10-17 (Pi log), Kuma 2.5.6 at `pihole/docker/uptime-kuma/`.
+- Terra reboot test (from Terra log 2026-10-05): passed (later Terra entry).
+- Terra BIOS "restore on AC power loss" (from Terra log 2026-10-05): owner says done.
+
+**Dropped:**
+- Bind Portainer (9000/9443) to 127.0.0.1, disable xrdp (3389) (from log
+  2026-10-08 item 6): owner uses both, LAN is family only.
+
+**Reverse if:** someone outside the family gets LAN or VPN access; then bind
+Portainer to 127.0.0.1 and put xrdp behind the VPN only.
+
+**Carried over:**
+- Immich offsite to the Terra (from log 2026-10-08 item 1, Terra log): Terra
+  fstab, rest-server, watchdog, `terra.repo`, timer, health module. Open since
+  2026-10-08; new drive online 2026-10-19.
+
 ## [2026-10-17] Pi nightly backup: receiver on lemongrab (WD disk)
 
 **Goal:** the Pi (Pi-hole host) now builds a ~50 MB `pi-YYYYMMDD-HHMMSS.tar.zst`

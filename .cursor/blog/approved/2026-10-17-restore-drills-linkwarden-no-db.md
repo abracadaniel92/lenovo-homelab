@@ -13,10 +13,15 @@
 
 **Public check:** Nothing
 
-**Outline:** (filled in at approval)
+**Outline:**
+1. Every night: backup written, archive verified, all green
+2. Linkwarden's archives never had its database in them
+3. Found by running a restore drill for all five services
+4. `restore-drill.sh`: open each backup and check the data is really there
+5. Verify contents, not just that a file was written
 
-**Effort:** (filled in at approval)
+**Effort:** post
 
-**Priority:** (filled in at approval)
+**Priority:** next
 
 **Published:**

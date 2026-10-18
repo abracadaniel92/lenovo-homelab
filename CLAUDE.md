@@ -132,6 +132,11 @@ New-route restart sequence: add the ingress line to the live
 `~/.cloudflared/config.yml` (edit it; never `cp` the repo copy over it, they
 differ) → restart caddy → restart cloudflared → verify. Caddy and cloudflared only read config at startup.
 
+Commands the owner must run (`! <cmd>`): keep them to one short line, at most
+two steps joined by `&&`; otherwise write a scratchpad script and give
+`! bash <script>`. On the phone (Termius) long pasted lines wrap and each piece
+runs as its own command; you can't tell which device is in use.
+
 ## Docs map
 
 Everything is indexed in `docs/README.md` (diátaxis-style: concepts /
@@ -148,9 +153,8 @@ before diagnosing anything; your incident may already be documented.
   `scripts/update-portfolio.sh` → synced to `/mnt/ssd/docker-projects/caddy/site`
   on the server. The repo's `site/` copy is stale by design of the new
   pipeline — don't edit it expecting to change gmojsoski.com.
-- **SSO on `:9091` is Authelia, not Authentik**, and it is NOT running
-  (checked 2026-10-08: stack exists at `/home/docker-projects/authelia`,
-  mirrored to `docker/authelia/`, but no container). Don't assume SSO exists.
+- **There is no SSO.** The never-run Authelia stack, its repo mirror and the
+  `auth.gmojsoski.com` Caddy block were removed 2026-10-18.
 - Stacks under `/home/docker-projects/` and `/home/apps/nextcloud` run from
   those live paths. Their compose files are mirrored into `docker/<name>/` by
   `scripts/mirror-live-compose.sh` (live is truth; secrets stay in each live
@@ -160,7 +164,7 @@ before diagnosing anything; your incident may already be documented.
   the Caddy `config.d/` snippets are closer to truth.
 - `docker/` still has dirs for stacks that no longer run: `beszel`,
   `scrutiny`, `ntfy` (rolled back 2026-07-28), `kitchenowl` (removed
-  2026-07-28), `clawdbot`, `authelia`. `docker ps` is the truth for what runs.
+  2026-07-28), `clawdbot`. `docker ps` is the truth for what runs.
 - `scripts/backup-all-critical.sh` still lists `kitchenowl` in `SERVICES`.
 - The `restart services/` directory has a space in its name — quote paths.
 

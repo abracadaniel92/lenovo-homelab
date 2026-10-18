@@ -13,10 +13,15 @@
 
 **Public check:** Nothing
 
-**Outline:** (filled in at approval)
+**Outline:**
+1. 282k head parks after 9.4k hours (rated ~600k)
+2. Why: laptop power saving parks the heads ~30 times an hour
+3. The fix: `hdparm -B 254`, persisted in `/etc/hdparm.conf`
+4. Proof: +0 cycles in 215 minutes
+5. Check this on any 2.5" drive you run 24/7
 
-**Effort:** (filled in at approval)
+**Effort:** TIL
 
-**Priority:** (filled in at approval)
+**Priority:** soon
 
 **Published:**
