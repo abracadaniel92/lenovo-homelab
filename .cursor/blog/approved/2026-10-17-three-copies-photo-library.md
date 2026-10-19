@@ -8,8 +8,9 @@
 - WireGuard to an office mini PC: DDNS re-resolve cron, a key copied from a screenshot with I/l swapped
 - Seed 133 GiB over USB instead of days of upload
 - Lesson: offsite needs monitoring too (freshness checks, watchdog)
+- Ending (2026-10-19): the verify run. 5% read-back clean, photos byte-identical via `restic dump`, append-only proven by a 403. Three traps on the way: `restic ls <dir>` without `--recursive` gave an empty list, which turned a 3-photo restore into a 133 GiB restore into a 16 GB RAM `/tmp`; `restic forget` exits 0 when the server refuses, so a naive "must fail" test lies both ways
 
-**Evidence:** lemongrab log 2026-09-26 (B2 audit + B2 offsite), lemongrab log 2026-10-17 (Terra seed), Terra log 2026-10-05
+**Evidence:** lemongrab log 2026-09-26 (B2 audit + B2 offsite), lemongrab log 2026-10-17 (Terra seed), Terra log 2026-10-05, lemongrab log 2026-10-19 (Terra offsite verified), commit 7b6503a
 
 **Public check:** Leave out: employer name and Wi-Fi name, DDNS hostname, WireGuard keys and IPs
 
