@@ -4,6 +4,29 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-19: reboot test with the drive passed; lemongrab reaches the repo
+
+**Goal:** close the "reboot test" and "curl gives 200" open items from the
+entry below.
+
+**Test:** owner rebooted the Terra. Checked about 1 min after boot.
+
+**Verification:**
+- `findmnt /mnt/offsite`: `/dev/sdb1` ext4 `rw,noatime`, mounted by fstab.
+- `restic-rest-server`, `wg-quick@wg0`, `terra-watchdog.timer` all active.
+- `ss -tlnp`: listening on `10.8.0.4:8000` only.
+- From lemongrab: `curl -u lemongrab http://10.8.0.4:8000/lemongrab/config`
+  gives **200**.
+
+**Problem hit:** the first curl got **401**. Not the server:
+`sudo htpasswd -v /etc/restic-rest-server/users.htpasswd lemongrab` said the
+Vaultwarden password is correct, and the same curl with `-u lemongrab` (curl
+prompts for the password) got 200. The password inline on the command line
+was mangled. Lesson: in a 401, check the password with `htpasswd -v` first,
+then let curl prompt instead of quoting it inline.
+
+**Still open:** Part B on lemongrab; `claude logout`.
+
 ## 2026-10-19: offsite drive mounted, rest-server and watchdog running
 
 **Goal:** README Part A steps 2, 4, 6 with the drive seeded on lemongrab
