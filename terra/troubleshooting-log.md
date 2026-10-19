@@ -4,6 +4,71 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-19: reboot test with the drive passed; lemongrab reaches the repo
+
+**Goal:** close the "reboot test" and "curl gives 200" open items from the
+entry below.
+
+**Test:** owner rebooted the Terra. Checked about 1 min after boot.
+
+**Verification:**
+- `findmnt /mnt/offsite`: `/dev/sdb1` ext4 `rw,noatime`, mounted by fstab.
+- `restic-rest-server`, `wg-quick@wg0`, `terra-watchdog.timer` all active.
+- `ss -tlnp`: listening on `10.8.0.4:8000` only.
+- From lemongrab: `curl -u lemongrab http://10.8.0.4:8000/lemongrab/config`
+  gives **200**.
+
+**Problem hit:** the first curl got **401**. Not the server:
+`sudo htpasswd -v /etc/restic-rest-server/users.htpasswd lemongrab` said the
+Vaultwarden password is correct, and the same curl with `-u lemongrab` (curl
+prompts for the password) got 200. The password inline on the command line
+was mangled. Lesson: in a 401, check the password with `htpasswd -v` first,
+then let curl prompt instead of quoting it inline.
+
+**Still open:** Part B on lemongrab; `claude logout`.
+
+## 2026-10-19: offsite drive mounted, rest-server and watchdog running
+
+**Goal:** README Part A steps 2, 4, 6 with the drive seeded on lemongrab
+(lemongrab log 2026-10-17).
+
+**Change (live on the Terra), via `sudo bash terra/setup-offsite.sh`:**
+- Toshiba MQ04ABD200 2 TB in the Verbatim USB enclosure, `sdb1` ext4 label
+  `offsite`, UUID `0bf3f4b3-60ac-472e-a054-fc45a39629a8`. fstab by UUID with
+  `nofail,noatime,x-systemd.device-timeout=30s`, mounted at `/mnt/offsite`.
+  Nothing formatted; only `chown -R restic-rest-server` on `restic/`.
+- `hdparm -B 254` accepted through the enclosure (`APM_level = 254`); block
+  appended to `/etc/hdparm.conf`.
+- `restic-rest-server` 0.13.0 (trixie package): `LISTEN = 10.8.0.4:8000`,
+  `--append-only --private-repos`, htpasswd user `lemongrab` (bcrypt). Drop-in
+  `override.conf`: `Wants/After=wg-quick@wg0`, `RequiresMountsFor=/mnt/offsite`.
+  The password went to the owner (Vaultwarden); the temp file on the Terra was
+  deleted.
+- `terra-watchdog.timer` (5 min after boot, every 10 min). Topic URL in
+  `/etc/terra-watchdog/ntfy_topic_url`: lemongrab's ntfy.sh topic.
+
+**SMART baseline (2026-10-19):** PASSED. Power_On_Hours 3, Load_Cycle_Count
+14, Start_Stop_Count 8, Temperature 33 °C (min/max 21/43), Reallocated,
+Pending, Offline_Uncorrectable and UDMA_CRC all 0. Recheck Load_Cycle_Count
+and the temperature after the first full backup and after a week.
+
+**Problem hit:** the topic prompt got a bare name (`goce-pi-alerts`) instead
+of a URL, so curl could not post and alerts would have failed silently. Fixed
+by writing the full `https://ntfy.sh/...` URL. Lesson: the file must hold a
+full URL.
+
+**Verification:**
+- `ss -tlnp`: `restic-rest-ser` on `10.8.0.4:8000` only.
+- `systemctl start terra-watchdog.service`: phone got "No new lemongrab
+  backup on the Terra in 36 h" (expected, the seed snapshot is from 2026-10-17;
+  it repeats every 6 h until Part B lands a snapshot).
+- `bash terra/test-watchdog.sh`: PASS (4/4).
+- `df -h /mnt/offsite`: 1.8T, 127G used.
+
+**Still open:** reboot test (drive mounts, rest-server back on 10.8.0.4:8000);
+from lemongrab `curl .../lemongrab/config` gives 200; Part B on lemongrab;
+`claude logout`.
+
 ## 2026-10-05: BIOS "restore on AC power loss" set to On
 
 **Change:** set in the BIOS by the owner, at the box. It boots by itself
