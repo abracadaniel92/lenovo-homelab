@@ -29,6 +29,10 @@ This is lemongrab's log. The other devices keep their own in their folders:
 - `up -d immich-server immich-machine-learning` also recreated `immich_postgres` (same image, healthy).
 - Pre-existing, not from this update: Mattermost logs "Mail server connection test failed" (`[::1]:10025` refused).
 
+**Open (owner deferred):** Mattermost email. Either Gmail SMTP like Cal.com/Nextcloud
+(new app password in the gitignored `docker/mattermost/.env`, `MM_EMAILSETTINGS_*` vars,
+test mail) or turn email notifications off to silence the error.
+
 **Backups:** Mattermost `pg_dumpall` (above), Nextcloud via `backup-engine.sh nextcloud`,
 HA tar (above), Immich nightly 02:00 dump.
 
