@@ -5,6 +5,40 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-19] Image updates from the weekly ntfy list (Mattermost went to 12.0)
+
+**Symptom:** `update-check` listed 10 containers with newer images.
+
+**Change (live dirs, one at a time):**
+- stirling-pdf 3.0.0 -> 3.2.0, homepage 2.5.0 -> 2.6.0, nginx-vaultwarden 1.31.6 -> 1.31.7,
+  cloudflared 2026.10.0 -> 2026.10.1, Home Assistant 2026.10.1 -> 2026.10.2,
+  Nextcloud 35.0.1 -> 35.0.2 (auto `occ upgrade`), Immich v3.3.1 -> v3.3.3.
+- **Mattermost 11.11.1 -> 12.0.0 (major).** Planned as 11.11.2 from GitHub's "latest
+  release", but Docker `:latest` was already 12.0.0. Migrations ran in ~2 s. v12 needs
+  Postgres >= 15 (we run 15), drops OpenSearch 1.x (unused) and suppresses unrebuilt web
+  plugins; the enabled ones (calls, nps, ai, playbooks) are prepackaged, the 5 third-party
+  ones on disk are disabled. Rollback = pin `:11.11` + restore
+  `/mnt/ssd/backups/mattermost/mattermost-db-11.11.1-20261019-1009.sql.gz`.
+- Caddy skipped: the "newer" image is the same v2.11.7 build (same build time).
+
+**Gotchas:**
+- Docker Hub 429 after 2 pulls; `compose pull` then printed `Running` and kept the old image.
+  Fix: `docker pull mirror.gcr.io/library/<img>:<tag>` + `docker tag` to the compose name.
+- HA config tar as goce misses root-owned `.storage/` files (exit 2). Took it from inside:
+  `docker exec homeassistant tar czf - -C / config > ...ha-config-2026.10.1-20261019-1007.tar.gz`.
+- `up -d immich-server immich-machine-learning` also recreated `immich_postgres` (same image, healthy).
+- Pre-existing, not from this update: Mattermost logs "Mail server connection test failed" (`[::1]:10025` refused).
+
+**Open (owner deferred):** Mattermost email. Either Gmail SMTP like Cal.com/Nextcloud
+(new app password in the gitignored `docker/mattermost/.env`, `MM_EMAILSETTINGS_*` vars,
+test mail) or turn email notifications off to silence the error.
+
+**Backups:** Mattermost `pg_dumpall` (above), Nextcloud via `backup-engine.sh nextcloud`,
+HA tar (above), Immich nightly 02:00 dump.
+
+**Verification:** each service's local endpoint + version checked; `verify-services.sh`
+all healthy after cloudflared and again at the end.
+
 ## [2026-10-18] Weekly review: open items
 
 First weekly review. Items checked against live state where possible.
