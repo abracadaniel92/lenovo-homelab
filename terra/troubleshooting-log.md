@@ -4,6 +4,22 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-19: APM 254 survives reboot through the USB enclosure
+
+**Goal:** confirm the head-parking fix (same as lemongrab, log 2026-10-17)
+persists across a reboot; the reboot test below did not check it.
+
+**Verification (after the reboot):**
+- `sudo hdparm -B /dev/sdb`: `APM_level = 254`, so `/etc/hdparm.conf` is
+  applied at boot through the Verbatim enclosure. No udev rule needed.
+- `Load_Cycle_Count` **28** (baseline 14 in the entry below). Expected some
+  growth from the setup work and the reboot (power-off retract + spin-up),
+  so this is not yet a sign of parking.
+
+**Still open:** recheck `Load_Cycle_Count` after a week of normal running and
+after the first full backup. Steady growth of ~1 per reboot is fine; dozens
+per day would mean APM is being lost at runtime.
+
 ## 2026-10-19: reboot test with the drive passed; lemongrab reaches the repo
 
 **Goal:** close the "reboot test" and "curl gives 200" open items from the
