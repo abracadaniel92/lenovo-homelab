@@ -5,6 +5,30 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-19] Terra offsite verified: check, restore and append-only all pass
+
+**Result:** repo `7a57bbe4` on Terra holds 2 snapshots (2026-10-17, 2026-10-19, ~133 GiB).
+`restic check --read-data-subset=5%`: 386/386 packs read over WireGuard in 40 min, no errors.
+3 random library photos streamed with `restic dump` were byte-identical (`cmp`) to the originals.
+`restic forget --keep-last 1` got `403 Forbidden` from rest-server, 0/1 files deleted:
+append-only works.
+
+**Gotchas (each one bit during this run):**
+- `restic ls latest <dir>` lists only the top level without `--recursive`; `library/` holds
+  only per-user dirs, so the photo list came back empty.
+- With that empty list, `restic restore latest --target /tmp/... "${inc[@]}"` had no
+  `--include` and started restoring all 133 GiB into `/tmp`, which is a 16 GB tmpfs (RAM).
+  It hit "no space left on device", was interrupted and cleaned up; root disk, RAM and
+  containers were unaffected. Use `restic dump latest <file> | cmp - <file>` instead.
+- `restic forget` exits 0 even when the server refuses the delete; read the output for 403.
+- A second exclusive-lock run (an earlier `check` still going) makes the next one fail at
+  once; `--retry-lock 30m` waits instead. A failure from a lock is not an append-only pass.
+
+**Change:** `terra/README.md` "Verify" section rewritten with the above (repo only, commit 7b6503a).
+
+**Still open:** unplug-the-drive failure test (README); first scheduled run of
+`backup-immich-terra.timer` at 04:05 on 2026-10-20.
+
 ## [2026-10-19] Image updates from the weekly ntfy list (Mattermost went to 12.0)
 
 **Symptom:** `update-check` listed 10 containers with newer images.
