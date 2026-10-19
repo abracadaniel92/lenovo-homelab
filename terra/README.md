@@ -166,7 +166,7 @@ backup.
    `OnUnitActiveSec=10min`). It pushes to the phone when lemongrab is offline
    (lemongrab can't report its own power or internet cut) or when no new
    restic snapshot has landed in 36 h. Put the ntfy topic URL the owner gives
-   you in `/etc/terra-watchdog/ntfy_topic_url` (0600, root). That's the only
+   you (the Pi's alerts topic, not lemongrab's) in `/etc/terra-watchdog/ntfy_topic_url` (0600, root). That's the only
    homelab value the Terra holds, and it grants no access to lemongrab.
    Test: `sudo systemctl start terra-watchdog.service`, then
    `bash test-watchdog.sh` from this folder (takes about 3 min).

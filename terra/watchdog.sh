@@ -5,8 +5,8 @@
 #
 # Runs every 10 min from terra-watchdog.timer (see README, Part A step 6).
 # Install: sudo install -m 0755 watchdog.sh /usr/local/bin/terra-watchdog.sh
-# Topic URL: /etc/terra-watchdog/ntfy_topic_url (0600), the same public ntfy.sh
-# topic lemongrab uses. Title only, never details (anyone with the topic name
+# Topic URL: /etc/terra-watchdog/ntfy_topic_url (0600), the Pi's public ntfy.sh
+# alerts topic (not lemongrab's, so the Terra never holds that one). Title only, never details (anyone with the topic name
 # can read it).
 #
 # ponytail: one push per problem per 6 h, stamps in tmpfs. Ceiling: no

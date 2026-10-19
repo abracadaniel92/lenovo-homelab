@@ -64,7 +64,7 @@ systemctl restart restic-rest-server
 install -m 0755 watchdog.sh /usr/local/bin/terra-watchdog.sh
 install -d -m 0700 /etc/terra-watchdog
 if [ ! -s /etc/terra-watchdog/ntfy_topic_url ]; then
-    read -rp "ntfy topic URL (same one lemongrab uses): " url
+    read -rp "ntfy topic URL (the Pi alerts topic): " url
     (umask 077; echo "$url" > /etc/terra-watchdog/ntfy_topic_url)
 fi
 cat > /etc/systemd/system/terra-watchdog.service <<'EOF'
