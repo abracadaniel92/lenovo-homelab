@@ -237,9 +237,15 @@ from lemongrab, then switch it back.
 ```bash
 restic -r <repo> snapshots            # a snapshot from tonight
 restic -r <repo> check --read-data-subset=5%
-restic -r <repo> restore latest --target /tmp/restore-test --include '*/library/*' # spot-check a few photos open, then delete
-restic -r <repo> forget --keep-last 1 # must FAIL: proves append-only works
+f=$(restic -r <repo> ls --recursive latest /mnt/ssd_1tb/immich-library/library | grep -iE '\.(jpe?g|heic)$' | shuf -n1)
+restic -r <repo> dump latest "$f" | cmp - "$f" && echo MATCH  # streams one photo, writes nothing
+restic -r <repo> forget --keep-last 1 # must print "403 Forbidden": proves append-only works
 ```
+
+`ls` needs `--recursive` with a folder argument, or it lists only the top level
+and the photo list comes back empty. Don't `restore` the library to `/tmp`: it
+is a 16 GB RAM disk and fills up. `forget` exits 0 even when the server refuses,
+so read the output for the 403, not the exit code.
 
 Also unplug the Terra's drive once and confirm the next run pushes a failure to
 the phone. From both sides: lemongrab's backup unit fails, and within 36 h the
