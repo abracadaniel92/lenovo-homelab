@@ -1,0 +1,40 @@
+---
+alwaysApply: true
+---
+# Rule: Capture blog candidates from homelab work, propose rather than publish
+
+Sister of `lesson-capture.mdc`. Lessons improve the agent's guidance; blog candidates are
+stories worth a post on the owner's site (gmojsoski.com). Nothing here writes a post or touches
+the `portfolio_v2` repo.
+
+When a piece of work **finishes**, check it against these signals:
+
+1. A non-obvious root cause: the obvious suspect was innocent.
+2. A silent failure found: something reported success while broken (backups, monitoring, DNS).
+3. A before/after number worth showing (load cycles, RAM, latency, cost, GB).
+4. A migration, a new device or service, or a design choice with a real trade-off.
+5. The user says "this would make a good post," or is clearly pleased with how something
+   turned out.
+
+Skip routine updates, restarts and plain cleanups unless one of the signals above also fired.
+
+**When a signal fires:**
+
+1. Check `.cursor/blog/decisions.md`. If a matching candidate was rejected and nothing new has
+   happened since, don't propose it again.
+2. Check `.cursor/blog/pending/` and `approved/`. If a candidate already covers the story, add
+   the new evidence to it (another log entry, a sharper angle) instead of a duplicate.
+3. Otherwise write `.cursor/blog/pending/YYYY-MM-DD-<slug>.md` from `.cursor/blog/_TEMPLATE.md`.
+   Point at the exact log entries (device + date) and commits; don't retell the whole log.
+4. One story per file. Two unrelated stories from one session are two candidates.
+5. At the end of your reply (never mid-task), add one line:
+   `Blog candidate: <title>`. No discussion; the owner reviews candidates weekly with the
+   `blog-review` skill.
+
+## Never
+
+- **The repo and the blog are public.** No passwords, tokens, ntfy/healthchecks/webhook URLs,
+  internal IPs, DDNS names, employer network names or personal details in a candidate. Note
+  what the post must leave out under **Public check**.
+- Never name or quote other people; refer to them by role.
+- Never let this slow down the task. Writing the file is a quick side effect.

@@ -5,7 +5,7 @@ description: Diagnose and recover from homelab service outages — 502/404 error
 
 # Troubleshoot Service Down
 
-Systematic diagnostic flow for homelab outages. Stay surgical: only touch the broken service. Do NOT modify unrelated services, the Caddyfile globals, or read-only infrastructure scripts (see governance rule).
+Systematic diagnostic flow for homelab outages. Stay surgical: only touch the broken service. Do NOT modify unrelated services, the Caddy globals, or read-only infrastructure scripts (see governance rule).
 
 ## Surgical rule (MANDATORY)
 
@@ -26,7 +26,7 @@ Copy this checklist:
 - [ ] 6. If service-specific: check that one container's logs
 - [ ] 7. Apply minimum-scope fix
 - [ ] 8. Re-run verify-services.sh
-- [ ] 9. Log to TROUBLESHOOTING_LOG.md if non-standard
+- [ ] 9. Log to docs/reference/troubleshooting-log.md if non-standard
 ```
 
 ## 1. Safety net first
@@ -39,7 +39,7 @@ This reveals which subdomains are down and which are healthy. Use this to scope 
 
 ## 2. Check prior incidents
 
-Before suggesting a fix, search [TROUBLESHOOTING_LOG.md](../../../docs/reference/troubleshooting-log.md) for the symptom. Many outages have known fixes — do not reinvent them.
+Before suggesting a fix, search [the troubleshooting log](../../../docs/reference/troubleshooting-log.md) for the symptom. Many outages have known fixes — do not reinvent them.
 
 ```bash
 rg -i "<symptom keyword>" docs/reference/troubleshooting-log.md
@@ -80,9 +80,11 @@ cd docker/caddy && docker compose restart caddy
 
 If services work locally but external curls fail, the tunnel is the suspect.
 
+cloudflared runs in Docker (`docker/cloudflared`, container `cloudflared-cloudflared-1`, 2 replicas):
+
 ```bash
-sudo systemctl status cloudflared.service
-journalctl -u cloudflared.service -n 30 --no-pager
+docker ps | grep cloudflared
+docker logs --tail 50 cloudflared-cloudflared-1
 ```
 
 CRITICAL config check: `~/.cloudflared/config.yml` `service:` URL MUST be `http://localhost:8080`. If it has been changed to `127.0.0.1:8080` — that's the bug. Fix it back to `localhost`.
@@ -90,8 +92,6 @@ CRITICAL config check: `~/.cloudflared/config.yml` `service:` URL MUST be `http:
 Restart the tunnel:
 ```bash
 cd docker/cloudflared && docker compose restart
-# OR if running as systemd:
-sudo systemctl restart cloudflared.service
 ```
 
 Wait 1–2 minutes for reconnection.
@@ -117,7 +117,6 @@ ONLY when multiple services are down (broad outage), and after the above didn't 
 ```bash
 bash "restart services/fix-all-services.sh"     # comprehensive
 bash "restart services/fix-external-access.sh"  # 502/404 broadly
-bash "restart services/fix-all-services.sh"        # faster, less thorough
 ```
 
 These are READ-ONLY in this skill — do not edit them.
@@ -132,7 +131,7 @@ curl -I https://<subdomain>.gmojsoski.com
 
 ## 9. Log it (if non-standard)
 
-If the fix involved anything beyond a clean container restart, log it via the `log-troubleshooting-entry` skill or directly to [TROUBLESHOOTING_LOG.md](../../../docs/reference/troubleshooting-log.md).
+If the fix involved anything beyond a clean container restart, log it via the `log-troubleshooting-entry` skill or directly to [the troubleshooting log](../../../docs/reference/troubleshooting-log.md).
 
 ## Common fixes (high-confidence)
 
@@ -143,10 +142,12 @@ If the fix involved anything beyond a clean container restart, log it via the `l
 | Intermittent connection drops | `127.0.0.1:8080` in tunnel config | Change back to `localhost:8080` |
 | Mobile streaming broken on Jellyfin | `encode gzip` in Caddy | Remove gzip from that block |
 | Service down after reboot | Startup race | `sudo bash scripts/permanent-auto-recovery.sh` |
+| Health check / backups silently stopped | `/opt/homelab` on the wrong branch, or a path with a space | `git -C /opt/homelab branch --show-current` (expect `main`); log 2026-09-25 |
+| `*.gmojsoski.com` fails on home Wi-Fi only | Pi-hole local DNS (hairpin) | Check the Pi; see `pihole/README.md` |
 
 ## Reference
 
 - Full recovery system overview: [MONITORING_AND_RECOVERY.md](../../../docs/concepts/monitoring-and-recovery.md)
-- Historical incidents: [TROUBLESHOOTING_LOG.md](../../../docs/reference/troubleshooting-log.md)
+- Historical incidents: [troubleshooting-log.md](../../../docs/reference/troubleshooting-log.md)
 - Cloudflare-specific: [CLOUDFLARE_MONITORING.md](../../../docs/how-to-guides/cloudflare-monitoring.md)
 - Health check status: [HEALTH_CHECK_STATUS.md](../../../docs/reference/health-check-status.md)

@@ -9,7 +9,7 @@ This file defines the strict operating rules for the Pi-version-control homelab 
 
 - **Where things run**: This **Lenovo** host is the homelab **server** — Docker stacks, Caddy, Cloudflare Tunnel (cloudflared), systemd timers, and related services run **on this machine**, not on some separate “prod box” implied by the repo alone.
 - **What the repo is for**: The **`Pi-version-control`** tree (GitHub: `lenovo-homelab`) is **version control** and documentation. Changing files **only** under that clone **does not** change live behaviour unless those exact paths are what bind-mounted services read **or** you **copy/restart** so runtime picks up the change.
-- **Rule for the agent**: When the user wants a **live** fix or rollout, **apply changes where runtime actually reads them first** (examples: `~/.cloudflared/config.yml` then restart cloudflared; live `docker/caddy/...` then `docker compose restart caddy`; scripts deployed to `/usr/local/bin/` via their deploy helpers). Treat “edited the GitHub-linked clone” as **incomplete** unless the user **explicitly** asked for a repo-only / preparatory change. After live is correct, **mirror** into the repo and commit/push **when the user wants** history to match — never assume a repo edit alone fixed prod.
+- **Rule for the agent**: When the user wants a **live** fix or rollout, **apply changes where runtime actually reads them first** (examples: `~/.cloudflared/config.yml` then restart cloudflared; live `docker/caddy/...` then `docker compose restart caddy`; `scripts/` itself, which is live through the `/opt/homelab` symlink, so `git checkout`/`git pull` on this host is a deploy; see `CLAUDE.md`). Treat “edited the GitHub-linked clone” as **incomplete** unless the user **explicitly** asked for a repo-only / preparatory change. After live is correct, **mirror** into the repo and commit/push **when the user wants** history to match — never assume a repo edit alone fixed prod.
 - **Reminder**: Say clearly when a step is **“repo / VCS only”** vs **“must run on this server to take effect”** so the user is never left thinking production moved when only git changed.
 
 ## CRITICAL: Networking & Ingress (NEVER CHANGE)
@@ -20,7 +20,7 @@ This file defines the strict operating rules for the Pi-version-control homelab 
    - **WHY**: The tunnel runs in Docker with host networking; `localhost` resolves reliably via `/etc/hosts`, while `127.0.0.1` has caused loopback routing issues.
 
 2. **Caddy Reverse Proxy**:
-   - **Source of Truth**: `docker/caddy/Caddyfile` is the ONLY valid configuration file. Ignore `site/` or `config/` subdirectories.
+   - **Source of Truth**: `docker/caddy/Caddyfile` holds only globals, `import /etc/caddy/config.d/*.caddy` and the catch-all. Service routes live in `docker/caddy/config.d/` by category (`10-gmojsoski-home`, `20-media`, `30-storage`, `40-communication`, `50-utilities`). Ignore `site/` (stale old portfolio).
    - **Standard Block**: When adding a new service, use this EXACT template:
      ```caddyfile
      handle @subdomain {
@@ -33,8 +33,8 @@ This file defines the strict operating rules for the Pi-version-control homelab 
 ## Operational Safety
 
 3. **Governance**:
-   - **NEVER** modify existing, working Caddyfile blocks while troubleshooting a new service.
-   - **ALWAYS** check `useful-files/TROUBLESHOOTING_LOG.md` before suggesting a fix **or** before appending a new log entry (same goal: avoid contradicting or duplicating what is already recorded).
+   - **NEVER** modify existing, working Caddy blocks while troubleshooting a new service.
+   - **ALWAYS** check the device's troubleshooting log (lemongrab: `docs/reference/troubleshooting-log.md`; Pi: `pihole/troubleshooting-log.md`; Terra: `terra/troubleshooting-log.md`) before suggesting a fix **or** before appending a new log entry (same goal: avoid contradicting or duplicating what is already recorded).
    - **ALWAYS** run `scripts/verify-services.sh` after any network change.
 
 4. **Service Addition Protocol**:
@@ -46,10 +46,10 @@ This file defines the strict operating rules for the Pi-version-control homelab 
 ## Documentation
 
 5. **Troubleshooting log (mandatory for traceable work)**:
-   - **Read before you write**: Before **adding** a new `## [...]` entry to `useful-files/TROUBLESHOOTING_LOG.md`, **read** the file end-to-end or **search** it (dates, service names, symptoms, error strings). **Do not** create a **duplicate** section for an incident that is **already logged** (same root cause and fix). If it is already documented, **skip** a new entry unless the user asks for an addendum or there is **material new** detail worth a separate dated follow-up — and then make clear how it differs from the existing entry.
-   - **Always** append a new entry to `useful-files/TROUBLESHOOTING_LOG.md` when you **resolve** an incident, **apply** a production-affecting change on this server, or **document** a non-obvious fix — so future sessions (and the user) have a dated record of **what changed**, **what was updated**, and **how it was verified**.
-   - The entry must be **useful for future reference**: at minimum — **symptom** (or goal), **what you changed** (file paths; distinguish **live** paths vs repo mirror if both), **commands / restarts** run (e.g. `docker compose restart`, `cloudflared` reload), **verification** (e.g. `./scripts/verify-services.sh`, `curl`), and **outcome** (fixed / mitigated / follow-up needed). Follow the structure in `useful-files/TROUBLESHOOTING_LOG_GUIDELINES.md` (append-only; **never** rewrite or delete past entries).
-   - This applies to work such as: tunnel/Caddy routing, Docker stack fixes, service-down recovery, ingress/DNS-related fixes, script deploys to `/usr/local/bin/`, and similar infra — **not** optional “only if major.”
+   - **Read before you write**: Before **adding** a new `## [...]` entry to the device's troubleshooting log, **read** the file end-to-end or **search** it (dates, service names, symptoms, error strings). **Do not** create a **duplicate** section for an incident that is **already logged** (same root cause and fix). If it is already documented, **skip** a new entry unless the user asks for an addendum or there is **material new** detail worth a separate dated follow-up — and then make clear how it differs from the existing entry.
+   - **Always** add a new entry (newest first, at the top) to the device's troubleshooting log when you **resolve** an incident, **apply** a production-affecting change on this server, or **document** a non-obvious fix — so future sessions (and the user) have a dated record of **what changed**, **what was updated**, and **how it was verified**.
+   - The entry must be **useful for future reference**: at minimum — **symptom** (or goal), **what you changed** (file paths; distinguish **live** paths vs repo mirror if both), **commands / restarts** run (e.g. `docker compose restart`, `cloudflared` reload), **verification** (e.g. `./scripts/verify-services.sh`, `curl`), and **outcome** (fixed / mitigated / follow-up needed). Follow `docs/reference/troubleshooting-log-guidelines.md` (append-only; **never** rewrite or delete past entries).
+   - This applies to work such as: tunnel/Caddy routing, Docker stack fixes, service-down recovery, ingress/DNS-related fixes, changes to live `scripts/`, and similar infra — **not** optional “only if major.”
    - **Exception**: If the user **explicitly** asks not to log a given change (e.g. sensitivity), skip the log and state in chat that logging was skipped by user request.
 
 ## Scope Enforcement (The "Surgical" Rule)
@@ -57,16 +57,16 @@ This file defines the strict operating rules for the Pi-version-control homelab 
 6. **Isolation**:
    - When troubleshooting "Service A", you are **FORBIDDEN** from editing the configuration of "Service B".
    - If a global change seems necessary (e.g., global Caddy settings), you must **STOP and ASK** the user for explicit permission first.
-   - **Files**: changes should primarily be limited to `docker/<service>/` and the specific block in `Caddyfile`. DO NOT touch `enhanced-health-check.sh` or `config.yml` unless you are specifically fixing a regression in those files.
+   - **Files**: changes should primarily be limited to `docker/<service>/` and that service's block in `docker/caddy/config.d/`. DO NOT touch `enhanced-health-check.sh` or `~/.cloudflared/config.yml` unless you are specifically fixing a regression in those files.
 
 ## Allowed Extensions (Append Only)
 
 7. **Sacred but Extendable Files**:
    The following files are CRITICAL infrastructure. You may **ONLY** add new entries to them. **NEVER** modify or delete existing entries without explicit permission.
    - `~/.cloudflared/config.yml`: Add new ingress rules to the list. Do NOT change the `tunnel` ID or credentials file.
-   - `docker/caddy/Caddyfile`: Add new `handle @service` blocks. Do NOT change global settings or existing reverse proxies.
+   - `docker/caddy/config.d/*.caddy`: Add new `handle @service` blocks. Do NOT change `Caddyfile` globals or existing reverse proxies.
    - `scripts/verify-services.sh`: Add new domains to the `SUBDOMAINS` array.
-   - `README.md`: Add new service descriptions.
+   - `README.md`: Add new service descriptions to the service table.
 
 ## Service removal from Caddy / Cloudflare (CONFIRMATION REQUIRED)
 
@@ -93,13 +93,14 @@ This file defines the strict operating rules for the Pi-version-control homelab 
 
 10. **Primary storage** (prefer for sensitive or important data, e.g. Immich photos):
    - **512GB NVMe** (root `/` and `/home`).
-   - **1TB healthy SATA SSD** mounted at `/mnt/ssd_1tb`.
-   - User is fine keeping the same data on both primary and mergerfs as backup.
+   - **1TB WD laptop HDD** (WD10SPZX) mounted at `/mnt/ssd_1tb` (the name is historical, it is not an SSD). Holds Immich, Kiwix, Pi backups.
+   - The old USB HDDs and the mergerfs `/mnt/storage` pool were unplugged on 2026-09-26 (unreliable). Never use them.
+   - Offsite copies: Backblaze B2 (rclone crypt, nightly) and the Terra (restic over WireGuard, Immich + `/mnt/ssd/backups`).
 
-11. **Where to store**: When adding or configuring storage for a new service or data, **ALWAYS ask the user** where it should be stored (primary NVMe/ssd_1tb vs mergerfs `/mnt/storage` vs other). Do not assume.
+11. **Where to store**: When adding or configuring storage for a new service or data, **ALWAYS ask the user** where it should be stored (NVMe `/home` vs `/mnt/ssd_1tb` vs other). Do not assume.
 
 12. **Keep root (`/`) clean** — the root partition is only **101G** and must stay lean:
-    - **NEVER** place service data, volumes, uploads, or large files on root. Use `/home`, `/mnt/ssd_1tb`, or `/mnt/storage` instead.
+    - **NEVER** place service data, volumes, uploads, or large files on root. Use `/home` or `/mnt/ssd_1tb` instead. Note `/mnt/ssd` is just a folder on root (its `apps`/`docker-projects` entries are symlinks into `/home`; `backups/` really is on root, keep it small).
     - When installing or configuring anything that defaults to `/var/lib/`, `/opt/`, or another root path, **proactively suggest** relocating the data to `/home` (or ask the user which mount to use).
     - Docker data root is already at `/home/docker-data` and containerd is symlinked to `/home/containerd`. Do NOT change these.
     - If root usage exceeds ~80%, flag it and suggest cleanup (apt cache, journal vacuum, snap cleanup, moving data off root).

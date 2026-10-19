@@ -45,21 +45,21 @@ SERVICES=("cloudflared.service" "gokapi.service" "bookmarks.service" "planning-p
 for service in "${SERVICES[@]}"; do
     if [ -f "/etc/systemd/system/$service" ]; then
         check "Service file exists: $service" "ok"
-        
+
         # Check if enabled
         if systemctl is-enabled "$service" >/dev/null 2>&1; then
             check "  → Enabled" "ok"
         else
             warn "  → Not enabled (won't start on boot)"
         fi
-        
+
         # Check if running
         if systemctl is-active "$service" >/dev/null 2>&1; then
             check "  → Running" "ok"
         else
             warn "  → Not running"
         fi
-        
+
         # Check restart policy
         if grep -q "Restart=always" "/etc/systemd/system/$service"; then
             check "  → Restart=always" "ok"
@@ -78,7 +78,7 @@ echo ""
 # Check health check service
 if [ -f "/etc/systemd/system/service-health-check.service" ]; then
     check "Health check service file exists" "ok"
-    
+
     # Check symlink
     if [ -L "/usr/local/bin/health-check-and-restart.sh" ]; then
         check "  → Symlink exists" "ok"
@@ -92,19 +92,19 @@ fi
 # Check health check timer
 if systemctl list-timers --all | grep -q "service-health-check.timer"; then
     check "Health check timer exists" "ok"
-    
+
     if systemctl is-active service-health-check.timer >/dev/null 2>&1; then
         check "  → Timer is active" "ok"
     else
         warn "  → Timer is not active"
     fi
-    
+
     if systemctl is-enabled service-health-check.timer >/dev/null 2>&1; then
         check "  → Timer is enabled" "ok"
     else
         warn "  → Timer is not enabled"
     fi
-    
+
     # Check interval
     INTERVAL=$(systemctl show service-health-check.timer -p OnUnitActiveSec --value 2>/dev/null || echo "")
     if [ "$INTERVAL" = "2min" ] || [ "$INTERVAL" = "120s" ]; then
@@ -120,24 +120,24 @@ echo ""
 echo "3. Checking Health Check Script Configuration..."
 echo ""
 
-HEALTH_SCRIPT="/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/health-check-and-restart.sh"
+HEALTH_SCRIPT="/opt/homelab/scripts/health-check-and-restart.sh"
 
 if [ -f "$HEALTH_SCRIPT" ]; then
     check "Health check script exists" "ok"
-    
+
     if [ -x "$HEALTH_SCRIPT" ]; then
         check "  → Script is executable" "ok"
     else
         warn "  → Script is not executable"
     fi
-    
+
     # Check if monitoring all services
     if grep -q "planning-poker.service" "$HEALTH_SCRIPT"; then
         check "  → Monitors planning-poker.service" "ok"
     else
         warn "  → Missing planning-poker.service in monitoring"
     fi
-    
+
     if grep -q "bookmarks.service" "$HEALTH_SCRIPT"; then
         check "  → Monitors bookmarks.service" "ok"
     else
@@ -176,7 +176,7 @@ IMPORTANT_SCRIPTS=(
 )
 
 for script in "${IMPORTANT_SCRIPTS[@]}"; do
-    FULL_PATH="/home/goce/Desktop/Cursor projects/Pi-version-control/$script"
+    FULL_PATH="/opt/homelab/$script"
     if [ -f "$FULL_PATH" ]; then
         if [ -x "$FULL_PATH" ]; then
             check "$script: exists and executable" "ok"
@@ -193,24 +193,24 @@ echo "6. Checking Service Files Match Repository..."
 echo ""
 
 # Check cloudflared.service
-if diff -q /etc/systemd/system/cloudflared.service "/home/goce/Desktop/Cursor projects/Pi-version-control/systemd/cloudflared.service" >/dev/null 2>&1; then
+if diff -q /etc/systemd/system/cloudflared.service "/opt/homelab/systemd/cloudflared.service" >/dev/null 2>&1; then
     check "cloudflared.service matches repo" "ok"
 else
     warn "cloudflared.service differs from repo"
-    echo "  → Run: sudo cp '/home/goce/Desktop/Cursor projects/Pi-version-control/systemd/cloudflared.service' /etc/systemd/system/"
+    echo "  → Run: sudo cp '/opt/homelab/systemd/cloudflared.service' /etc/systemd/system/"
 fi
 
 # Check planning-poker.service
 if [ -f "/etc/systemd/system/planning-poker.service" ]; then
-    if diff -q /etc/systemd/system/planning-poker.service "/home/goce/Desktop/Cursor projects/Pi-version-control/systemd/planning-poker.service" >/dev/null 2>&1; then
+    if diff -q /etc/systemd/system/planning-poker.service "/opt/homelab/systemd/planning-poker.service" >/dev/null 2>&1; then
         check "planning-poker.service matches repo" "ok"
     else
         warn "planning-poker.service differs from repo"
-        echo "  → Run: sudo cp '/home/goce/Desktop/Cursor projects/Pi-version-control/systemd/planning-poker.service' /etc/systemd/system/"
+        echo "  → Run: sudo cp '/opt/homelab/systemd/planning-poker.service' /etc/systemd/system/"
     fi
 else
     warn "planning-poker.service not installed"
-    echo "  → Run: sudo cp '/home/goce/Desktop/Cursor projects/Pi-version-control/systemd/planning-poker.service' /etc/systemd/system/"
+    echo "  → Run: sudo cp '/opt/homelab/systemd/planning-poker.service' /etc/systemd/system/"
 fi
 
 echo ""
@@ -220,7 +220,7 @@ echo ""
 BOOKMARKS_FILE="/mnt/ssd/apps/bookmarks/secure_slack_bookmarks.py"
 if [ -f "$BOOKMARKS_FILE" ]; then
     check "Bookmarks Flask app exists" "ok"
-    
+
     if grep -q "@app.route(\"/\")" "$BOOKMARKS_FILE" || grep -q '@app.route("/")' "$BOOKMARKS_FILE"; then
         check "  → Health check route exists" "ok"
     else
@@ -252,6 +252,5 @@ fi
 
 echo ""
 echo "To fix issues, run:"
-echo "  sudo bash '/home/goce/Desktop/Cursor projects/Pi-version-control/scripts/optimize-system.sh'"
+echo "  sudo bash '/opt/homelab/scripts/optimize-system.sh'"
 echo ""
-

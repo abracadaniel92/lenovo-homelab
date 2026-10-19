@@ -8,7 +8,11 @@ drifted since the constitution was written, and gives you the map.
 
 ## FIRST: figure out which machine you're on
 
-This repo is cloned in two places, and the rules differ:
+This repo is cloned in four places, and the rules differ. **Before your first
+action in a session, run `hostname`** (Windows: `$env:COMPUTERNAME`), say which
+machine you're on in your first reply, and apply that machine's rules below.
+If the hostname matches none of them, say so and treat the session as
+repo-only until the user tells you otherwise.
 
 - **On `lemongrab` (the Lenovo server, Debian-based Linux):** this machine IS
   production. ~30 containers serve real users at `*.gmojsoski.com`. For
@@ -22,6 +26,14 @@ This repo is cloned in two places, and the rules differ:
   everything you do is **repo/VCS-only by definition**. You cannot restart
   services, run `verify-services.sh`, or touch live configs from here. Say so
   explicitly when a change needs a follow-up step on the server to take effect.
+- **On the Pi (hostname `goce`, the Pi-hole box):** the checkout is also live for DNS. Unbound
+  bind-mounts `pihole/docker/unbound/unbound.conf` from it, so a branch switch
+  or pull that touches that folder needs
+  `cd pihole/docker/unbound && docker compose up -d` afterwards. Never use
+  `docker/uptime-kuma/` there (that is lemongrab's); the Pi's is
+  `pihole/docker/uptime-kuma/`. Log in `pihole/troubleshooting-log.md`.
+- **On the Terra (`cricket`):** follow `terra/README.md` "Start here"; never
+  format or write into the offsite drive. Log in `terra/troubleshooting-log.md`.
 
 ## ⚠️ On lemongrab, `git checkout` and `git pull` are DEPLOYS
 
@@ -34,9 +46,9 @@ through it. So on the server:
   2026-09-25: a `git checkout develop` (21 commits behind) reverted the
   freshly-repaired `backup-engine.sh` while the hourly timer was armed.
 - **`git pull` deploys instantly**, with no restart and no confirmation step.
-- **Keep the server tree on `main`.** To promote work, prefer
-  `git push origin develop:main` or a GitHub PR merge over checking `main` out
-  locally, so the live tree is never momentarily stale.
+- **Keep the server tree on `main`.** Commit straight to `main` here and push
+  at the end of the task; never check out another existing branch. Details:
+  the `prepare-pull-request` skill.
 - **Verify after any branch operation:**
   `grep -c SQLITE_TAR /opt/homelab/scripts/backup-engine.sh` (expect 1).
 
@@ -58,26 +70,21 @@ See `docs/reference/troubleshooting-log.md` entry 2026-09-25.
 `.cursor/skills/` has step-by-step runbooks — follow the matching one:
 `add-homelab-service`, `update-homelab-service`, `troubleshoot-service-down`,
 `homelab-backup-restore`, `homelab-storage-migration`,
-`log-troubleshooting-entry`, `prepare-pull-request`.
+`log-troubleshooting-entry`, `prepare-pull-request`, `lesson-review`,
+`blog-review`, `weekly-review`.
 The human-readable master for additions is `SERVICE_ADDITION_CHECKLIST.md`.
 
-## Path corrections (the constitution has drifted — trust THIS list)
+## Paths that moved (fixed in the constitution on 2026-10-17)
 
-1. **Troubleshooting log** is at `docs/reference/troubleshooting-log.md`
-   for lemongrab (guidelines: `docs/reference/troubleshooting-log-guidelines.md`).
-   The constitution still says `useful-files/TROUBLESHOOTING_LOG.md` — that
-   directory no longer exists. Do NOT recreate `useful-files/`.
-   Since 2026-10-03 the Pi and the Terra each keep their own log in their
-   folder (`pihole/troubleshooting-log.md`, `terra/troubleshooting-log.md`);
-   log device work in that device's file.
-2. **Caddy config is now split**: `docker/caddy/Caddyfile` holds only globals
-   + `import /etc/caddy/config.d/*.caddy` + the catch-all file server. Service
-   routes live in `docker/caddy/config.d/` grouped by category
-   (`10-gmojsoski-home`, `20-media`, `30-storage`, `40-communication`,
-   `50-utilities`). New services get a `handle` block in the right category
-   snippet — not in the root Caddyfile as the constitution/checklist still
-   imply. The block template and "no header overrides / no gzip for media"
-   rules are unchanged.
+1. **Troubleshooting logs**, one per device, newest entry at the top:
+   lemongrab `docs/reference/troubleshooting-log.md`, Pi
+   `pihole/troubleshooting-log.md`, Terra `terra/troubleshooting-log.md`.
+   `useful-files/` is gone; do NOT recreate it.
+2. **Caddy is split**: `docker/caddy/Caddyfile` is globals + import +
+   catch-all only. New services get a `handle` block in the right
+   `docker/caddy/config.d/NN-category.caddy` snippet.
+3. **`/mnt/ssd_1tb` is a 1 TB WD laptop HDD**, not an SSD (historical name).
+   `/mnt/ssd` is a plain folder on the root disk.
 
 ## Invariants (short form — full versions in the constitution)
 
@@ -115,8 +122,20 @@ make portfolio-update   # rebuild gmojsoski.com from portfolio_v2 + sync to Cadd
 docker exec caddy caddy validate --config /etc/caddy/Caddyfile  # before restarting Caddy
 ```
 
-New-route restart sequence: copy tunnel config → restart caddy → restart
-cloudflared → verify. Caddy and cloudflared only read config at startup.
+After editing the root `Caddyfile` that validate checks the OLD file (single-file
+bind mount keeps the old inode). Validate a copy instead:
+`docker cp docker/caddy/Caddyfile caddy:/tmp/Caddyfile.new && docker exec caddy caddy validate --config /tmp/Caddyfile.new --adapter caddyfile`,
+then `docker restart caddy`. Edits under `config.d/` (a directory mount) are
+seen normally.
+
+New-route restart sequence: add the ingress line to the live
+`~/.cloudflared/config.yml` (edit it; never `cp` the repo copy over it, they
+differ) → restart caddy → restart cloudflared → verify. Caddy and cloudflared only read config at startup.
+
+Commands the owner must run (`! <cmd>`): keep them to one short line, at most
+two steps joined by `&&`; otherwise write a scratchpad script and give
+`! bash <script>`. On the phone (Termius) long pasted lines wrap and each piece
+runs as its own command; you can't tell which device is in use.
 
 ## Docs map
 
@@ -127,16 +146,15 @@ how-to-guides / reference). Key references: `port-map.md`,
 is append-only and mandatory for production-affecting changes — read it
 before diagnosing anything; your incident may already be documented.
 
-## Known drift / open items (as of 2026-07-06)
+## Known drift / open items (as of 2026-10-17)
 
 - **`docker/caddy/site/` holds the OLD portfolio** (vanilla HTML/JS). The
   live site is now built from the separate `portfolio_v2` repo via
   `scripts/update-portfolio.sh` → synced to `/mnt/ssd/docker-projects/caddy/site`
   on the server. The repo's `site/` copy is stale by design of the new
   pipeline — don't edit it expecting to change gmojsoski.com.
-- **SSO on `:9091` is Authelia, not Authentik**, and it is NOT running
-  (checked 2026-10-08: stack exists at `/home/docker-projects/authelia`,
-  mirrored to `docker/authelia/`, but no container). Don't assume SSO exists.
+- **There is no SSO.** The never-run Authelia stack, its repo mirror and the
+  `auth.gmojsoski.com` Caddy block were removed 2026-10-18.
 - Stacks under `/home/docker-projects/` and `/home/apps/nextcloud` run from
   those live paths. Their compose files are mirrored into `docker/<name>/` by
   `scripts/mirror-live-compose.sh` (live is truth; secrets stay in each live
@@ -144,15 +162,36 @@ before diagnosing anything; your incident may already be documented.
   have no compose dir under `docker/`. Don't assume `docker/` is the
   complete service inventory; `docs/reference/infrastructure-summary.md` and
   the Caddy `config.d/` snippets are closer to truth.
+- `docker/` still has dirs for stacks that no longer run: `beszel`,
+  `scrutiny`, `ntfy` (rolled back 2026-07-28), `kitchenowl` (removed
+  2026-07-28), `clawdbot`. `docker ps` is the truth for what runs.
+- `scripts/backup-all-critical.sh` still lists `kitchenowl` in `SERVICES`.
 - The `restart services/` directory has a space in its name — quote paths.
 
 ## Non-negotiable habits
 
-1. Check `docs/reference/troubleshooting-log.md` before diagnosing.
-2. After resolving anything production-affecting, append a dated entry there
+1. Check the device's troubleshooting log before diagnosing.
+2. After resolving anything production-affecting, add a dated entry there
    (symptom → change (live vs repo paths) → commands → verification →
    outcome). Never rewrite old entries.
 3. `./scripts/verify-services.sh` after every network change.
 4. Update `README.md` service table + `port-map.md` when adding a service.
-5. Branching: `feature/*` → `develop` → `main`. Pre-commit runs YAML/shell
-   checks; Renovate handles image bumps.
+5. **Small atomic commits, often.** Commit after each step that works: one
+   logical change per commit, production changes together with their log
+   entry, subject `<Area>: <outcome>; log <date>`. Commit locally as you go;
+   push at the end of the task. Publishing depends on the machine: lemongrab
+   commits on `main` directly, other machines use `feature/<date>-<name>` →
+   PR into `main` (merge or rebase, never squash). `develop` is retired. Full
+   rules: `prepare-pull-request` skill. Pre-commit runs YAML/shell checks;
+   Renovate handles image bumps.
+6. **Lesson capture** (`.cursor/rules/lesson-capture.mdc`): when a skill,
+   rule or this file misled you, or the user corrects how you work, don't
+   edit the guidance. Drop a proposal in `.cursor/proposals/pending/` and
+   carry on; the user reviews them with the `lesson-review` skill.
+7. **Blog capture** (`.cursor/rules/blog-capture.mdc`): when finished work
+   makes a good story (hidden root cause, silent failure, before/after
+   number, migration), write a candidate to `.cursor/blog/pending/` and end
+   the reply with `Blog candidate: <title>`. The owner approves or rejects
+   them with the `blog-review` skill.
+8. **Weekly review**: "weekly review" runs the `weekly-review` skill
+   (lessons, blog candidates, open items and reverse conditions).

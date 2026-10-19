@@ -12,7 +12,7 @@ set -euo pipefail
 
 REPO=/opt/homelab
 STACKS=(
-    /home/docker-projects/{authelia,DocumentsToCalendar-1,homepage,kitchenowl,linkwarden,mosquitto}
+    /home/docker-projects/{homepage,kitchenowl,linkwarden,mosquitto}
     /home/docker-projects/{nginx-vaultwarden,goatcounter,jellyfin,paperless,portainer,travelsync,uptime-kuma,vaultwarden}
     /home/apps/nextcloud
 )
@@ -21,6 +21,7 @@ for d in "${STACKS[@]}"; do
     n=$(basename "$d")
     mkdir -p "$REPO/docker/$n"
     cp "$d/docker-compose.yml" "$REPO/docker/$n/docker-compose.yml"
+    [ ! -f "$d/Dockerfile" ] || cp "$d/Dockerfile" "$REPO/docker/$n/Dockerfile"
 done
 
 cd "$REPO"

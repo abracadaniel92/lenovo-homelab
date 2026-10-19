@@ -1,0 +1,59 @@
+---
+alwaysApply: true
+---
+# Rule: Capture lessons from skill use, propose rather than edit
+
+Adapted from `abracadaniel92/product_manager_skills` (`rules/lesson-capture.md`).
+
+While working in this repo (any skill, or plain homelab work), watch for these four signals:
+
+1. The user says "remember this," "from now on," or clearly praises or pushes back on
+   something you did.
+2. You did something the slow way when a better way existed.
+3. Something failed and a different approach worked.
+4. You had to work something out that a skill, a rule, `CLAUDE.md`, or
+   `SERVICE_ADDITION_CHECKLIST.md` could have stated plainly, or one of them told you
+   something that turned out to be wrong (a drifted path, a removed service, a dead command).
+
+**When a signal fires, do not edit any skill, rule, or guidance file directly.** Instead:
+
+1. Check `.cursor/proposals/decisions.md` first. If a matching idea was already rejected and
+   no new evidence has appeared since, do not propose it again.
+2. Check `.cursor/proposals/pending/` for a proposal already covering the same lesson. If one
+   exists, update it (a second occurrence, a sharper fix) instead of creating a duplicate.
+3. Otherwise, write one new proposal to
+   `.cursor/proposals/pending/YYYY-MM-DD-<short-name>.md`, using the structure in
+   `.cursor/proposals/_TEMPLATE.md`. Name the exact file and the exact sentence, or the exact
+   missing sentence, that misled you, and propose fixing that specific spot, not adding a note
+   somewhere unrelated.
+4. One lesson per proposal file. If a signal touches two unrelated files, write two proposals.
+5. Say nothing more about it in the current task. Don't interrupt the task in progress to
+   announce the proposal, and don't ask for approval mid-task. The user reviews proposals with
+   the `lesson-review` skill, on their own schedule, usually weekly.
+
+## Scope
+
+This rule is for lessons about *how the agent works in this repo*: a skill's wording, a rule,
+`CLAUDE.md`, the service checklist, missing or wrong guidance. Guidance files covered:
+`.cursor/skills/*/SKILL.md`, `.cursor/rules/*.mdc`, `CLAUDE.md`,
+`SERVICE_ADDITION_CHECKLIST.md`.
+
+It is **not** for facts about the homelab itself (an incident, a config change, a new port).
+Those already have a home: the device's troubleshooting log
+(`docs/reference/troubleshooting-log.md`, `pihole/troubleshooting-log.md`,
+`terra/troubleshooting-log.md`) and the reference docs. Log them there as usual.
+
+## Never
+
+- Never edit a `SKILL.md`, a rule, `CLAUDE.md` or the checklist as a direct response to a
+  signal. Every change goes through a proposal and `lesson-review`. (Edits the user asks for
+  directly are normal work, not signals.)
+- **This repo is public.** Never put a password, token, webhook/ntfy/healthchecks URL, private
+  key, internal IP, or personal detail in a proposal. If the lesson can't be stated without
+  one, generalize it or drop it.
+- Never let this rule slow down the task that is actually running, or override any
+  confirmation step in `homelab-governance.mdc`. Writing the proposal file is a quick side
+  effect, not a reason to pause or discuss it mid-task.
+
+This exists so skills and rules improve from real use, with every change reviewed and approved
+by the user first, instead of drifting underneath them unseen.

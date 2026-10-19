@@ -1,6 +1,6 @@
 ---
 name: homelab-storage-migration
-description: Migrate service data between storage tiers, format new disks, and decide where new data should live across the Pi homelab (NVMe primary, /mnt/ssd_1tb, mergerfs /mnt/storage). Use when the user says "move X to ssd_1tb", "migrate to mergerfs", "format the new disk", "where should this data go", "set up storage for new service", or otherwise touches disk layout.
+description: Migrate service data between storage tiers, format new disks, and decide where new data should live on lemongrab (NVMe /home, /mnt/ssd_1tb). Use when the user says "move X to ssd_1tb", "format the new disk", "where should this data go", "set up storage for new service", or otherwise touches disk layout.
 ---
 
 # Homelab Storage Migration
@@ -13,21 +13,22 @@ Per the governance rule:
 
 | Tier | Mount | Use for |
 |---|---|---|
-| Primary | NVMe (`/`, `/home`) | OS, apps, hot data |
-| Primary | `/mnt/ssd_1tb` (1TB SATA SSD) | Sensitive/important data (e.g. Immich photos) |
-| Bulk | `/mnt/storage` (mergerfs) | Bulk media, backup of primary data |
+| Primary | NVMe `/home` (368 GB) | Docker data root, apps, databases |
+| Primary | `/mnt/ssd_1tb` (1 TB **WD laptop HDD**, WD10SPZX; the name is historical) | Immich library, Kiwix, Pi backups |
+| Keep lean | NVMe `/` (101 GB) | OS only. `/mnt/ssd` is a folder here; `/mnt/ssd/backups` really is on root |
 
-User is fine keeping the same data on **both** primary and mergerfs as a redundancy.
+There is no bulk tier any more: the USB HDDs and mergerfs `/mnt/storage` were unplugged on
+2026-09-26. Redundancy comes from backups instead: B2 (nightly, rclone crypt) and the Terra
+(restic over WireGuard; see `terra/README.md`).
 
 ## MANDATORY: Always ask first
 
 When adding or relocating storage for a service or dataset, ALWAYS ask the user where it should live. Do NOT assume. Frame it like:
 
 > "For `<service>`'s `<dataset>`, should it live on:
-> - Primary NVMe (`/home/...`)
-> - Primary 1TB SSD (`/mnt/ssd_1tb/...`)
-> - mergerfs bulk (`/mnt/storage/...`)
-> - or a combination (primary + mergerfs as backup)?"
+> - NVMe (`/home/...`)
+> - the 1 TB HDD (`/mnt/ssd_1tb/...`)
+> - and does it need a backup config (`scripts/backup.d/`)?"
 
 Only proceed once the user confirms.
 
@@ -51,7 +52,10 @@ sudo mount /mnt/ssd_1tb
 
 Verify with `lsblk`, `df -h`, and `findmnt /mnt/ssd_1tb`.
 
-Reference fstab snippet for boot-only NVMe + 1TB SSD: [fstab-boot-only-nvme-ssd1tb.snippet](../../../../fstab-boot-only-nvme-ssd1tb.snippet) (in workspace root, one level above the repo).
+Always use `nofail`: on 2026-03-27 a missing USB disk hung boot (see the troubleshooting log).
+
+For a spinning disk that runs 24/7, stop head parking with `scripts/fix-hdd-head-parking.sh`
+(APM 254, persisted in `/etc/hdparm.conf`); see log entry 2026-10-17.
 
 ### Migrate Immich (canonical pattern)
 
@@ -81,15 +85,15 @@ Adapt the Immich script — do NOT improvise. Copy it to a new file under `scrip
 - [ ] 6. Restart service: docker compose up -d
 - [ ] 7. Verify the service works AND the data is intact
 - [ ] 8. Leave the old data in place until user confirms (do NOT auto-delete)
-- [ ] 9. Log to TROUBLESHOOTING_LOG.md (this is non-standard work)
+- [ ] 9. Log to docs/reference/troubleshooting-log.md (this is non-standard work)
 ```
 
 ### Set up storage for a brand-new service
 
-1. Ask the user where the data should live (the four-option question above).
+1. Ask the user where the data should live (the question above).
 2. Create the directory: `sudo mkdir -p <chosen path>` and chown to the appropriate user.
 3. Reference that path in `docker/<service>/docker-compose.yml` volume mounts.
-4. If choosing primary + mergerfs redundancy: configure backup to copy to `/mnt/storage/<service>/` on a schedule (use the `homelab-backup-restore` skill).
+4. If the data matters, add a backup config (use the `homelab-backup-restore` skill). Anything under `/mnt/ssd/backups` goes to B2 automatically.
 
 ## Hard rules
 
@@ -101,5 +105,5 @@ Adapt the Immich script — do NOT improvise. Copy it to a new file under `scrip
 
 ## Reference
 
-- Storage policy: see governance rule (`homelab-governance.mdc`, sections 9-10).
+- Storage policy: see governance rule (`homelab-governance.mdc`, sections 10-12).
 - Generic file/data preference: `~/Desktop/Cursor projects/.cursor/rules/storage-preference.mdc` (workspace-level: prefer `/home` over `/`).

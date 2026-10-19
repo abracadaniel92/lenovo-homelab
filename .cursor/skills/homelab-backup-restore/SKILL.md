@@ -1,6 +1,6 @@
 ---
 name: homelab-backup-restore
-description: Run, configure, verify, or restore homelab backups for services like Vaultwarden, Nextcloud, KitchenOwl, TravelSync, Linkwarden, plus Backblaze B2 offsite sync. Use when the user says "back up X", "restore from B2", "verify backups are working", "set up backup cron for new service", "add a backup config", or otherwise wants to operate the backup system.
+description: Run, configure, verify, or restore homelab backups for services like Vaultwarden, Nextcloud, TravelSync, Linkwarden, the Pi's nightly backup, plus the B2 and Terra offsite copies. Use when the user says "back up X", "restore from B2", "verify backups are working", "set up backup cron for new service", "add a backup config", or otherwise wants to operate the backup system.
 ---
 
 # Homelab Backup & Restore
@@ -15,18 +15,21 @@ scripts/
 ├── backup-all-critical.sh        # wrapper: runs all critical services
 ├── backup-retention-helper.sh    # smart retention (READ-ONLY)
 ├── backup.d/
-│   ├── kitchenowl.conf
-│   ├── linkwarden.conf
-│   ├── nextcloud.conf
-│   ├── travelsync.conf
-│   └── vaultwarden.conf
+│   ├── linkwarden.conf / nextcloud.conf / travelsync.conf / vaultwarden.conf
+│   ├── kitchenowl.conf           # service removed 2026-07-28, conf still present
+│   └── pi.conf                   # freshness check only; the Pi pushes its own archive
 ├── verify-backups.sh             # safety net for backup health
-├── setup-backblaze-b2-backup.sh  # configure B2 offsite
-├── sync-backups-to-b2.sh         # push local backups to B2
+├── restore-drill.sh              # prove a backup restores
+├── sync-backups-to-b2.sh         # nightly rclone-crypt push to B2 (sync-backups-to-b2.timer, 03:00)
+├── backup-immich-terra.sh        # restic: Immich library + /mnt/ssd/backups to the Terra
 └── setup-all-backups-cron.sh     # install daily 02:00 cron
 ```
 
-Backups land in `/mnt/ssd/backups/<service>/`. Daily cron runs at 02:00 via `/etc/crontab`. Retention: last 30 backups per service.
+Backups land in `/mnt/ssd/backups/<service>/` (on the root disk; keep it small). Daily cron runs at 02:00 via `/etc/crontab`. Retention: last 30 backups per service.
+
+Monitoring: the hourly health check (`health.d/50-backup-freshness.sh`, `60-offsite-freshness.sh`) pushes to ntfy if a backup or the B2 copy goes stale.
+
+Three copies of what matters: lemongrab, Backblaze B2 (all of `/mnt/ssd/backups`, follows symlinks so the Pi's backups on `/mnt/ssd_1tb/backups/pi` go too), and the Terra (Immich + `/mnt/ssd/backups`, but symlinks stay symlinks, so no Pi backups there).
 
 ## Workflows
 
@@ -73,7 +76,7 @@ Choose the right `TYPE` in the conf file:
 
 ### Restore from a local backup
 
-Use the service-specific restore script if one exists (e.g. `restore-kitchenowl.sh`). Otherwise:
+Use the service-specific restore script if one exists (`scripts/restore-*.sh`); `scripts/restore-drill.sh` shows the tested path. Otherwise:
 
 1. Stop the container: `cd docker/<service> && docker compose stop`
 2. Move existing data aside (do NOT delete until restore is verified): `mv data data.preserve.<date>`
@@ -84,17 +87,16 @@ Use the service-specific restore script if one exists (e.g. `restore-kitchenowl.
 
 ### Backblaze B2 offsite
 
-Initial setup (once):
+Runs nightly from `sync-backups-to-b2.timer`; encrypted with rclone crypt (setup: `scripts/setup-b2-encrypted-sync.sh`). Manual run:
 ```bash
-bash scripts/setup-backblaze-b2-backup.sh
+sudo systemctl start sync-backups-to-b2.service
 ```
 
-Routine sync (push local `/mnt/ssd/backups/` to B2):
-```bash
-bash scripts/sync-backups-to-b2.sh
-```
+To restore from B2: `rclone copy` the archive from the crypt remote to a local dir, then follow the local-restore procedure above. See log entry 2026-09-26 "B2 offsite".
 
-To restore from B2: pull the desired archive locally first using the B2 CLI, then follow the local-restore procedure above.
+### Terra offsite (restic)
+
+See `terra/README.md` (Part B for the lemongrab side). The restic password is only on lemongrab (`/root/.config/restic/`, copy in Vaultwarden).
 
 ### Cron maintenance
 
@@ -103,10 +105,6 @@ To (re)install the daily backup cron:
 bash scripts/setup-all-backups-cron.sh
 ```
 
-For a single service:
-```bash
-bash scripts/setup-kitchenowl-backup-cron.sh
-```
 
 ## Hard rules
 

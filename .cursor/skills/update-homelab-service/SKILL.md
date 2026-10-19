@@ -11,14 +11,14 @@ Safe, surgical update workflow for a single Docker-composed service. Always targ
 
 Watchtower was removed on 2026-09-25 and nothing replaced it on purpose: every update is manual. `update-check.timer` pushes a weekly ntfy list of images whose tag has a newer build (`scripts/update-check.sh --print` shows it on demand). Take extra care when:
 
-- The service has **state** that needs care (Vaultwarden, Nextcloud, Immich, Outline, KitchenOwl, Mattermost, Linkwarden, paperless, etc.)
+- The service has **state** that needs care (Vaultwarden, Nextcloud, Immich, Outline, Mattermost, Linkwarden, Paperless, Cal, etc.)
 - The user explicitly asks to update one service
 - A breaking-change major version bump is involved (read release notes first)
 - The service is **infrastructure-critical** (Caddy, cloudflared, Pi-hole, Portainer) — these should never be auto-updated; always manual + immediate verification
 
 The weekly check cannot tell a patch from a major jump (Jellyfin `:latest` moved 10.x → 12.x), and it never sees newer releases of pinned tags. Check release notes before every pull.
 
-Docker Hub allows 100 anonymous requests per hour per IP, and each pull and each check counts. A big batch of updates hits `429 Too Many Requests`; it refills within the hour.
+Docker Hub allows 100 anonymous requests per hour per IP, and each pull and each check counts. A big batch of updates hits `429 Too Many Requests`; it refills within the hour. `update-check.sh` spends about 30 of them per run, so run it once, not repeatedly, right before pulling. If a pull hits 429, wait for the refill or pull via `mirror.gcr.io`.
 
 ## Workflow
 
@@ -31,13 +31,13 @@ Docker Hub allows 100 anonymous requests per hour per IP, and each pull and each
 - [ ] 6. docker compose pull
 - [ ] 7. docker compose up -d
 - [ ] 8. Verify health (container status + app endpoint + verify-services.sh)
-- [ ] 9. Log to TROUBLESHOOTING_LOG.md if anything was non-routine
+- [ ] 9. Log to docs/reference/troubleshooting-log.md if anything was non-routine
 ```
 
 ## 1. Confirm scope
 
 Ask the user (if unspecified):
-- Which service exactly? (one of the 28 in `docker/`)
+- Which service exactly? (`docker ps`; `docker/` also holds dirs for stacks that no longer run)
 - Pin a version, or "latest"?
 - Have they read the release notes for breaking changes? (Especially Immich, Nextcloud, Outline.)
 
@@ -50,9 +50,11 @@ docker inspect <container-name> --format '{{ index .Config.Labels "com.docker.co
 ```
 
 Common live locations on this homelab:
-- `~/Desktop/Cursor projects/Pi-version-control/docker/<service>/` (most services)
-- `/home/docker-projects/<service>/` (legacy path for some)
-- `/mnt/ssd/docker-projects/<service>/` (storage-tier-specific)
+- `/home/docker-projects/<service>/` (about half; `/mnt/ssd/docker-projects` is a symlink to it)
+- `/home/apps/nextcloud`
+- the repo's `docker/<service>/` (caddy, cloudflared and a few others)
+
+After updating a stack under `/home/docker-projects/`, run `scripts/mirror-live-compose.sh` so the repo copy matches.
 
 ALWAYS run `docker compose` commands from the live directory. Updating the repo copy alone does NOTHING — Compose reads `docker-compose.yml` from the cwd.
 
@@ -71,11 +73,11 @@ Many services have README/SETUP_GUIDE files with version-specific gotchas. Skim 
 docker inspect <container-name> --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
 ```
 
-Mounts must point at persistent storage paths (`/home/...`, `/mnt/ssd_1tb/...`, `/mnt/ssd/...`, `/mnt/storage/...`). Anything pointing at an anonymous volume or a temp path is a data-loss risk; STOP and surface to the user.
+Mounts must point at persistent storage paths (`/home/...`, `/mnt/ssd_1tb/...`, `/mnt/ssd/...`; never the unplugged `/mnt/storage`). Anything pointing at an anonymous volume or a temp path is a data-loss risk; STOP and surface to the user.
 
 ## 5. Back up first (stateful services)
 
-Mandatory for: Vaultwarden, Nextcloud, Immich, Outline, KitchenOwl, Mattermost, Linkwarden, paperless, TravelSync, Mattermost.
+Mandatory for: Vaultwarden, Nextcloud, Immich, Outline, Mattermost, Linkwarden, Paperless, TravelSync, Cal.
 
 Use the `homelab-backup-restore` skill or directly:
 
@@ -83,7 +85,12 @@ Use the `homelab-backup-restore` skill or directly:
 bash scripts/backup-engine.sh <service>   # if a backup config exists in scripts/backup.d/
 ```
 
-If no backup config exists for the service: STOP and ask the user — should we add one (via `homelab-backup-restore`) before updating, or proceed with manual snapshot, or accept the risk?
+No backup config yet for these; use the snapshot already used for them:
+- Immich: covered by its own 02:00 DB dump in `/mnt/ssd_1tb/immich-library/backups/`; for a major version also `pg_dumpall` first.
+- Outline (and other Postgres apps): `docker exec <db> pg_dumpall -U <user> | gzip > /mnt/ssd/backups/<svc>/<svc>-db-<version>-<date>.sql.gz`
+- Home Assistant: tar its config dir to `/mnt/ssd/backups/homeassistant/ha-config-<version>-<date>.tar.gz`
+
+Any other service without a backup config: STOP and ask the user — should we add one (via `homelab-backup-restore`) before updating, or proceed with manual snapshot, or accept the risk?
 
 For stateless services (clawdbot, freshrss frontend, kiwix readers, stirling-pdf, etc.) skip this step.
 
@@ -96,6 +103,8 @@ cd <live-directory>
 docker compose pull              # pulls new images for all services in this compose file
 ```
 
+If it says `No service selected`, the compose file uses profiles: `docker compose --profile <name> pull <service>` and the same `--profile` on `up -d` (Home Assistant: `--profile utilities`).
+
 If the compose file pins a tag (`image: app:1.2.3`), bump the tag in the file FIRST, then pull. Do NOT silently change a pinned tag without user confirmation.
 
 ## 7. Restart with new image
@@ -104,7 +113,7 @@ If the compose file pins a tag (`image: app:1.2.3`), bump the tag in the file FI
 docker compose up -d
 ```
 
-This recreates only the containers whose images changed. Existing volumes and networks are preserved.
+This recreates only the containers whose images changed. Not always: if `up -d` says `Running` and the version did not change, use `docker compose up -d --force-recreate --no-deps <service>`. Check the version after, don't trust the `up` output. Existing volumes and networks are preserved.
 
 For services with a **dependent stack** (DB + app, or app + reverse-proxy sidecar): check `depends_on` in the compose file to confirm restart order is sane.
 

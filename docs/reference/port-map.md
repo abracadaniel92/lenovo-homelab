@@ -27,7 +27,6 @@ Single source of truth for which service uses which host port. Check this (and r
 | 8101  | Cal               | cal.gmojsoski.com (Postgres container-internal) |
 | 8102+ | —                 | available                         |
 | 5555  | ADB (emulator)    | 127.0.0.1 only                    |
-| 9091  | Authentik         | auth.gmojsoski.com                |
 | 9000  | Portainer         | internal only                     |
 | 9443  | Portainer HTTPS   | internal only                     |
 | 2283  | Immich            | immich.gmojsoski.com              |

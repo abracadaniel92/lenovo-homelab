@@ -5,6 +5,89 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-19] Image updates from the weekly ntfy list (Mattermost went to 12.0)
+
+**Symptom:** `update-check` listed 10 containers with newer images.
+
+**Change (live dirs, one at a time):**
+- stirling-pdf 3.0.0 -> 3.2.0, homepage 2.5.0 -> 2.6.0, nginx-vaultwarden 1.31.6 -> 1.31.7,
+  cloudflared 2026.10.0 -> 2026.10.1, Home Assistant 2026.10.1 -> 2026.10.2,
+  Nextcloud 35.0.1 -> 35.0.2 (auto `occ upgrade`), Immich v3.3.1 -> v3.3.3.
+- **Mattermost 11.11.1 -> 12.0.0 (major).** Planned as 11.11.2 from GitHub's "latest
+  release", but Docker `:latest` was already 12.0.0. Migrations ran in ~2 s. v12 needs
+  Postgres >= 15 (we run 15), drops OpenSearch 1.x (unused) and suppresses unrebuilt web
+  plugins; the enabled ones (calls, nps, ai, playbooks) are prepackaged, the 5 third-party
+  ones on disk are disabled. Rollback = pin `:11.11` + restore
+  `/mnt/ssd/backups/mattermost/mattermost-db-11.11.1-20261019-1009.sql.gz`.
+- Caddy skipped: the "newer" image is the same v2.11.7 build (same build time).
+
+**Gotchas:**
+- Docker Hub 429 after 2 pulls; `compose pull` then printed `Running` and kept the old image.
+  Fix: `docker pull mirror.gcr.io/library/<img>:<tag>` + `docker tag` to the compose name.
+- HA config tar as goce misses root-owned `.storage/` files (exit 2). Took it from inside:
+  `docker exec homeassistant tar czf - -C / config > ...ha-config-2026.10.1-20261019-1007.tar.gz`.
+- `up -d immich-server immich-machine-learning` also recreated `immich_postgres` (same image, healthy).
+- Pre-existing, not from this update: Mattermost logs "Mail server connection test failed" (`[::1]:10025` refused).
+
+**Open (owner deferred):** Mattermost email. Either Gmail SMTP like Cal.com/Nextcloud
+(new app password in the gitignored `docker/mattermost/.env`, `MM_EMAILSETTINGS_*` vars,
+test mail) or turn email notifications off to silence the error.
+
+**Backups:** Mattermost `pg_dumpall` (above), Nextcloud via `backup-engine.sh nextcloud`,
+HA tar (above), Immich nightly 02:00 dump.
+
+**Verification:** each service's local endpoint + version checked; `verify-services.sh`
+all healthy after cloudflared and again at the end.
+
+## [2026-10-18] Weekly review: open items
+
+First weekly review. Items checked against live state where possible.
+
+**Closed:**
+- Pi nightly backup (from log 2026-10-17): `pi-20261018-023204.tar.zst` arrived
+  02:32, so the Pi timer runs.
+- `/usr/local/bin/css-update` (from log 2026-10-05): already gone.
+- ws-scrcpy port 8233 (from log 2026-10-08 item 6): closed, stack removed 2026-10-13.
+- `.bak-20261008` files with plaintext secrets (from log 2026-10-08 item 2):
+  deleted (4 compose backups, paperless `.env.bak`). The kitchenowl,
+  vaultwarden and nextcloud `.env.bak` were already gone.
+- Vaultwarden `ADMIN_TOKEN` plaintext (from log 2026-10-08 item 3): admin page
+  never used (no `data/config.json`), so the `ADMIN_TOKEN` line was removed from
+  the live `.env` and the container recreated. `/admin` now says "disabled";
+  `/alive` 200 locally and via vault.gmojsoski.com. Revert: add the line back,
+  `docker compose up -d --force-recreate`.
+- Authelia (from log 2026-10-08 item 4): deleted. Live
+  `/home/docker-projects/authelia` (never ran), repo `docker/authelia/`, its
+  `mirror-live-compose.sh` entry, and the `@auth` (auth.gmojsoski.com → :9091)
+  block in `docker/caddy/config.d/50-utilities.caddy` (owner approved; no
+  tunnel hostname, no DNS, nothing on 9091, so no visible impact). Caddy
+  validated and restarted; `verify-services.sh`: all healthy.
+- travelsync (from log 2026-10-08 item 5): **that item was backwards.**
+  `/home/docker-projects/travelsync` (= `/mnt/ssd/docker-projects/travelsync`)
+  is the live stack the `documents-to-calendar` container runs from (its data,
+  DB, `.env`). The leftover was `DocumentsToCalendar-1` (old compose +
+  Dockerfile, Dec 2025): removed from the repo and the mirror script; live
+  folder removal left to the owner (`rm -rf /home/docker-projects/DocumentsToCalendar-1`).
+- Pi `sshd` password auth (from log 2026-10-08 item 7): owner disabled it; to be
+  logged in the Pi log.
+- Pi firmware/OS update and reboot (from Pi log 2026-10-17): owner says done.
+- Pi Uptime Kuma off lemongrab's compose (from Pi log 2026-10-03): done
+  2026-10-17 (Pi log), Kuma 2.5.6 at `pihole/docker/uptime-kuma/`.
+- Terra reboot test (from Terra log 2026-10-05): passed (later Terra entry).
+- Terra BIOS "restore on AC power loss" (from Terra log 2026-10-05): owner says done.
+
+**Dropped:**
+- Bind Portainer (9000/9443) to 127.0.0.1, disable xrdp (3389) (from log
+  2026-10-08 item 6): owner uses both, LAN is family only.
+
+**Reverse if:** someone outside the family gets LAN or VPN access; then bind
+Portainer to 127.0.0.1 and put xrdp behind the VPN only.
+
+**Carried over:**
+- Immich offsite to the Terra (from log 2026-10-08 item 1, Terra log): Terra
+  fstab, rest-server, watchdog, `terra.repo`, timer, health module. Open since
+  2026-10-08; new drive online 2026-10-19.
+
 ## [2026-10-17] Pi nightly backup: receiver on lemongrab (WD disk)
 
 **Goal:** the Pi (Pi-hole host) now builds a ~50 MB `pi-YYYYMMDD-HHMMSS.tar.zst`
