@@ -4,6 +4,29 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-20: first scheduled nightly backup landed
+
+**Goal:** confirm lemongrab's `backup-immich-terra.timer` (04:00) pushed
+a snapshot on its own the first night after Part B.
+
+**Check (on the Terra, read-only):** the repo is `restic-rest-server`-only
+(0700), so it needs `sudo`: `sudo ls -la --time-style=full-iso
+/mnt/offsite/restic/lemongrab/snapshots/` and
+`sudo find /mnt/offsite/restic/lemongrab/data -type f -newermt '2026-10-20 00:00' | wc -l`.
+
+**Verification:** 3 snapshot files:
+- `254ffab1` 2026-10-17 (seed on lemongrab)
+- `b97ab177` 2026-10-19 10:36 (manual run during Part B)
+- `77c31ffd` **2026-10-20 04:11:31** (the timer's run)
+
+The run took ~11 min. 6 new pack files since midnight, so incremental as
+expected. `journalctl -u restic-rest-server` shows nothing for the night;
+normal, since rest-server does not log requests by default.
+
+**Still open:** this proves a snapshot was written, not its integrity. Run
+`restic snapshots` / `restic check` from lemongrab (the repo password lives
+there).
+
 ## 2026-10-19: APM 254 survives reboot through the USB enclosure
 
 **Goal:** confirm the head-parking fix (same as lemongrab, log 2026-10-17)
