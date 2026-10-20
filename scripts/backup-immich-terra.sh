@@ -11,6 +11,8 @@
 # local path instead, e.g. RESTIC_REPOSITORY=/mnt/offsite/restic/lemongrab.
 set -euo pipefail
 
+# systemd runs this without HOME; restic needs it for its cache (log 2026-10-20).
+export HOME="${HOME:-/root}"
 export RESTIC_PASSWORD_FILE=/root/.config/restic/terra.pass
 [ -n "${RESTIC_REPOSITORY:-}" ] || export RESTIC_REPOSITORY_FILE=/root/.config/restic/terra.repo
 

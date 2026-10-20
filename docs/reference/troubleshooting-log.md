@@ -15,7 +15,9 @@ processed in 6:07. Repo `7a57bbe4` now holds 3 snapshots (2026-10-17, 2026-10-19
 
 **Noticed:** restic warns `unable to open cache: neither $XDG_CACHE_HOME nor $HOME
 are defined` (systemd runs it without `HOME`), so every run works uncached and
-re-reads the index over WireGuard. Harmless at 6 min; not changed.
+re-reads the index over WireGuard. Fixed (live, `scripts/` is live): the script now
+sets `HOME="${HOME:-/root}"`, so restic caches under `/root/.cache/restic`. Takes
+effect on the 2026-10-21 04:05 run; check its journal has no cache warning.
 
 **Still open:** unplug-the-drive failure test (README).
 
