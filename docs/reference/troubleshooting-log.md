@@ -5,6 +5,20 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-20] Terra offsite: first scheduled nightly run succeeded
+
+**Result:** `backup-immich-terra.timer` fired at 04:05, the service exited 0 at 04:11.
+Snapshot `77c31ffd` saved (parent `b97ab177`): 18 new files, 81 MiB added, 133.3 GiB
+processed in 6:07. Repo `7a57bbe4` now holds 3 snapshots (2026-10-17, 2026-10-19,
+2026-10-20). Checked with `journalctl -u backup-immich-terra.service` and
+`restic snapshots --no-lock` as root.
+
+**Noticed:** restic warns `unable to open cache: neither $XDG_CACHE_HOME nor $HOME
+are defined` (systemd runs it without `HOME`), so every run works uncached and
+re-reads the index over WireGuard. Harmless at 6 min; not changed.
+
+**Still open:** unplug-the-drive failure test (README).
+
 ## [2026-10-19] Terra offsite verified: check, restore and append-only all pass
 
 **Result:** repo `7a57bbe4` on Terra holds 2 snapshots (2026-10-17, 2026-10-19, ~133 GiB).
