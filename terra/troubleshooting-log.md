@@ -4,6 +4,31 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-21: APM udev rule and rest-server BindsTo applied
+
+**Goal:** permanent fixes for the two problems the unplug test (entry below) found.
+
+**EPC ruled out:** `openSeaChest_PowerControl --showEPCSettings` says "not
+supported on this device" (through the enclosure it reports as "Portable USB
+3.0"; features list APM only). So EPC isn't why it parks at APM 254.
+
+**Change (live on the Terra, copied from the repo):**
+- `terra/99-offsite-apm.rules` → `/etc/udev/rules.d/`: on `add` of the disk
+  with `ID_SERIAL_SHORT=56HRP1HST`, run `hdparm -B 254`.
+- `BindsTo=mnt-offsite.mount` appended to
+  `/etc/systemd/system/restic-rest-server.service.d/override.conf`,
+  `daemon-reload`. rest-server now stops when the drive goes, and does not
+  start by itself when it comes back (`mount /mnt/offsite && systemctl start
+  restic-rest-server`; a reboot also does it).
+- `terra/setup-offsite.sh` installs both.
+
+**Verification:** `hdparm -B 128` (as after a power-up), then `udevadm trigger
+--action=add --sysname-match=sdb`: APM back to **254**. `systemctl show
+restic-rest-server`: `BindsTo=mnt-offsite.mount`, active, port 8000 listening.
+
+**Still open:** why it parks ~5/h at APM 254 (watching disk I/O for the
+watchdog's 10-min and smartd's 30-min pattern); `BindsTo=` not yet tested by an actual unplug.
+
 ## 2026-10-21: unplug test passed on both sides; APM lost on replug
 
 **Goal:** README "Verify": unplug the drive, both sides must alert.
