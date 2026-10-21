@@ -4,6 +4,48 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-21: unplug test passed on both sides; APM lost on replug
+
+**Goal:** README "Verify": unplug the drive, both sides must alert.
+lemongrab's half is in its log (2026-10-21): restic exit 10, ntfy push
+arrived, and the Mattermost alert was found dead (Cloudflare 403) and fixed.
+
+**Before the test (read-only):** snapshots `77c31ffd` (10-20 04:11) and
+`c64ea872` (10-21 04:06), 6 + 5 new packs (85 + 66 MB), repo 128 GB.
+SMART clean, but `Load_Cycle_Count` **263** (28 on 10-19) and +2 in 3 min
+idle with `APM_level = 254`: the drive parks anyway (~5/h). Suspect
+Toshiba EPC idle timers, which APM does not control.
+
+**Test (on the Terra):**
+- 09:00:28 `sync && umount /mnt/offsite` (after clearing the watchdog's
+  `backup` stamp), then cable pulled.
+- 09:01 watchdog run: pushed only "WireGuard to lemongrab down". The office
+  Wi-Fi was dropping packets then (WireGuard ping and DNS failing on and off,
+  signal 73), so the backup push most likely failed to send. No stamp, so it retried.
+- **09:11:56 backup push sent** ("No new lemongrab backup on the Terra in
+  36 h"). The stamp is only written after ntfy accepts it. Terra half passed;
+  this closes the item lemongrab's entry left open.
+- Replugged, `mount /mnt/offsite`: ext4 mounted clean, rest-server on 8000.
+
+**Problems found:**
+- **rest-server kept running after `umount`** (up since 10-19).
+  `RequiresMountsFor` only stops it when systemd stops the mount, not on a
+  manual `umount` or a yanked cable. Harmless here: the bare mountpoint is
+  root 0755, so rest-server could not write onto the root disk, and lemongrab
+  got "repository does not exist". Fix: `BindsTo=mnt-offsite.mount`.
+- **APM came back as 128 after the replug.** Debian's hdparm udev hook skips
+  APM on USB disks (`hdparm_try_apm` returns 1 for `pci-*-usb-*`), so
+  `/etc/hdparm.conf` never applies to this drive. The 10-19 "survives reboot"
+  result was a warm reboot that kept the enclosure powered; a power cut
+  would reset it too. Fix: a udev rule on `ID_SERIAL_SHORT=56HRP1HST` that
+  runs `hdparm -B 254`, plus the EPC check above.
+- Watchdog alerts from lemongrab's daily restarts (10-20 02:27 wg, 05:27
+  site) arrive often enough to train the owner to ignore pushes.
+
+**Still open:** udev APM rule + EPC (openSeaChest `--showEPCSettings`);
+`BindsTo=`; noisy wg/site alerts (find the daily restart, or alert only
+after 2 failed runs in a row); confirm the 2026-10-22 04:05 run.
+
 ## 2026-10-20: first scheduled nightly backup landed
 
 **Goal:** confirm lemongrab's `backup-immich-terra.timer` (04:00) pushed
