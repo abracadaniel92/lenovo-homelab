@@ -41,6 +41,8 @@ udevadm control --reload
 # Every SMART poll is a drive access that unparks the heads; 3 h, not 30 min.
 grep -q '^smartd_opts=' /etc/default/smartmontools \
     || echo 'smartd_opts="--interval=10800"' >> /etc/default/smartmontools
+# No MTA here, so smartd's mail goes nowhere; push its warnings instead.
+install -m 0755 "$(dirname "$0")/smartd-ntfy.sh" /etc/smartmontools/run.d/05ntfy
 systemctl restart smartmontools
 
 # rest-server: append-only, WireGuard IP only, never without the drive.

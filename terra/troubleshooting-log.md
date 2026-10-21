@@ -4,6 +4,34 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-21: smartd warnings push to ntfy; Terra gets its own topic and priorities
+
+**Symptom:** smartd mailed root, but the Terra has no MTA (`10mail` hook:
+"does not have /usr/bin/mail"), so SMART warnings went nowhere.
+
+**Change (live, Terra):**
+- `terra/smartd-ntfy.sh` → `/etc/smartmontools/run.d/05ntfy` (runs before
+  `10mail` via smartd-runner): pushes "SMART warning on <sdX>: <type>".
+  By-id paths are resolved to the kernel name so the serial never reaches
+  the public topic. `setup-offsite.sh` installs it.
+- `/etc/terra-watchdog/ntfy_topic_url` now holds a **Terra-only** ntfy.sh
+  topic (owner subscribed). lemongrab's topic also carries Uptime Kuma, and a
+  test push got lost there. Topic name stays out of the repo.
+- `terra/watchdog.sh` (installed 11:21): priorities per alert: `urgent`
+  lemongrab offline, `high` no backup in 36 h, `default` site or WireGuard
+  alone. The owner sets up the phone's notification sounds per priority.
+
+**Verification:**
+- `smartd -q onecheck` with a `-M test` config: push "SMART warning on sdb:
+  EmailTest" arrived on the new topic. The first test (old topic) did not
+  show up on the phone, though smartd shows `05ntfy` exited cleanly.
+- `bash terra/test-watchdog.sh` PASS (now also checks the priority header).
+- Live `05ntfy` and `/usr/local/bin/terra-watchdog.sh` match the repo
+  (apart from a header comment edited afterwards).
+
+**Reverse if:** the separate topic gets missed; put lemongrab's URL back in
+the topic file.
+
 ## 2026-10-21: udisks2 SMART polling can't be switched off per drive; ~6 parks/h accepted
 
 **Goal:** stop udisks2's 10-min SMART poll on the offsite drive (entry below)

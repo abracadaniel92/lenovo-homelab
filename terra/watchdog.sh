@@ -5,9 +5,9 @@
 #
 # Runs every 10 min from terra-watchdog.timer (see README, Part A step 6).
 # Install: sudo install -m 0755 watchdog.sh /usr/local/bin/terra-watchdog.sh
-# Topic URL: /etc/terra-watchdog/ntfy_topic_url (0600), the same public ntfy.sh
-# topic lemongrab uses. Title only, never details (anyone with the topic name
-# can read it).
+# Topic URL: /etc/terra-watchdog/ntfy_topic_url (0600): a public ntfy.sh topic
+# for the Terra alone (since 2026-10-21; lemongrab's is shared with Uptime
+# Kuma). Title only, never details (anyone with the topic name can read it).
 #
 # ponytail: one push per problem per 6 h, stamps in tmpfs. Ceiling: no
 # "recovered" message and stamps reset on reboot. Upgrade path: clear the
