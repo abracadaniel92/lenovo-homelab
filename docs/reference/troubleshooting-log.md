@@ -18,6 +18,12 @@ URL is saved in `~/.ntfy_topic_url.kuma-cal` (mode 600). Revert: copy it back.
 
 **Verification:** a test push through `ntfy-push.sh` was accepted by ntfy.sh (owner to confirm on the phone).
 
+**Cal bookings too:** the Cal webhook (`Webhook` row `68fad15a…` in `calcom-postgres`)
+now posts to a separate `goce-booking-cal-…` topic. Only the topic path changed, the
+template query string is the same. Done with an SQL `regexp_replace` in a transaction
+instead of the UI (long templated URL). A sample `BOOKING_CREATED` payload to the new URL
+returned 200. Uptime Kuma is now the only sender on the old topic.
+
 ## [2026-10-21] Weekly review: open items
 
 **Closed:**
