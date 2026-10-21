@@ -5,6 +5,19 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-21] ntfy: lemongrab system alerts on their own topic
+
+**Why:** one topic carried Kuma up/down, Cal bookings, health and unit-failure alerts and
+the weekly update list; too noisy to tell apart. The Terra already has its own topic.
+
+**Change (live, gitignored):** `scripts/ntfy_topic_url` now points at a new
+`lemongrab-system-…` topic on ntfy.sh. Everything that goes through `ntfy-push.sh`
+moves with it: health-check 🚨 alerts, `notify-unit-failure.sh`, `update-check.sh`.
+Uptime Kuma and the Cal webhook keep the old topic (set in their own configs). The old
+URL is saved in `~/.ntfy_topic_url.kuma-cal` (mode 600). Revert: copy it back.
+
+**Verification:** a test push through `ntfy-push.sh` was accepted by ntfy.sh (owner to confirm on the phone).
+
 ## [2026-10-21] Weekly review: open items
 
 **Closed:**
