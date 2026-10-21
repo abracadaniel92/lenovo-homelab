@@ -5,6 +5,7 @@ candidate.
 
 | Date | Outcome | Candidate | Note or reason |
 |------|---------|-----------|----------------|
+| 2026-10-21 | Published | pihole-quietly-using-google | Live as /blog/pihole-v6-ignored-unbound-upstream |
 | 2026-10-21 | Approved (soon) | unplug-test-caught-dead-alerts | TIL; separate from the watchman post (alert lost on the way out, not a silent server) |
 | 2026-10-18 | Published | space-in-path-killed-backups | Already live since 2026-10-08 as /blog/space-in-path-killed-homelab-automation |
 | 2026-10-18 | Split out (soon) | who-watches-the-watchman | Not in the published space-in-path post; TIL follow-up to it |
