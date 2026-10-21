@@ -21,10 +21,10 @@ LEMONGRAB_WG="${LEMONGRAB_WG:-10.8.0.1}"
 STATE="${STATE:-/run/terra-watchdog}"
 mkdir -p "$STATE"
 
-alert() { # alert <title> <key>
+alert() { # alert <title> <key> <priority>; the phone keeps "default" silent
     local stamp="$STATE/$2"
     [ -n "$(find "$stamp" -mmin -360 2>/dev/null)" ] && return
-    curl -fsS --max-time 10 -H "Title: terra" -H "Priority: high" \
+    curl -fsS --max-time 10 -H "Title: terra" -H "Priority: $3" \
         -d "$1" "$TOPIC_URL" >/dev/null && touch "$stamp"
 }
 
@@ -42,16 +42,16 @@ if [ $site_ok = 1 ] && [ $wg_ok = 1 ]; then
 elif [ ! -e "$STATE/net-strike" ]; then
     touch "$STATE/net-strike"
 elif [ $site_ok = 0 ] && [ $wg_ok = 0 ]; then
-    alert "lemongrab offline: site and WireGuard both down (home power or internet?)" home
+    alert "lemongrab offline: site and WireGuard both down (home power or internet?)" home urgent
 elif [ $site_ok = 0 ]; then
-    alert "gmojsoski.com down but lemongrab answers on WireGuard (Caddy/cloudflared?)" site
+    alert "gmojsoski.com down but lemongrab answers on WireGuard (Caddy/cloudflared?)" site default
 elif [ $wg_ok = 0 ]; then
-    alert "WireGuard to lemongrab down, site is up" wg
+    alert "WireGuard to lemongrab down, site is up" wg default
 fi
 
 # restic writes one small file per snapshot into snapshots/. The Terra can't
 # read them (encrypted) but can see when the last one landed. A missing dir
 # (drive not mounted) also alerts.
 if [ -z "$(find "$SNAP_DIR" -type f -mmin -2160 -print -quit 2>/dev/null)" ]; then
-    alert "No new lemongrab backup on the Terra in 36 h" backup
+    alert "No new lemongrab backup on the Terra in 36 h" backup high
 fi

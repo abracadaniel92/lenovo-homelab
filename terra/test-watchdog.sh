@@ -11,7 +11,7 @@ out = sys.argv[1]
 class H(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers['Content-Length'])).decode()
-        open(out, 'a').write(body + '\n'); self.send_response(200); self.end_headers()
+        open(out, 'a').write(body + ' |' + self.headers.get('Priority', '') + '\n'); self.send_response(200); self.end_headers()
     def log_message(self, *a): pass
 http.server.HTTPServer(('127.0.0.1', 18765), H).serve_forever()
 EOF
@@ -26,13 +26,13 @@ check() { if grep -q "$1" "$tmp/posts" 2>/dev/null; then echo "  ok: $2"; else e
 
 # ponytail: the site is faked as down (closed port), so each run takes ~60 s of curl retries.
 run 127.0.0.1                              # site down, "WireGuard" up, no snapshots
-check "^No new lemongrab backup" "stale snapshots alert"
+check "^No new lemongrab backup.*|high$" "stale snapshots alert, high"
 if grep -q "^gmojsoski.com down" "$tmp/posts"; then echo "  FAIL: first network failure pushed"; fail=1
 else echo "  ok: first network failure waits"; fi
 run 127.0.0.1                              # still down on the next run
-check "^gmojsoski.com down" "site down alone is told apart"
+check "^gmojsoski.com down.*|default$" "site down alone is told apart, quiet"
 run 192.0.2.1                              # site down, WireGuard unreachable
-check "^lemongrab offline" "both down reads as home offline"
+check "^lemongrab offline.*|urgent$" "both down reads as home offline, urgent"
 n=$(wc -l < "$tmp/posts"); run 192.0.2.1
 if [ "$(wc -l < "$tmp/posts")" = "$n" ]; then echo "  ok: repeat run is deduped"; else echo "  FAIL: dedup"; fail=1; fi
 
