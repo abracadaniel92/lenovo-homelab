@@ -35,6 +35,9 @@ mountpoint -q "$MNT" || { echo "$MNT did not mount; stopping" >&2; exit 1; }
 # Laptop HDD parks its heads aggressively; APM resets on power loss.
 hdparm -B 254 "$DISK" || echo "WARN: hdparm -B unsupported via the enclosure; watch Load_Cycle_Count"
 grep -qF "$DISK" /etc/hdparm.conf || printf '\n%s {\n\tapm = 254\n}\n' "$DISK" >> /etc/hdparm.conf
+# hdparm.conf skips USB disks; this rule re-applies APM on every hotplug.
+install -m 0644 "$(dirname "$0")/99-offsite-apm.rules" /etc/udev/rules.d/
+udevadm control --reload
 
 # rest-server: append-only, WireGuard IP only, never without the drive.
 cat > /etc/default/restic-rest-server <<'EOF'
@@ -49,6 +52,9 @@ cat > /etc/systemd/system/restic-rest-server.service.d/override.conf <<'EOF'
 Wants=wg-quick@wg0.service
 After=wg-quick@wg0.service
 RequiresMountsFor=/mnt/offsite
+# A manual umount or a yanked cable doesn't stop Requires= dependents
+# (unplug test, log 2026-10-21); BindsTo= does.
+BindsTo=mnt-offsite.mount
 EOF
 
 if ! grep -q '^lemongrab:' /etc/restic-rest-server/users.htpasswd; then
