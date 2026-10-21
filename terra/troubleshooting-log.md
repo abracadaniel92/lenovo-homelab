@@ -4,6 +4,32 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-21: cause of the wg/site dips: home internet line, not lemongrab
+
+**Closes** the open cause from "watchdog network alerts need two failed runs
+in a row" (below). Found from lemongrab (owner's lemongrab session).
+
+**Findings:**
+- 10-20 05:25: every external `*.gmojsoski.com` check timed out at once while
+  the local Caddy check stayed up; the Cloudflare tunnel lost all 4
+  connections at 05:26:50 and was back at 05:27:04 (~2 min in total).
+- lemongrab's journal for the window: no link drop, NIC errors or WireGuard
+  messages; the 05:30 health check ran clean. The server kept its LAN link;
+  the path out to the internet went down. WireGuard dipped too because the
+  Terra reaches lemongrab over the same line via the DDNS name.
+- A nightly drop at about **02:20** (10-21 3 min, caught by Kuma; 10-20 14 s;
+  09-24): a scheduled router restart or a provider-forced reconnect, likely
+  with a new public IP. The 05:25 one was a one-off.
+
+**Decision (owner): ignore.** Drops are 2-3 min, far from the 04:05 backup,
+and recover on their own. The two-strike watchdog already keeps them quiet:
+a dip shorter than the 10-min interval can fail only one run.
+
+**Not checked:** the router's log (WAN/PPPoE reconnect, DDNS IP change).
+
+**Reverse if:** a drop lasts over 10 min, or one starts overlapping the
+04:00-04:15 backup window: then move or disable the router's restart.
+
 ## 2026-10-21: smartd warnings push to ntfy; Terra gets its own topic and priorities
 
 **Symptom:** smartd mailed root, but the Terra has no MTA (`10mail` hook:
