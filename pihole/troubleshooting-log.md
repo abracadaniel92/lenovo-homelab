@@ -6,6 +6,24 @@ Uptime Kuma). Newest first. Same format as the lemongrab log at
 the Terra has its own at [`terra/troubleshooting-log.md`](../terra/troubleshooting-log.md).
 Pi entries from before 2026-10-03 are in the lemongrab log.
 
+## [2026-10-21] Uptime Kuma ntfy topic changed
+
+**Goal:** Pi alerts go to a new ntfy topic (owner changed it).
+
+**Change (live):** Uptime Kuma's single notification ("Uptime Kuma", type ntfy,
+server `https://ntfy.sh`, default, attached to all 10 monitors) now uses the new
+topic. Set by the owner in the Kuma UI; exact date of the change not verified.
+The topic name is kept out of this public repo (public ntfy.sh topics can be
+read by anyone who knows the name).
+
+**Change (repo):** none; the setting lives in `pihole/docker/uptime-kuma/data/kuma.db`.
+
+**Verification:** read-only check of `notification.config` in `kuma.db` with
+`sqlite3 -readonly`: topic matches the new name the owner gave; 10/10 monitors
+linked to notification 1. Test push from the Kuma UI not run here (not verified).
+
+**Outcome / Still open:** done. Phone must be subscribed to the new topic.
+
 ## [2026-10-18] Weekly review: open items
 
 First per-machine weekly review on the Pi. Items checked against live state.
