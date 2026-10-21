@@ -46,7 +46,8 @@ text = (
 req = urllib.request.Request(
     url,
     data=json.dumps({"text": text}).encode(),
-    headers={"Content-Type": "application/json"},
+    # Cloudflare rejects urllib's default "Python-urllib" UA with 403 error 1010 (log 2026-10-21).
+    headers={"Content-Type": "application/json", "User-Agent": "lemongrab-notify-unit-failure"},
 )
 try:
     urllib.request.urlopen(req, timeout=10)

@@ -5,6 +5,28 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-21] Terra unplug test: backup failed correctly, Mattermost alert blocked by Cloudflare
+
+**Test:** Terra drive unplugged, `backup-immich-terra.service` started by hand at 09:01.
+It failed with restic exit 10 (repository does not exist), as intended, and
+`OnFailure=` fired `notify-failure@backup-immich-terra.service.service`.
+
+**Symptom:** the notifier itself failed: `POST failed: HTTP Error 403: Forbidden`.
+Cause: Cloudflare answers `error code: 1010` (banned browser signature) to urllib's
+default `Python-urllib/3.x` User-Agent. The same POST with curl's UA reached Mattermost.
+It worked in September (HTTP 200 entry below), so the Cloudflare side changed since.
+Every Mattermost `OnFailure` alert was silently lost until this fix; the ntfy push
+goes first and is separate.
+
+**Change (live, `scripts/` is live):** `scripts/notify-unit-failure.sh` sends
+`User-Agent: lemongrab-notify-unit-failure`. It is the only script posting with urllib.
+
+**Verification:** urllib POST of `{}` with the new UA now gets Mattermost's own 400
+(payload error) instead of Cloudflare's 403.
+
+**Still open:** end-to-end alert test (`sudo systemctl start notify-failure@test.service`),
+plug the Terra drive back in, Terra-side 36 h watchdog half of the unplug test.
+
 ## [2026-10-20] Terra offsite: first scheduled nightly run succeeded
 
 **Result:** `backup-immich-terra.timer` fired at 04:05, the service exited 0 at 04:11.
