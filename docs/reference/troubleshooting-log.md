@@ -5,6 +5,19 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-21] Nextcloud: PHP RCE patch (CVE-2026-109618 / -109619)
+
+**Why:** CERT-EU / Nextcloud advisory: two unauthenticated RCE bugs in PHP, fixed in
+8.5.12 (released 2026-10-21, PoCs public). Nextcloud was the only PHP container on
+lemongrab, public via Caddy + tunnel, on PHP 8.5.11 with Apache mod_php (the highest-risk setup).
+
+**Change (live `/home/apps/nextcloud`):** `backup-engine.sh nextcloud` first, then
+`docker compose pull` + `up -d`. Rebuilt `nextcloud:35-apache` image, same Nextcloud
+35.0.2, so no `occ upgrade`. No compose change, nothing to mirror.
+
+**Verification:** `php -v` in the container is 8.5.12; `occ status` shows 35.0.2,
+`needsDbUpgrade: false`, maintenance off; local `status.php` 200; `verify-services.sh` all healthy.
+
 ## [2026-10-21] ntfy: lemongrab system alerts on their own topic
 
 **Why:** one topic carried Kuma up/down, Cal bookings, health and unit-failure alerts and
