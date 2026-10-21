@@ -5,6 +5,26 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-21] Weekly review: open items
+
+**Closed:**
+- Immich offsite to the Terra (from log 2026-10-08 item 1): lemongrab side done.
+  `backup-immich-terra.timer` enabled, last run 2026-10-21 04:05, `health.d/70-terra.sh`
+  installed, verify passed 2026-10-19, manual run 09:18 exited 0. Terra-side items
+  belong to the Terra review.
+- `DocumentsToCalendar-1` live folder (from log 2026-10-18): already gone.
+- Restic cache warning (from log 2026-10-20): `journalctl -u backup-immich-terra.service
+  --since today | grep -ci cache` = 0, so the `HOME` fix works.
+
+**Carried over:**
+- Mattermost email (from log 2026-10-19), open since 2026-10-19: still logs
+  "Mail server connection test failed" on start; owner skipped this week.
+- Confirm the 2026-10-22 04:05 Terra run succeeds (from log 2026-10-21).
+- Terra watchdog half of the unplug test (from log 2026-10-21): for the Terra review.
+
+**Drift:** none. 33 containers = README badge; no unpushed commits; every skill
+changed since 2026-10-17.
+
 ## [2026-10-21] Terra unplug test: backup failed correctly, Mattermost alert blocked by Cloudflare
 
 **Test:** Terra drive unplugged, `backup-immich-terra.service` started by hand at 09:01.

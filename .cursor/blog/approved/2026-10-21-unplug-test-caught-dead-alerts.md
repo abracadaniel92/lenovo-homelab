@@ -5,3 +5,18 @@
 - Fix: one header (`User-Agent: lemongrab-notify-unit-failure`).
 - Lesson: test the alarm, not only the thing it guards. A failure test that only checks "did it fail" misses half the point.
 - Source: docs/reference/troubleshooting-log.md 2026-10-21, commit ecfacb8.
+
+**Public check:** Leave out: the webhook URL
+
+**Outline:**
+1. The test: unplug the offsite drive, expect a loud failure
+2. The backup failed correctly; the alert didn't arrive in Mattermost
+3. 403 error 1010: Cloudflare bans the `Python-urllib` User-Agent (curl vs urllib side by side)
+4. The fix: one header, then an end-to-end test of the alert itself
+5. Lesson: test the alarm, not only the thing it guards
+
+**Effort:** TIL
+
+**Priority:** soon
+
+**Published:**
