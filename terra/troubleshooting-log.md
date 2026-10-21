@@ -4,6 +4,33 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-21: udisks2 SMART polling can't be switched off per drive; ~6 parks/h accepted
+
+**Goal:** stop udisks2's 10-min SMART poll on the offsite drive (entry below)
+without masking udisks2.
+
+**Tried (both live on the Terra, both reverted):**
+1. `ENV{UDISKS_IGNORE}="1"` for serial `56HRP1HST` in `99-offsite-apm.rules`,
+   `udevadm trigger --action=change`: udisks2 set `HintIgnore=true` but still
+   polled at 11:05:41. It only hides the drive from desktop tools.
+2. `ENV{ID_ATA_FEATURE_SET_SMART}="0"` (+ `_ENABLED`), then `systemctl
+   restart udisks2`: `SmartSupported` stayed true and the restart itself
+   polled (11:09:39). udisks2 asks the drive itself, not udev.
+Reverted: repo rule restored, reinstalled, `change` trigger; live rule ==
+repo, SMART properties back to 1.
+
+**Why not mask udisks2:** the Terra boots `graphical.target` (lightdm), and
+`fwupd-refresh.timer` is enabled; fwupd uses udisks2 to find the ESP
+(`/dev/sda1`).
+
+**Decision (owner): accept ~6 parks/h** (udisks2 ~6/h; smartd now 3 h).
+~53k/yr, about 11 years to a ~600k rating; lemongrab's review called 5/h fine.
+Last readings: `Load_Cycle_Count` 280 (09:44) → 287 (10:44), before smartd
+went to 3 h. Parking watch stopped.
+
+**Reverse if:** `Load_Cycle_Count` grows past ~150/day (check it monthly), or
+the Terra goes headless (then mask udisks2 and point fwupd at the ESP).
+
 ## 2026-10-21: parking traced to SMART polling; smartd every 3 h
 
 **Symptom:** at APM 254 the offsite drive still parks: `Load_Cycle_Count`
