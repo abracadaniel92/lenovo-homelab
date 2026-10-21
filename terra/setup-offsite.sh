@@ -38,6 +38,10 @@ grep -qF "$DISK" /etc/hdparm.conf || printf '\n%s {\n\tapm = 254\n}\n' "$DISK" >
 # hdparm.conf skips USB disks; this rule re-applies APM on every hotplug.
 install -m 0644 "$(dirname "$0")/99-offsite-apm.rules" /etc/udev/rules.d/
 udevadm control --reload
+# Every SMART poll is a drive access that unparks the heads; 3 h, not 30 min.
+grep -q '^smartd_opts=' /etc/default/smartmontools \
+    || echo 'smartd_opts="--interval=10800"' >> /etc/default/smartmontools
+systemctl restart smartmontools
 
 # rest-server: append-only, WireGuard IP only, never without the drive.
 cat > /etc/default/restic-rest-server <<'EOF'

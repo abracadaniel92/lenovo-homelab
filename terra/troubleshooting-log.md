@@ -4,6 +4,47 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-21: parking traced to SMART polling; smartd every 3 h
+
+**Symptom:** at APM 254 the offsite drive still parks: `Load_Cycle_Count`
+280 → 287 from 09:44 to 10:44, with **zero** block reads or writes the whole
+hour (`/sys/block/sdb/stat` flat at 1644/5; minute log + hourly smartctl,
+`io-watch.sh` in the session scratchpad).
+
+**Ruled out:** EPC (unsupported, entry below); ext4lazyinit (finished);
+atime (mounted `noatime`); the watchdog: after its first run following the mount,
+its `find` over `snapshots/` is served from cache (runs at 09:42, 09:53 did
+no I/O).
+
+**Cause:** SMART polls are drive accesses that block stats don't count. Each
+access after idle loads the heads; they park again soon after.
+- **udisks2** refreshes SMART every 10 min (`SmartUpdated` on its D-Bus drive
+  object: 10:45:41, then 10:55:41): ~6/h.
+- **smartd** on the default 30 min: ~2/h.
+That's ~8 accesses/h against 7 parks/h.
+
+**Change (live, Terra):** `/etc/default/smartmontools` gets
+`smartd_opts="--interval=10800"` (backup `.bak-20261021`), `systemctl
+restart smartmontools`; running as `/usr/sbin/smartd -n --interval=10800`.
+`terra/setup-offsite.sh` does the same.
+
+**Found on the way:** smartd alerts go nowhere. It mails root (`-m root`,
+`10mail` hook) but the Terra has no `sendmail`/`mail`.
+
+**Not changed:** udisks2. Masking it would break fwupd (firmware updates use
+it to find the EFI partition) plus gvfs/thunar/gnome-disk-utility. The targeted
+option, `ENV{UDISKS_IGNORE}="1"` for this serial in `99-offsite-apm.rules`, is
+untested: it may only hide the drive from the desktop and keep polling it.
+
+**Expected:** ~6/h until udisks2 is dealt with (~53k/yr, fine for a ~600k
+rating); under 1/h after.
+
+**Still open:** udisks2 polling (try `UDISKS_IGNORE`, check `SmartUpdated`
+stops moving); smartd alerts to ntfy via `-M exec`.
+
+**Reverse if:** a SMART problem should be caught within the hour: drop the
+`smartd_opts` line and restart smartmontools.
+
 ## 2026-10-21: watchdog network alerts need two failed runs in a row
 
 **Symptom:** short WireGuard/site dips pushed alerts (10-20 02:27 wg, 05:27
