@@ -27,8 +27,10 @@ goes first and is separate.
 and the ntfy push; the 09:01 ntfy push had also arrived. Lemongrab half of the unplug
 test passed.
 
-**Still open:** plug the Terra drive back in; Terra-side 36 h watchdog half of the
-unplug test.
+Terra drive plugged back in the same morning.
+
+**Still open:** Terra-side 36 h watchdog half of the unplug test (skipped for now);
+confirm the 2026-10-22 04:05 run succeeds.
 
 ## [2026-10-20] Terra offsite: first scheduled nightly run succeeded
 
