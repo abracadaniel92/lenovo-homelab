@@ -26,6 +26,8 @@ Toshiba EPC idle timers, which APM does not control.
   36 h"). The stamp is only written after ntfy accepts it. Terra half passed;
   this closes the item lemongrab's entry left open.
 - Replugged, `mount /mnt/offsite`: ext4 mounted clean, rest-server on 8000.
+- Backup re-run by hand on lemongrab after the replug: `restic snapshots`
+  shows **5 snapshots** (4 before the test), so backups work again.
 
 **Problems found:**
 - **rest-server kept running after `umount`** (up since 10-19).
