@@ -22,10 +22,13 @@ goes first and is separate.
 `User-Agent: lemongrab-notify-unit-failure`. It is the only script posting with urllib.
 
 **Verification:** urllib POST of `{}` with the new UA now gets Mattermost's own 400
-(payload error) instead of Cloudflare's 403.
+(payload error) instead of Cloudflare's 403. End to end:
+`sudo systemctl start notify-failure@test.service` delivered both the Mattermost post
+and the ntfy push; the 09:01 ntfy push had also arrived. Lemongrab half of the unplug
+test passed.
 
-**Still open:** end-to-end alert test (`sudo systemctl start notify-failure@test.service`),
-plug the Terra drive back in, Terra-side 36 h watchdog half of the unplug test.
+**Still open:** plug the Terra drive back in; Terra-side 36 h watchdog half of the
+unplug test.
 
 ## [2026-10-20] Terra offsite: first scheduled nightly run succeeded
 
