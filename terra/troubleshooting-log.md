@@ -4,6 +4,27 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-21: second unplug test: udev APM rule and BindsTo both verified
+
+**Goal:** test the two fixes from the entry below with a real cable pull
+(power cut to the enclosure), not a simulated `udevadm trigger`.
+
+**Test (on the Terra):**
+- 09:24:36 `sync && umount /mnt/offsite`: `restic-rest-server` went
+  **inactive** at once (on the first test it kept running). `BindsTo=` works.
+- Cable pulled about 09:24:40 (`sdb` gone), replugged 09:26:48.
+- Before anything touched the drive: `hdparm -B` read **APM_level = 254**, so
+  the udev rule worked after a cold power-up (it came back as 128 on the first test).
+  rest-server was still **inactive**, so it did not start on its own.
+- `mount /mnt/offsite && systemctl start restic-rest-server`: ext4 rw, active,
+  listening on `10.8.0.4:8000` by 09:27:18.
+
+**Outcome:** both permanent fixes are proven. The I/O watch for the parking
+pattern stopped when the drive went away; restart it to continue that.
+
+**Still open:** why it parks ~5/h at APM 254; noisy wg/site alerts; confirm
+the 2026-10-22 04:05 run.
+
 ## 2026-10-21: APM udev rule and rest-server BindsTo applied
 
 **Goal:** permanent fixes for the two problems the unplug test (entry below) found.
