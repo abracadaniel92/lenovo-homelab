@@ -16,7 +16,7 @@ moves with it: health-check 🚨 alerts, `notify-unit-failure.sh`, `update-check
 Uptime Kuma and the Cal webhook keep the old topic (set in their own configs). The old
 URL is saved in `~/.ntfy_topic_url.kuma-cal` (mode 600). Revert: copy it back.
 
-**Verification:** a test push through `ntfy-push.sh` was accepted by ntfy.sh (owner to confirm on the phone).
+**Verification:** a test push through `ntfy-push.sh` arrived on the phone; Cal sample pushes arrived too.
 
 **Cal bookings too:** the Cal webhook (`Webhook` row `68fad15a…` in `calcom-postgres`)
 now posts to a separate `goce-booking-cal-…` topic. Only the topic path changed, the
