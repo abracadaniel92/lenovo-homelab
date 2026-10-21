@@ -169,7 +169,7 @@ backup.
    you in `/etc/terra-watchdog/ntfy_topic_url` (0600, root). That's the only
    homelab value the Terra holds, and it grants no access to lemongrab.
    Test: `sudo systemctl start terra-watchdog.service`, then
-   `bash test-watchdog.sh` from this folder (takes about 3 min).
+   `bash test-watchdog.sh` from this folder (takes about 4 min).
 7. **Log out:** `claude logout` when done, so no session is left on a device
    in the office.
 

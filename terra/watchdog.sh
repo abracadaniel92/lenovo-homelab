@@ -33,7 +33,15 @@ site_ok=1; curl -fsS -o /dev/null --max-time 15 --retry 2 --retry-delay 30 \
     --retry-all-errors "$SITE" || site_ok=0
 wg_ok=1; ping -c 3 -W 5 "$LEMONGRAB_WG" >/dev/null || wg_ok=0
 
-if [ $site_ok = 0 ] && [ $wg_ok = 0 ]; then
+# Network trouble must last two runs in a row (10 min) before it pushes:
+# short dips (10-20 02:27 wg, 05:27 site; likely a home IP change, which
+# WireGuard rides out at the next 5-min endpoint re-resolve) were training
+# the owner to ignore pushes (log 2026-10-21).
+if [ $site_ok = 1 ] && [ $wg_ok = 1 ]; then
+    rm -f "$STATE/net-strike"
+elif [ ! -e "$STATE/net-strike" ]; then
+    touch "$STATE/net-strike"
+elif [ $site_ok = 0 ] && [ $wg_ok = 0 ]; then
     alert "lemongrab offline: site and WireGuard both down (home power or internet?)" home
 elif [ $site_ok = 0 ]; then
     alert "gmojsoski.com down but lemongrab answers on WireGuard (Caddy/cloudflared?)" site
