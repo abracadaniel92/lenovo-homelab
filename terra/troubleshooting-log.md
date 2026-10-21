@@ -4,6 +4,31 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-21: watchdog network alerts need two failed runs in a row
+
+**Symptom:** short WireGuard/site dips pushed alerts (10-20 02:27 wg, 05:27
+site; the `site` stamp in `/run/terra-watchdog` is dated 10-20 05:27), often
+enough to train the owner to ignore pushes.
+
+**Cause: not found.** Nothing in lemongrab's cron or timers (repo) runs near
+those times, so "lemongrab's daily restarts" in the entry below was a guess.
+Likely a home public IP change (WireGuard waits for the router's No-IP update
+and the 5-min `terra-wg-reresolve` cron). Not confirmed: lemongrab refuses SSH
+on 10.8.0.1, so its journal wasn't checked from here.
+
+**Change:** `terra/watchdog.sh`: the first failed network check only touches
+`$STATE/net-strike`; the wg/site/home push fires if the next run (10 min
+later) fails too; a passing run clears it. Backup-staleness alert unchanged.
+Installed live: `sudo install -m 0755 terra/watchdog.sh /usr/local/bin/terra-watchdog.sh`
+(10:15; the installed copy matched the old repo version before).
+
+**Verification:** `bash terra/test-watchdog.sh` PASS (new case: first
+failure doesn't push, second does). Live run 10:24:18: `Result=success`,
+exit 0, no `net-strike` left, `ping 10.8.0.1` up.
+
+**Reverse if:** a real outage gets noticed late. Then drop the strike block
+(alerts go back to the first failed run).
+
 ## 2026-10-21: second unplug test: udev APM rule and BindsTo both verified
 
 **Goal:** test the two fixes from the entry below with a real cable pull
