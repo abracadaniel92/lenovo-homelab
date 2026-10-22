@@ -5,6 +5,17 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-22] Backups: KitchenOwl dropped from the nightly run
+
+**Why:** KitchenOwl was removed 2026-07-28 but stayed in `SERVICES` of
+`scripts/backup-all-critical.sh`, so the 02:00 cron kept backing up its leftover database.
+
+**Change (live, `scripts/` is live via `/opt/homelab`):** removed `kitchenowl` from
+`SERVICES` and from the "Backup locations" echo. Old archives in
+`/mnt/ssd/backups/kitchenowl/` are left in place (deleting them needs owner confirmation).
+
+**Verification:** `bash -n` OK; tonight's run in `logs/backup-all-critical.log` should list 4 services.
+
 ## [2026-10-21] Nextcloud: PHP RCE patch (CVE-2026-109618 / -109619)
 
 **Why:** CERT-EU / Nextcloud advisory: two unauthenticated RCE bugs in PHP, fixed in
