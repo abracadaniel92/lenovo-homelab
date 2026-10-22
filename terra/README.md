@@ -166,10 +166,15 @@ backup.
    `OnUnitActiveSec=10min`). It pushes to the phone when lemongrab is offline
    (lemongrab can't report its own power or internet cut) or when no new
    restic snapshot has landed in 36 h. Put the ntfy topic URL the owner gives
-   you in `/etc/terra-watchdog/ntfy_topic_url` (0600, root). That's the only
-   homelab value the Terra holds, and it grants no access to lemongrab.
+   you in `/etc/terra-watchdog/ntfy_topic_url` (0600, root): a Terra-only
+   topic, never lemongrab's (that one also carries Uptime Kuma). smartd's
+   warnings use the same file through
+   [`smartd-ntfy.sh`](smartd-ntfy.sh). That's the only homelab value the Terra
+   holds, and it grants no access to lemongrab. Priorities: urgent (SMART,
+   lemongrab offline), high (no backup in 36 h), default (site or WireGuard
+   alone).
    Test: `sudo systemctl start terra-watchdog.service`, then
-   `bash test-watchdog.sh` from this folder (takes about 3 min).
+   `bash test-watchdog.sh` from this folder (takes about 4 min).
 7. **Log out:** `claude logout` when done, so no session is left on a device
    in the office.
 
