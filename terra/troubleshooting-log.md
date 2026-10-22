@@ -4,6 +4,21 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-22: nightly backup landed; Load_Cycle_Count +161 in 24 h
+
+**Check (read-only, Terra):** snapshot file in `snapshots/` written 04:06:47
+(third nightly in a row: 10-20 04:11, 10-21 04:06); 5 packs, ~0.06 GiB in
+`data/` since 10-21 20:00. Watchdog silent overnight. `/mnt/offsite` 128 G
+used of 1.8 T.
+
+**SMART (~11:00):** `Load_Cycle_Count` **448** (287 at 10-21 10:44, so
++161 in ~24 h, ~6.7/h). Temperature 33 °C (min/max 21/43); Reallocated,
+Reallocated_Event and Current_Pending all 0.
+
+**Open:** +161/day is just over the ~150/day reverse line in the udisks2
+entry below. One day isn't a trend: recheck about 11:00 on 10-23; if still
+over 150/day, revisit that decision.
+
 ## 2026-10-21: cause of the wg/site dips: home internet line, not lemongrab
 
 **Closes** the open cause from "watchdog network alerts need two failed runs
