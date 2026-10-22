@@ -12,7 +12,8 @@ This is lemongrab's log. The other devices keep their own in their folders:
 
 **Change (live, `scripts/` is live via `/opt/homelab`):** removed `kitchenowl` from
 `SERVICES` and from the "Backup locations" echo. Old archives in
-`/mnt/ssd/backups/kitchenowl/` are left in place (deleting them needs owner confirmation).
+`/mnt/ssd/backups/kitchenowl/` (11 `.db` + `.ok`, 17 MB) deleted on owner confirmation; B2 sync
+moves its copies into the dated `--backup-dir` archive rather than erasing them.
 
 **Verification:** `bash -n` OK; tonight's run in `logs/backup-all-critical.log` should list 4 services.
 
