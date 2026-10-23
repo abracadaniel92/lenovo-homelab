@@ -25,7 +25,7 @@
 ###############################################################################
 set -uo pipefail
 
-SERVICES="vaultwarden nextcloud travelsync kitchenowl linkwarden"
+SERVICES="vaultwarden nextcloud travelsync linkwarden"
 BACKUP_ROOT="/mnt/ssd/backups"
 PG_IMAGE="postgres:16-alpine"
 
@@ -212,24 +212,6 @@ drill_travelsync() {
     # Calendar and needs a manual reauthorisation.
     want_file "$dir/credentials.json" "credentials.json present" "credentials.json MISSING"
     want_file "$dir/token.pickle" "token.pickle present" "token.pickle MISSING"
-}
-
-drill_kitchenowl() {
-    local arch tables alembic
-    arch=$(newest "$BACKUP_ROOT/kitchenowl" "kitchenowl-*.db")
-    [ -n "$arch" ] || { bad "no archive found"; return; }
-    echo "    archive: $(basename "$arch")"
-    sqlite_check "$arch" "kitchenowl db"
-    tables=$(sqlite_tables "$arch")
-    echo "    tables=${tables:-?}"
-    want_gt "$tables" 10 "schema present ($tables tables)" "too few tables (${tables:-0})"
-    # alembic_version proves it is a real migrated KitchenOwl DB, not a stub.
-    alembic=$(python3 -c "
-import sqlite3,sys
-c=sqlite3.connect('file:'+sys.argv[1]+'?mode=ro',uri=True)
-v=c.execute('select version_num from alembic_version').fetchone()
-print(v[0] if v else '')" "$arch" 2>/dev/null)
-    want_set "$alembic" "alembic schema version present" "no alembic_version row"
 }
 
 drill_linkwarden() {

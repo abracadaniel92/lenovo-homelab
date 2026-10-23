@@ -5,6 +5,27 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-23] Backups: false "stale or missing" alerts for KitchenOwl
+
+**Symptom:** from 2026-10-23 early morning, every hourly health check sent
+"🚨 Backups stale or missing" and "🚨 Offsite backups stale or missing", both naming only
+KitchenOwl ("NO backup found" / "NO offsite copy in b2-crypt:current").
+
+**Cause:** the 2026-10-22 cleanup removed KitchenOwl from `backup-all-critical.sh` and
+deleted its archives, but left `scripts/backup.d/kitchenowl.conf`. Both
+`health.d/50-backup-freshness.sh` and `60-offsite-freshness.sh` iterate `backup.d/*.conf`.
+The real backups were fine: the 02:00 run backed up and verified all 4 services.
+
+**Change (live, `scripts/` is live via `/opt/homelab`):** deleted `backup.d/kitchenowl.conf`;
+removed `kitchenowl` from `SERVICES` and its `drill_kitchenowl` function in
+`restore-drill.sh` (it would have failed the same way).
+
+**Verification:** `50-backup-freshness.sh` run standalone: "all services within their max
+age". `bash -n restore-drill.sh` OK. Next hourly run should show no CRITICAL lines in
+`/var/log/enhanced-health-check.log`.
+
+**Lesson:** when removing a service, grep `scripts/` for its name, not just the backup script.
+
 ## [2026-10-22] Backups: KitchenOwl dropped from the nightly run
 
 **Why:** KitchenOwl was removed 2026-07-28 but stayed in `SERVICES` of
