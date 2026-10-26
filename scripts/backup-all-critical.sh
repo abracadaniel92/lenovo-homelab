@@ -19,7 +19,7 @@ echo "🔄 Backing up all critical services..."
 echo ""
 
 # Services to backup (in order)
-SERVICES=("vaultwarden" "nextcloud" "travelsync" "kitchenowl" "linkwarden")
+SERVICES=("vaultwarden" "nextcloud" "travelsync" "linkwarden")
 
 failed=()
 for service in "${SERVICES[@]}"; do
@@ -44,5 +44,4 @@ echo "📦 Backup locations:"
 echo "   Vaultwarden: /mnt/ssd/backups/vaultwarden/"
 echo "   Nextcloud:  /mnt/ssd/backups/nextcloud/"
 echo "   TravelSync: /mnt/ssd/backups/travelsync/"
-echo "   KitchenOwl: /mnt/ssd/backups/kitchenowl/"
 echo "   Linkwarden: /mnt/ssd/backups/linkwarden/"

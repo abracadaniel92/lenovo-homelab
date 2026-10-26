@@ -6,6 +6,9 @@ evidence.
 
 | Date | Outcome | File changed | What changed, or why rejected |
 |------|---------|---------------|-------------------------------|
+| 2026-10-21 | Applied | `update-homelab-service/SKILL.md` | Step 6: read the pulled image's version before `up -d`; a new major means read its upgrade notes first. |
+| 2026-10-21 | Applied | `update-homelab-service/SKILL.md` | Docker Hub paragraph: a `mirror.gcr.io` pull must be re-tagged to the plain name or Compose keeps the old image. |
+| 2026-10-21 | Applied | `update-homelab-service/SKILL.md` | Step 5: back up Home Assistant with tar inside the container; host tar misses root-owned `.storage/` files. |
 | 2026-10-18 | Applied | `CLAUDE.md` | Pi bullet names the real hostname `goce` (was `pihole`), so the `hostname` check matches. |
 | 2026-10-18 | Applied | `blog-review/SKILL.md` | Step 1: grep portfolio_v2 published posts and drafts for overlap before asking |
 | 2026-10-18 | Applied | `CLAUDE.md` | Commands the owner must run stay one short line (Termius on the phone wraps long ones) |

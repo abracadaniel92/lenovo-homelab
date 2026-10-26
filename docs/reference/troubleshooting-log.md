@@ -5,6 +5,91 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-10-23] Backups: false "stale or missing" alerts for KitchenOwl
+
+**Symptom:** from 2026-10-23 early morning, every hourly health check sent
+"🚨 Backups stale or missing" and "🚨 Offsite backups stale or missing", both naming only
+KitchenOwl ("NO backup found" / "NO offsite copy in b2-crypt:current").
+
+**Cause:** the 2026-10-22 cleanup removed KitchenOwl from `backup-all-critical.sh` and
+deleted its archives, but left `scripts/backup.d/kitchenowl.conf`. Both
+`health.d/50-backup-freshness.sh` and `60-offsite-freshness.sh` iterate `backup.d/*.conf`.
+The real backups were fine: the 02:00 run backed up and verified all 4 services.
+
+**Change (live, `scripts/` is live via `/opt/homelab`):** deleted `backup.d/kitchenowl.conf`;
+removed `kitchenowl` from `SERVICES` and its `drill_kitchenowl` function in
+`restore-drill.sh` (it would have failed the same way).
+
+**Verification:** `50-backup-freshness.sh` run standalone: "all services within their max
+age". `bash -n restore-drill.sh` OK. Next hourly run should show no CRITICAL lines in
+`/var/log/enhanced-health-check.log`.
+
+**Lesson:** when removing a service, grep `scripts/` for its name, not just the backup script.
+
+## [2026-10-22] Backups: KitchenOwl dropped from the nightly run
+
+**Why:** KitchenOwl was removed 2026-07-28 but stayed in `SERVICES` of
+`scripts/backup-all-critical.sh`, so the 02:00 cron kept backing up its leftover database.
+
+**Change (live, `scripts/` is live via `/opt/homelab`):** removed `kitchenowl` from
+`SERVICES` and from the "Backup locations" echo. Old archives in
+`/mnt/ssd/backups/kitchenowl/` (11 `.db` + `.ok`, 17 MB) deleted on owner confirmation; B2 sync
+moves its copies into the dated `--backup-dir` archive rather than erasing them.
+
+**Verification:** `bash -n` OK; tonight's run in `logs/backup-all-critical.log` should list 4 services.
+
+## [2026-10-21] Nextcloud: PHP RCE patch (CVE-2026-109618 / -109619)
+
+**Why:** CERT-EU / Nextcloud advisory: two unauthenticated RCE bugs in PHP, fixed in
+8.5.12 (released 2026-10-21, PoCs public). Nextcloud was the only PHP container on
+lemongrab, public via Caddy + tunnel, on PHP 8.5.11 with Apache mod_php (the highest-risk setup).
+
+**Change (live `/home/apps/nextcloud`):** `backup-engine.sh nextcloud` first, then
+`docker compose pull` + `up -d`. Rebuilt `nextcloud:35-apache` image, same Nextcloud
+35.0.2, so no `occ upgrade`. No compose change, nothing to mirror.
+
+**Verification:** `php -v` in the container is 8.5.12; `occ status` shows 35.0.2,
+`needsDbUpgrade: false`, maintenance off; local `status.php` 200; `verify-services.sh` all healthy.
+
+## [2026-10-21] ntfy: lemongrab system alerts on their own topic
+
+**Why:** one topic carried Kuma up/down, Cal bookings, health and unit-failure alerts and
+the weekly update list; too noisy to tell apart. The Terra already has its own topic.
+
+**Change (live, gitignored):** `scripts/ntfy_topic_url` now points at a new
+`lemongrab-system-…` topic on ntfy.sh. Everything that goes through `ntfy-push.sh`
+moves with it: health-check 🚨 alerts, `notify-unit-failure.sh`, `update-check.sh`.
+Uptime Kuma and the Cal webhook keep the old topic (set in their own configs). The old
+URL is saved in `~/.ntfy_topic_url.kuma-cal` (mode 600). Revert: copy it back.
+
+**Verification:** a test push through `ntfy-push.sh` arrived on the phone; Cal sample pushes arrived too.
+
+**Cal bookings too:** the Cal webhook (`Webhook` row `68fad15a…` in `calcom-postgres`)
+now posts to a separate `goce-booking-cal-…` topic. Only the topic path changed, the
+template query string is the same. Done with an SQL `regexp_replace` in a transaction
+instead of the UI (long templated URL). A sample `BOOKING_CREATED` payload to the new URL
+returned 200. Uptime Kuma is now the only sender on the old topic.
+
+## [2026-10-21] Weekly review: open items
+
+**Closed:**
+- Immich offsite to the Terra (from log 2026-10-08 item 1): lemongrab side done.
+  `backup-immich-terra.timer` enabled, last run 2026-10-21 04:05, `health.d/70-terra.sh`
+  installed, verify passed 2026-10-19, manual run 09:18 exited 0. Terra-side items
+  belong to the Terra review.
+- `DocumentsToCalendar-1` live folder (from log 2026-10-18): already gone.
+- Restic cache warning (from log 2026-10-20): `journalctl -u backup-immich-terra.service
+  --since today | grep -ci cache` = 0, so the `HOME` fix works.
+
+**Carried over:**
+- Mattermost email (from log 2026-10-19), open since 2026-10-19: still logs
+  "Mail server connection test failed" on start; owner skipped this week.
+- Confirm the 2026-10-22 04:05 Terra run succeeds (from log 2026-10-21).
+- Terra watchdog half of the unplug test (from log 2026-10-21): for the Terra review.
+
+**Drift:** none. 33 containers = README badge; no unpushed commits; every skill
+changed since 2026-10-17.
+
 ## [2026-10-21] Terra unplug test: backup failed correctly, Mattermost alert blocked by Cloudflare
 
 **Test:** Terra drive unplugged, `backup-immich-terra.service` started by hand at 09:01.

@@ -24,4 +24,4 @@
 
 **Priority:** next, first in the queue (strongest fully new story)
 
-**Published:**
+**Published:** https://gmojsoski.com/blog/pihole-v6-ignored-unbound-upstream (2026-10-21)

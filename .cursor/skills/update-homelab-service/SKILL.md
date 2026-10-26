@@ -18,7 +18,7 @@ Watchtower was removed on 2026-09-25 and nothing replaced it on purpose: every u
 
 The weekly check cannot tell a patch from a major jump (Jellyfin `:latest` moved 10.x → 12.x), and it never sees newer releases of pinned tags. Check release notes before every pull.
 
-Docker Hub allows 100 anonymous requests per hour per IP, and each pull and each check counts. A big batch of updates hits `429 Too Many Requests`; it refills within the hour. `update-check.sh` spends about 30 of them per run, so run it once, not repeatedly, right before pulling. If a pull hits 429, wait for the refill or pull via `mirror.gcr.io`.
+Docker Hub allows 100 anonymous requests per hour per IP, and each pull and each check counts. A big batch of updates hits `429 Too Many Requests`; it refills within the hour. `update-check.sh` spends about 30 of them per run, so run it once, not repeatedly, right before pulling. If a pull hits 429, wait for the refill or pull via `mirror.gcr.io`. Compose won't see it under that name: `docker pull mirror.gcr.io/library/<img>:<tag> && docker tag mirror.gcr.io/library/<img>:<tag> <img>:<tag>` (non-official images drop `library/`, e.g. `mirror.gcr.io/cloudflare/cloudflared`), then `up -d`.
 
 ## Workflow
 
@@ -88,7 +88,7 @@ bash scripts/backup-engine.sh <service>   # if a backup config exists in scripts
 No backup config yet for these; use the snapshot already used for them:
 - Immich: covered by its own 02:00 DB dump in `/mnt/ssd_1tb/immich-library/backups/`; for a major version also `pg_dumpall` first.
 - Outline (and other Postgres apps): `docker exec <db> pg_dumpall -U <user> | gzip > /mnt/ssd/backups/<svc>/<svc>-db-<version>-<date>.sql.gz`
-- Home Assistant: tar its config dir to `/mnt/ssd/backups/homeassistant/ha-config-<version>-<date>.tar.gz`
+- Home Assistant: `docker exec homeassistant tar czf - -C / config > /mnt/ssd/backups/homeassistant/ha-config-<version>-<date>.tar.gz` (from inside the container: `config/.storage/` holds root-owned files a host-side tar can't read)
 
 Any other service without a backup config: STOP and ask the user — should we add one (via `homelab-backup-restore`) before updating, or proceed with manual snapshot, or accept the risk?
 
@@ -102,6 +102,8 @@ From the LIVE directory identified in step 2:
 cd <live-directory>
 docker compose pull              # pulls new images for all services in this compose file
 ```
+
+Before `up -d`, read the version of the image you just pulled (`docker image inspect <image> --format '{{index .Config.Labels "org.opencontainers.image.version"}}'`, or run its `--version`). That, not GitHub's "latest release", is what will run. If it is a new major version, stop and read that version's upgrade notes first.
 
 If it says `No service selected`, the compose file uses profiles: `docker compose --profile <name> pull <service>` and the same `--profile` on `up -d` (Home Assistant: `--profile utilities`).
 
