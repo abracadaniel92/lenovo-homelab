@@ -20,11 +20,15 @@ in ~96.5 h, **~152/day**, ~6.3/h). Temperature 33 °C; Reallocated,
 Reallocated_Event, Current_Pending, Offline_Uncorrectable and Load_Retry all
 0. Power-on 172 h, heads loaded 29 h.
 
-**Open:** the recheck promised in the entry below. The rate holds steady at
+**Closes** the recheck promised in the entry below. The rate holds steady at
 ~150-160/day, right on the udisks2 reverse line (~56k/yr, ~11 years to
-600k). The rate is steady and the line is barely crossed, so nothing was
-changed. The owner decides whether to revisit (see the reverse conditions
-in the udisks2 entry).
+600k).
+
+**Decision (owner): keep as is**, udisks2 keeps polling. Check monthly; next
+check about **2026-11-26** (expect ~5.7k by then at this rate).
+
+**Reverse if:** the rate climbs clearly past ~200/day, or any of the
+reallocated/pending counters move off 0.
 
 ## 2026-10-22: nightly backup landed; Load_Cycle_Count +161 in 24 h
 
