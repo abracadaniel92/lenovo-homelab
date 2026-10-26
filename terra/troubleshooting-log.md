@@ -4,6 +4,32 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-10-26: backups fine; Load_Cycle_Count ~152/day over 4 days (at the line)
+
+**Check (read-only, Terra, no sudo):** `terra-watchdog` runs every 10 min,
+last at 10:27:46 `Result=success`. `/run/terra-watchdog` has no `backup`
+stamp, so a snapshot landed within the last 36 h. Its only stamps are the old
+`site` (10-20) and `wg` (10-21). The dir mtime of 01:37 is a single
+`net-strike` that was set and then cleared: the nightly line drop, so no push.
+rest-server is listening on `10.8.0.4:8000`; `/mnt/offsite` 129 G of 1.8 T.
+Snapshot times were not listed: the repo dirs need root.
+
+**SMART** (read through udisks2 D-Bus `SmartGetAttributes`, no root needed,
+updated 10:29:40): `Load_Cycle_Count` **1061** (448 at 10-22 ~11:00, so +613
+in ~96.5 h, **~152/day**, ~6.3/h). Temperature 33 °C; Reallocated,
+Reallocated_Event, Current_Pending, Offline_Uncorrectable and Load_Retry all
+0. Power-on 172 h, heads loaded 29 h.
+
+**Closes** the recheck promised in the entry below. The rate holds steady at
+~150-160/day, right on the udisks2 reverse line (~56k/yr, ~11 years to
+600k).
+
+**Decision (owner): keep as is**, udisks2 keeps polling. Check monthly; next
+check about **2026-11-26** (expect ~5.7k by then at this rate).
+
+**Reverse if:** the rate climbs clearly past ~200/day, or any of the
+reallocated/pending counters move off 0.
+
 ## 2026-10-22: nightly backup landed; Load_Cycle_Count +161 in 24 h
 
 **Check (read-only, Terra):** snapshot file in `snapshots/` written 04:06:47
