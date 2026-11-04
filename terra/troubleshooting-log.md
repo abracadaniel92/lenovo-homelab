@@ -4,6 +4,34 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-11-04: no errors or failed uploads; unclean reboot on 10-30 04:31
+
+**Check (read-only, Terra, no sudo):** no failed units.
+`restic-rest-server` active since 10-30 04:33, 0 restarts, listening on
+`10.8.0.4:8000`. `terra-watchdog` runs every 10 min, `Result=success`, no
+`backup` stamp in `/run/terra-watchdog` (stamps reset at boot, so this covers
+10-30 onwards). A single `net-strike` at 08:56 was cleared by the 09:06 run,
+the usual line blip, no push. WireGuard ping to `10.8.0.1` ~8 ms;
+gmojsoski.com 200. `/mnt/offsite` 130 G of 1.8 T (129 G on 10-26).
+Snapshot file times and the system journal were not read: both need root.
+
+**Unclean reboot:** `last -x` shows the boot from 10-19 ended in `crash`
+(no shutdown record) and a new boot at **10-30 04:31**. Likely an office
+power cut and BIOS power-on after AC loss; not confirmed without root
+(`sudo journalctl -b -1 -n 30`). It came back close to the ~04:06 backup
+window, but the watchdog's 36 h backup check never alerted after boot, so a
+recent snapshot was present.
+
+**SMART** (udisks2 D-Bus, updated 09:01): `Load_Cycle_Count` **2389** (1061
+at 10-26 10:29, so +1328 in ~8.9 days, **~149/day**, steady). Temperature
+32 °C; Reallocated, Reallocated_Event, Current_Pending, Offline_Uncorrectable
+and Load_Retry all 0. Power-on 386 h, Power_Cycle_Count 10,
+Power-Off_Retract_Count 8.
+
+**Open:** confirm each nightly snapshot since 10-28 and the crash cause with
+root (`sudo ls -l --time-style=+%F_%T /mnt/offsite/restic/lemongrab/snapshots | tail -8`).
+Monthly LCC check still due about 2026-11-26.
+
 ## 2026-10-26: backups fine; Load_Cycle_Count ~152/day over 4 days (at the line)
 
 **Check (read-only, Terra, no sudo):** `terra-watchdog` runs every 10 min,
