@@ -5,6 +5,34 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-04] Image updates from the weekly list (8 real bumps, 6 rebuilds skipped)
+
+**Symptom:** `update-check.sh --print` listed 14 containers with newer images.
+Resolved each moving tag to a version via the Docker Hub tags API
+(`hub.docker.com/v2/repositories/<repo>/tags/<tag>` digest matched against
+version tags), which does not spend the pull quota.
+
+**Change (live compose dirs, `up -d --no-deps <svc>`, one at a time):**
+- mattermost 12.0.0 -> 12.0.1 (security fixes), outline 1.11.0 -> 1.12.0
+  (Node security fix; migrations ran clean in ms), uptime-kuma 2.5.6 -> 2.5.9,
+  stirling-pdf 3.2.0 -> 3.2.2, cloudflared 2026.10.3 -> 2026.10.7 (4 tunnel
+  connections), nginx-vaultwarden 1.31.7 -> 1.31.8, outline-redis 7.4.11 -> 7.4.12,
+  paperless-redis 8.10.2 -> 8.10.3 (Paperless reconnected to the broker after ~2 s).
+- Skipped (same version, base image rebuilt only): caddy 2.11.7, mosquitto 2.1.2,
+  nextcloud 35.0.2, outline/mattermost/nextcloud/calcom postgres.
+
+**Backups:** `/mnt/ssd/backups/mattermost/mattermost-db-12.0.0-20261104-0857.sql.gz`,
+`/mnt/ssd/backups/outline/outline-db-1.11.0-20261104-0857.sql.gz` (both end with
+"dump complete").
+
+**Gotcha:** the one `update-check.sh` run plus the Mattermost pull used up the
+Docker Hub quota; the Outline pull got 429. Everything after came from
+`mirror.gcr.io` + `docker tag`, versions checked before `up -d`.
+
+**Verification:** each service's version + health/endpoint checked, 0 restarts;
+`verify-services.sh` all healthy; all containers up. Outline has no Caddy route
+(LAN only, port 8098), so check it with `curl localhost:8098/_health`.
+
 ## [2026-10-23] Backups: false "stale or missing" alerts for KitchenOwl
 
 **Symptom:** from 2026-10-23 early morning, every hourly health check sent
