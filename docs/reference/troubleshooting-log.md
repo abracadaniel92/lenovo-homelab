@@ -31,8 +31,15 @@ NVMe: `/home/vms` (root:libvirt, 2775). Freed space first: `docker image prune`
   hosts and WireGuard clients can (RDP).
 - i5-7500T is not on the Win11 CPU list: in setup, Shift+F10 and
   `reg add HKLM\SYSTEM\Setup\LabConfig /v BypassCPUCheck /t REG_DWORD /d 1 /f`.
-- Setup sees no disk until `viostor` loads: `drvload E:\viostor\w11\amd64\viostor.inf`
-  (E: = virtio CD), then Refresh.
+- Setup sees no disk until `viostor` loads. Use setup's **Load driver** button
+  (Browse -> E:\viostor\w11\amd64), NOT `drvload` from Shift+F10: drvload only
+  loads it into the installer, setup does not copy it into the new Windows, and
+  the first boot loops on `INACCESSIBLE_BOOT_DEVICE` (0x7B). Recovery used here:
+  boot the ISO, Shift+F10, `drvload` viostor again so C: is visible, then
+  `dism /image:c:\ /add-driver /driver:e:\viostor\w11\amd64\viostor.inf /driver:e:\netkvm\w11\amd64\netkvm.inf`,
+  `wpeutil shutdown`, boot from disk. Injecting NetKVM too gave OOBE network.
+- Boot order is `hd,cdrom` after install (`virt-xml win11 --edit --boot hd,cdrom`),
+  so the "press any key to boot from CD" prompt no longer shows on each reboot.
 - Cockpit's noVNC console did not pass arrow keys to the UEFI menu. Drive the VM
   from the host instead: `virsh send-key win11 KEY_...` and
   `virsh screenshot win11 x.ppm`.
