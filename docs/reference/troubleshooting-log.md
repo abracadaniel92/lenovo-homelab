@@ -5,6 +5,41 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-04] Windows 11 VM on KVM, managed with Cockpit
+
+**Why:** owner wanted a Windows VM to open and use like Hyper-V.
+
+**Host check:** i5-7500T has VT-x, `kvm_intel` loaded, 31 GB RAM (~20 GB free).
+`/mnt/ssd_1tb` is the spinning HDD (and holds Immich), so the VM lives on the
+NVMe: `/home/vms` (root:libvirt, 2775). Freed space first: `docker image prune`
+(dangling only) reclaimed 46 GB, `/home` 147 -> 190 GB free.
+
+**Change (host, not Docker):**
+- `apt install libvirt-daemon-system virtinst ovmf swtpm swtpm-tools cockpit cockpit-machines`;
+  goce added to `libvirt,kvm`; `libvirtd` + `cockpit.socket` enabled.
+  Cockpit: `https://192.168.1.97:9090` (LAN only, log in as goce).
+- VM `win11`: 8 GB RAM, 2 vCPU (host-passthrough), UEFI Secure Boot + TPM 2.0
+  (swtpm), 64 GB thin qcow2 `/home/vms/win11.qcow2` on virtio, NIC = macvtap on
+  `enp0s31f6` (own LAN IP from the router; no host bridge, host network untouched).
+  ISOs in `/home/vms/iso/` (`win11.iso` consumer multi-edition, `virtio-win.iso` 0.1.302).
+  Exact virt-install flags were in the session scratchpad; `virsh dumpxml win11` is the truth.
+- Windows 11 Pro, unactivated (watermark). 40 GB disk was asked for, but Win11
+  setup refuses < 64 GB; thin qcow2 makes 64 GB cost only what is written.
+
+**Gotchas:**
+- macvtap: lemongrab itself cannot reach the VM's IP (by design); other LAN
+  hosts and WireGuard clients can (RDP).
+- i5-7500T is not on the Win11 CPU list: in setup, Shift+F10 and
+  `reg add HKLM\SYSTEM\Setup\LabConfig /v BypassCPUCheck /t REG_DWORD /d 1 /f`.
+- Setup sees no disk until `viostor` loads: `drvload E:\viostor\w11\amd64\viostor.inf`
+  (E: = virtio CD), then Refresh.
+- Cockpit's noVNC console did not pass arrow keys to the UEFI menu. Drive the VM
+  from the host instead: `virsh send-key win11 KEY_...` and
+  `virsh screenshot win11 x.ppm`.
+- `virsh reset` during the virt-install first boot shut the VM off (install-phase
+  `on_reboot=destroy`); saved config booted from disk only. Fixed with
+  `virt-xml win11 --edit --boot cdrom,hd` + `virsh start`.
+
 ## [2026-11-04] Image updates from the weekly list (8 real bumps, 6 rebuilds skipped)
 
 **Symptom:** `update-check.sh --print` listed 14 containers with newer images.
