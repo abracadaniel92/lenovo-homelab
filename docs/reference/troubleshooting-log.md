@@ -40,6 +40,17 @@ Windows Update the VM held 2 cores at 100%, host 28% idle, CPU 66 C, swap 2 -> 3
   a Docker /20. From anywhere on the VPN:
   `ssh -p 223 -N -L 3390:10.77.0.10:3389 goce@10.8.0.1`, then RDP to `localhost:3390`.
   On the LAN, RDP straight to 192.168.1.112.
+- SSH is key-only. The work PC's key is in `~/.ssh/authorized_keys` as
+  `restrict,port-forwarding,permitopen="10.77.0.10:3389",command="/bin/false"`
+  (tunnel to the VM's RDP only, no shell). Backup of the old file:
+  `authorized_keys.bak-20261104`.
+- RDP refused the Microsoft-account login: Win11 had "only allow Windows Hello
+  sign-in" on (`HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device`
+  `DevicePasswordLessBuildVersion=2`; set to 0). Owner then switched to a local
+  account; RDP works.
+- Guest agent can run commands in Windows from the host:
+  `virsh qemu-agent-command win11 '{"execute":"guest-exec",...}'` (powershell.exe,
+  capture-output), handy when the console keyboard misbehaves.
 - i5-7500T is not on the Win11 CPU list: in setup, Shift+F10 and
   `reg add HKLM\SYSTEM\Setup\LabConfig /v BypassCPUCheck /t REG_DWORD /d 1 /f`.
 - Setup sees no disk until `viostor` loads. Use setup's **Load driver** button
