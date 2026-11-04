@@ -26,6 +26,11 @@ NVMe: `/home/vms` (root:libvirt, 2775). Freed space first: `docker image prune`
 - Windows 11 Pro, unactivated (watermark). 40 GB disk was asked for, but Win11
   setup refuses < 64 GB; thin qcow2 makes 64 GB cost only what is written.
 
+**Result:** Windows 11 Pro, LAN IP 192.168.1.112 (DHCP, MAC 52:54:00:a4:61:da),
+Remote Desktop enabled, autostart OFF (owner starts it from Cockpit). During
+Windows Update the VM held 2 cores at 100%, host 28% idle, CPU 66 C, swap 2 -> 3.2 GB;
+8 GB RAM is the ceiling for this box.
+
 **Gotchas:**
 - macvtap: lemongrab itself cannot reach the VM's IP (by design); other LAN
   hosts and WireGuard clients can (RDP).
@@ -38,6 +43,9 @@ NVMe: `/home/vms` (root:libvirt, 2775). Freed space first: `docker image prune`
   boot the ISO, Shift+F10, `drvload` viostor again so C: is visible, then
   `dism /image:c:\ /add-driver /driver:e:\viostor\w11\amd64\viostor.inf /driver:e:\netkvm\w11\amd64\netkvm.inf`,
   `wpeutil shutdown`, boot from disk. Injecting NetKVM too gave OOBE network.
+- Guest agent channel added after install (needs a full power-off to take
+  effect, hotplug fails without a virtio-serial controller); with
+  virtio-win-guest-tools installed, `virsh domifaddr win11 --source agent` gives the IP.
 - Boot order is `hd,cdrom` after install (`virt-xml win11 --edit --boot hd,cdrom`),
   so the "press any key to boot from CD" prompt no longer shows on each reboot.
 - Cockpit's noVNC console did not pass arrow keys to the UEFI menu. Drive the VM
