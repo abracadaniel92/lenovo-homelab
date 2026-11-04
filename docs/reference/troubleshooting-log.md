@@ -32,8 +32,14 @@ Windows Update the VM held 2 cores at 100%, host 28% idle, CPU 66 C, swap 2 -> 3
 8 GB RAM is the ceiling for this box.
 
 **Gotchas:**
-- macvtap: lemongrab itself cannot reach the VM's IP (by design); other LAN
-  hosts and WireGuard clients can (RDP).
+- macvtap: lemongrab itself cannot reach the VM's IP (by design), and neither
+  can WireGuard clients, since wg0 ends on lemongrab. Fix for remote use: second
+  NIC on libvirt network `hostonly` (isolated, no `<forward>`, bridge `virbr-host`,
+  10.77.0.0/24, autostart; VM fixed at 10.77.0.10 via DHCP host entry for MAC
+  52:54:00:77:00:10, hot-added live). 192.168.100.0/24 was avoided: it sits inside
+  a Docker /20. From anywhere on the VPN:
+  `ssh -p 223 -N -L 3390:10.77.0.10:3389 goce@10.8.0.1`, then RDP to `localhost:3390`.
+  On the LAN, RDP straight to 192.168.1.112.
 - i5-7500T is not on the Win11 CPU list: in setup, Shift+F10 and
   `reg add HKLM\SYSTEM\Setup\LabConfig /v BypassCPUCheck /t REG_DWORD /d 1 /f`.
 - Setup sees no disk until `viostor` loads. Use setup's **Load driver** button
