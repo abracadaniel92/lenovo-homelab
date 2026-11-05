@@ -35,6 +35,8 @@ Docs: https://immich.app/docs/install/docker-compose
 - **OAuth (Google):** Auto Register **disabled** — only admin-created users can log in with Google.
 - **Password login:** **Disabled** in Administration → Settings — prevents guessing; access is OAuth-only.
 - Add users via Administration → Users; they link Google in User settings → OAuth after first sign-in.
+- **Google OAuth client:** lives in Google Cloud project `immich-goce`. Google deletes clients unused for ~6 months (warning email at 5); phone apps stay logged in, so do one web login with Google now and then to keep it active.
+- **Locked out (Google login broken):** on lemongrab run `docker exec immich_server immich-admin enable-password-login`, sign in with the password (`immich-admin reset-admin-password` if forgotten), fix OAuth, then disable password login again.
 
 ## Troubleshooting
 
