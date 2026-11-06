@@ -5,6 +5,41 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-06] gmojsoski.com moved off the homelab to Cloudflare Workers (static assets)
+
+**Why:** the portfolio is the one page strangers see; it went down with
+lemongrab, power or ISP. Static Vite build, no backend, so a CDN fits.
+
+**Change (Cloudflare dashboard, owner):** Workers project `my-portfolio`,
+Git-connected to `abracadaniel92/portfolio_v2` `main` (build `npm run build`,
+deploy `npx wrangler deploy`, config in that repo's `wrangler.jsonc`:
+`not_found_handling: "404-page"`). Deleted the apex DNS record
+(CNAME `df638884-0d3e-4799-8a98-60e844fcd164.cfargotunnel.com`, tunnel
+`portfolio`) and added `gmojsoski.com` as the Worker's custom domain.
+Nothing changed on lemongrab: the `gmojsoski.com` tunnel ingress line and the
+Caddy `@gmojsoski` block stay as an unused fallback. `www` stays on the
+tunnel; Caddy still 301s it to the apex.
+
+**Gotchas hit:** (1) the dashboard's Git flow creates a Worker, not Pages;
+with no `wrangler.jsonc`, `wrangler deploy` auto-configured the repo on the
+builder, injected `@cloudflare/vite-plugin` (broke the SSR prerender) and
+picked SPA mode (soft 404s). Fixed by committing `wrangler.jsonc`. (2) Static
+assets 307 `/x` to `/x/` for a directory `index.html`, so the prerender now
+writes flat `blog.html` / `blog/<slug>.html` (entry below).
+
+**Verification:** apex resolves to Cloudflare anycast; HTML carries the Workers
+`cache-control: public, max-age=0, must-revalidate` (Caddy sends `no-cache`),
+so it is not the tunnel. `/`, `/blog`, all 12 posts 200 with own title and
+matching canonical (checked on `*.workers.dev` first); misses 404 with the
+styled page and the CSP/HSTS; `/assets/*` immutable; CV, sitemap, rss, robots
+200; `www` 301; `verify-services.sh` all healthy.
+
+**Deploys now:** every push to `portfolio_v2` `main` goes live.
+`make portfolio-update` only refreshes the homelab fallback copy.
+
+**Rollback:** remove the Worker custom domain, then on lemongrab
+`cloudflared tunnel route dns portfolio gmojsoski.com`. Caddy serves within a minute.
+
 ## [2026-11-06] gmojsoski.com: Caddy serves flat `.html` routes (prep for Cloudflare Pages)
 
 **Why:** moving the portfolio to Cloudflare Pages. Pages 307s a directory
