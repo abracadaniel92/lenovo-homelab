@@ -5,6 +5,24 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-06] Daily check of the public links outsiders click
+
+**Why:** the Cal booking link 404'd for six weeks with every check green (entry
+below): all checks hit only each site's root, and Cal's root is a login
+redirect regardless.
+
+**Change (live, `scripts/` is live via /opt/homelab):** new module
+`scripts/health.d/80-public-links.sh`. Rides the hourly health-check timer but
+only acts in the 09:xx run (owner asked for daily). Follows redirects and wants
+a final 200 for: `https://gmojsoski.com/`, the CV PDF, and
+`https://cal.gmojsoski.com/gmojsoski/30min?user=gmojsoski&overlayCalendar=true`.
+Anything else alerts via `send_slack_notification` (Mattermost + ntfy). To add
+a link, append it to the `public_links` array.
+
+**Verification:** `bash scripts/test-health-modules.sh` PASS (new assertions: a
+404 link alerts with its query string intact, a 200 link is left alone);
+forced live run: "Public links: all 3 return 200"; shellcheck clean.
+
 ## [2026-11-06] Cal.com: public booking link 404'd ("username is still available")
 
 **Symptom:** `https://cal.gmojsoski.com/gmojsoski` (linked 3x from the

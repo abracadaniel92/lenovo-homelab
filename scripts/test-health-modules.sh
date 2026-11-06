@@ -170,6 +170,25 @@ else
         *"could not encode"*) fail "quotes/backslashes broke JSON encoding" ;;
         *)                    pass "quotes and backslashes encode cleanly" ;;
     esac
+
+    # 80-public-links.sh: a 404 among the links must alert, naming that link only.
+    # shellcheck disable=SC2034,SC2317,SC2329  # read by / called from the module
+    links_alert=$(
+        log() { :; }
+        send_slack_notification() { printf '%s' "$2"; }
+        PUBLIC_LINKS_HOUR=$(date +%H)
+        public_links=("http://127.0.0.1:$PORT/exists.txt" "http://127.0.0.1:$PORT/no-such-file?a=1&b=2")
+        # shellcheck source=/dev/null
+        source "$(dirname "$ENGINE")/health.d/80-public-links.sh"
+    )
+    case "$links_alert" in
+        *"no-such-file?a=1&b=2 -> 404"*) pass "public-links alerts on a 404 (query string intact)" ;;
+        *) fail "public-links missed a 404: [$links_alert]" ;;
+    esac
+    case "$links_alert" in
+        *exists.txt*) fail "public-links flagged a 200 link" ;;
+        *)            pass "public-links leaves a 200 link alone" ;;
+    esac
 fi
 
 echo
