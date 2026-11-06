@@ -4,6 +4,32 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-11-06: Uptime Kuma installed for outside-in monitoring
+
+**Why:** lemongrab's and the Pi's Uptime Kuma sit behind the home line they
+check, so a dead line, tunnel or DNS looks fine to them. The Terra checks
+from the office.
+
+**Change (live, Terra):** `sudo bash terra/setup-uptime-kuma.sh` installed
+`docker.io` + `docker-compose` (trixie), `/etc/docker/daemon.json`
+(`"iptables": false`, `"bridge": "none"`, local logs 10 MB) so Docker never
+touches `nftables.conf`, and `louislam/uptime-kuma:2` from
+`/opt/uptime-kuma/docker-compose.yml` (host network,
+`UPTIME_KUMA_HOST=127.0.0.1`, `restart: unless-stopped`). Data in
+`/opt/uptime-kuma/data` on the OS SSD (owner's choice), nothing on
+`/mnt/offsite`. No firewall change.
+
+**Verification:** `curl http://127.0.0.1:3001` gives 302 (to first-run
+setup); `ss -tln` shows `127.0.0.1:3001` only, rest-server still on
+`10.8.0.4:8000`; no `docker0` link; docker, restic-rest-server, nftables,
+wg-quick@wg0 all active.
+
+**Open:** owner creates the admin user over
+`ssh -J lemongrab -L 3001:localhost:3001 goce@10.8.0.4`, adds HTTPS
+monitors for the `verify-services.sh` SUBDOMAINS (200/302/307) and points
+alerts at the Terra's ntfy topic, not lemongrab's. Reboot survival not yet
+tested (docker enabled, container `unless-stopped`).
+
 ## 2026-11-04: no errors or failed uploads; unclean reboot on 10-30 04:31
 
 **Check (read-only, Terra, no sudo):** no failed units.
