@@ -5,6 +5,29 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-06] Cal.com: public booking link 404'd ("username is still available")
+
+**Symptom:** `https://cal.gmojsoski.com/gmojsoski` (linked 3x from the
+portfolio) showed Cal's 404 "The username /gmojsoski is still available",
+though the profile username is `gmojsoski`. Likely broken since 2026-09-27.
+
+**Cause:** the 2026-09-27 cleanup set `ALLOWED_HOSTNAMES='"gmojsoski.com"'`
+to silence a log warning. Cal then parses `cal.gmojsoski.com` as an
+*organization* subdomain `cal` and looks the user up inside that (non-existent)
+org. Proof: `curl -H "Host: localhost:8101" http://127.0.0.1:8101/gmojsoski`
+307'd to `/gmojsoski/30min`; same request with `Host: cal.gmojsoski.com` 404'd.
+
+**Change (live = repo dir, `docker/calcom/`):** `.env` and `.env.example`
+`ALLOWED_HOSTNAMES='"cal.gmojsoski.com"'`, `docker compose up -d calcom`
+(run by owner; auto mode blocks live deploys).
+
+**Verification:** `/gmojsoski` 307 -> `/gmojsoski/30min?user=gmojsoski`, final 200.
+
+**Known, leave it:** the log warning `Match of WEBAPP_URL with ALLOWED_HOSTNAMES
+failed` is back. It only goes away when WEBAPP_URL is a subdomain of an
+allowed host, which is exactly what breaks user links. Organizations are off
+(`ORGANIZATIONS_ENABLED` unset), so it is noise. Do not "fix" it again.
+
 ## [2026-11-06] gmojsoski.com moved off the homelab to Cloudflare Workers (static assets)
 
 **Why:** the portfolio is the one page strangers see; it went down with
