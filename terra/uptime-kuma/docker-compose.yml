@@ -4,7 +4,7 @@
 # OS SSD, never the offsite backup drive.
 # Host networking + Docker's "iptables": false (setup script) keep Docker out
 # of terra/nftables.conf. UI on 127.0.0.1 only; reach it with
-#   ssh -J lemongrab -L 3001:localhost:3001 goce@10.8.0.4
+#   ssh -J goce@<lemongrab> -L 3011:localhost:3001 goce@10.8.0.4   (from a laptop)
 services:
   uptime-kuma:
     image: louislam/uptime-kuma:2

@@ -42,5 +42,5 @@ ss -tlnp | grep ':3001 ' || { echo "nothing listening on 3001" >&2; exit 1; }
 ss -tlnp | grep ':3001 ' | grep -qv '127.0.0.1:3001' \
     && { echo "WARN: 3001 is bound beyond 127.0.0.1" >&2; exit 1; }
 nft list table inet filter >/dev/null && echo "nftables filter table intact"
-echo "OK. From your laptop: ssh -J lemongrab -L 3001:localhost:3001 goce@10.8.0.4"
-echo "then open http://localhost:3001 and create the admin user."
+echo "OK. From your laptop: ssh -J goce@<lemongrab> -L 3011:localhost:3001 goce@10.8.0.4"
+echo "then open http://localhost:3011 and create the admin user."
