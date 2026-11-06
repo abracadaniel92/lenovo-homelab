@@ -5,6 +5,28 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-06] gmojsoski.com: Caddy serves flat `.html` routes (prep for Cloudflare Pages)
+
+**Why:** moving the portfolio to Cloudflare Pages. Pages 307s a directory
+index (`/blog/x` to `/blog/x/`), so `portfolio_v2` commit `c185242` now
+prerenders `blog.html` and `blog/<slug>.html` instead of `.../index.html`.
+The live Caddy block only tried `{path}/index.html`, so deploying that build
+here would have 404'd every post.
+
+**Change (live = repo, config.d is mounted from /opt/homelab):**
+`docker/caddy/config.d/10-gmojsoski-home.caddy`, owner-approved edit of an
+existing line: `try_files {path} {path}/index.html` ->
+`try_files {path} {path}.html {path}/index.html`. Serves old and new builds.
+`caddy validate` OK, `caddy reload`.
+
+**Verification:** `/`, `/blog`, a post each 200 with their own `<title>`;
+`/definitely-not-a-page` 404 with the styled page; www 301; CSP present;
+`verify-services.sh` all healthy. Side effect: `/404` now answers 200 with
+the noindex 404 page (Pages does the same); harmless.
+
+**Next:** push `portfolio_v2`, connect it in Pages, check `*.pages.dev`, then
+move the apex DNS from the tunnel to Pages (needs owner confirmation).
+
 ## [2026-11-04] Windows 11 VM on KVM, managed with Cockpit
 
 **Why:** owner wanted a Windows VM to open and use like Hyper-V.

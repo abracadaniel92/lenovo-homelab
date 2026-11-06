@@ -13,16 +13,16 @@ handle @gmojsoski_www {
 handle @gmojsoski {
 	root * /srv/site
 	encode zstd gzip
-	# {path}/index.html is load-bearing, not an optimisation: the build prerenders
-	# /blog and every /blog/<slug> to its own index.html. Without this line those
-	# URLs fall through and serve the homepage at 200, so every post looks like a
-	# duplicate of / to a crawler.
+	# {path}.html is load-bearing, not an optimisation: the build prerenders /blog
+	# and every /blog/<slug> to blog.html / blog/<slug>.html (flat, for Cloudflare
+	# Pages, 2026-11-06). {path}/index.html serves builds from before that. Without
+	# these, those URLs miss and every post looks broken or duplicate to a crawler.
 	#
 	# Deliberately NO `/index.html` fallback at the end. With one, every unknown
 	# URL answered 200 with the homepage, which Google reads as a soft 404. Now a
 	# miss stays a miss and the 404 handler in ../Caddyfile serves dist/404.html
 	# with a real 404 status.
-	try_files {path} {path}/index.html
+	try_files {path} {path}.html {path}/index.html
 	file_server
 
 	header {
