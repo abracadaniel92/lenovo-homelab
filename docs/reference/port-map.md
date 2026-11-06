@@ -29,6 +29,8 @@ Single source of truth for which service uses which host port. Check this (and r
 | 5555  | ADB (emulator)    | 127.0.0.1 only                    |
 | 9000  | Portainer         | internal only                     |
 | 9443  | Portainer HTTPS   | internal only                     |
+| 9090  | Cockpit (host + VM manager) | LAN only, https; never route via Caddy/tunnel |
+| 5900  | win11 VM console (VNC) | 127.0.0.1 only, Cockpit proxies it |
 | 2283  | Immich            | immich.gmojsoski.com              |
 | 18789 | Clawdbot          | 127.0.0.1 only                    |
 

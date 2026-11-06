@@ -5,6 +5,199 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-06] Daily check of the public links outsiders click
+
+**Why:** the Cal booking link 404'd for six weeks with every check green (entry
+below): all checks hit only each site's root, and Cal's root is a login
+redirect regardless.
+
+**Change (live, `scripts/` is live via /opt/homelab):** new module
+`scripts/health.d/80-public-links.sh`. Rides the hourly health-check timer but
+only acts in the 09:xx run (owner asked for daily). Follows redirects and wants
+a final 200 for: `https://gmojsoski.com/`, the CV PDF, and
+`https://cal.gmojsoski.com/gmojsoski/30min?user=gmojsoski&overlayCalendar=true`.
+Anything else alerts via `send_slack_notification` (Mattermost + ntfy). To add
+a link, append it to the `public_links` array.
+
+**Verification:** `bash scripts/test-health-modules.sh` PASS (new assertions: a
+404 link alerts with its query string intact, a 200 link is left alone);
+forced live run: "Public links: all 3 return 200"; shellcheck clean.
+
+## [2026-11-06] Cal.com: public booking link 404'd ("username is still available")
+
+**Symptom:** `https://cal.gmojsoski.com/gmojsoski` (linked 3x from the
+portfolio) showed Cal's 404 "The username /gmojsoski is still available",
+though the profile username is `gmojsoski`. Likely broken since 2026-09-27.
+
+**Cause:** the 2026-09-27 cleanup set `ALLOWED_HOSTNAMES='"gmojsoski.com"'`
+to silence a log warning. Cal then parses `cal.gmojsoski.com` as an
+*organization* subdomain `cal` and looks the user up inside that (non-existent)
+org. Proof: `curl -H "Host: localhost:8101" http://127.0.0.1:8101/gmojsoski`
+307'd to `/gmojsoski/30min`; same request with `Host: cal.gmojsoski.com` 404'd.
+
+**Change (live = repo dir, `docker/calcom/`):** `.env` and `.env.example`
+`ALLOWED_HOSTNAMES='"cal.gmojsoski.com"'`, `docker compose up -d calcom`
+(run by owner; auto mode blocks live deploys).
+
+**Verification:** `/gmojsoski` 307 -> `/gmojsoski/30min?user=gmojsoski`, final 200.
+
+**Known, leave it:** the log warning `Match of WEBAPP_URL with ALLOWED_HOSTNAMES
+failed` is back. It only goes away when WEBAPP_URL is a subdomain of an
+allowed host, which is exactly what breaks user links. Organizations are off
+(`ORGANIZATIONS_ENABLED` unset), so it is noise. Do not "fix" it again.
+
+## [2026-11-06] gmojsoski.com moved off the homelab to Cloudflare Workers (static assets)
+
+**Why:** the portfolio is the one page strangers see; it went down with
+lemongrab, power or ISP. Static Vite build, no backend, so a CDN fits.
+
+**Change (Cloudflare dashboard, owner):** Workers project `my-portfolio`,
+Git-connected to `abracadaniel92/portfolio_v2` `main` (build `npm run build`,
+deploy `npx wrangler deploy`, config in that repo's `wrangler.jsonc`:
+`not_found_handling: "404-page"`). Deleted the apex DNS record
+(CNAME `df638884-0d3e-4799-8a98-60e844fcd164.cfargotunnel.com`, tunnel
+`portfolio`) and added `gmojsoski.com` as the Worker's custom domain.
+Nothing changed on lemongrab: the `gmojsoski.com` tunnel ingress line and the
+Caddy `@gmojsoski` block stay as an unused fallback. `www` stays on the
+tunnel; Caddy still 301s it to the apex.
+
+**Gotchas hit:** (1) the dashboard's Git flow creates a Worker, not Pages;
+with no `wrangler.jsonc`, `wrangler deploy` auto-configured the repo on the
+builder, injected `@cloudflare/vite-plugin` (broke the SSR prerender) and
+picked SPA mode (soft 404s). Fixed by committing `wrangler.jsonc`. (2) Static
+assets 307 `/x` to `/x/` for a directory `index.html`, so the prerender now
+writes flat `blog.html` / `blog/<slug>.html` (entry below).
+
+**Verification:** apex resolves to Cloudflare anycast; HTML carries the Workers
+`cache-control: public, max-age=0, must-revalidate` (Caddy sends `no-cache`),
+so it is not the tunnel. `/`, `/blog`, all 12 posts 200 with own title and
+matching canonical (checked on `*.workers.dev` first); misses 404 with the
+styled page and the CSP/HSTS; `/assets/*` immutable; CV, sitemap, rss, robots
+200; `www` 301; `verify-services.sh` all healthy.
+
+**Deploys now:** every push to `portfolio_v2` `main` goes live.
+`make portfolio-update` only refreshes the homelab fallback copy.
+
+**Rollback:** remove the Worker custom domain, then on lemongrab
+`cloudflared tunnel route dns portfolio gmojsoski.com`. Caddy serves within a minute.
+
+## [2026-11-06] gmojsoski.com: Caddy serves flat `.html` routes (prep for Cloudflare Pages)
+
+**Why:** moving the portfolio to Cloudflare Pages. Pages 307s a directory
+index (`/blog/x` to `/blog/x/`), so `portfolio_v2` commit `c185242` now
+prerenders `blog.html` and `blog/<slug>.html` instead of `.../index.html`.
+The live Caddy block only tried `{path}/index.html`, so deploying that build
+here would have 404'd every post.
+
+**Change (live = repo, config.d is mounted from /opt/homelab):**
+`docker/caddy/config.d/10-gmojsoski-home.caddy`, owner-approved edit of an
+existing line: `try_files {path} {path}/index.html` ->
+`try_files {path} {path}.html {path}/index.html`. Serves old and new builds.
+`caddy validate` OK, `caddy reload`.
+
+**Verification:** `/`, `/blog`, a post each 200 with their own `<title>`;
+`/definitely-not-a-page` 404 with the styled page; www 301; CSP present;
+`verify-services.sh` all healthy. Side effect: `/404` now answers 200 with
+the noindex 404 page (Pages does the same); harmless.
+
+**Next:** push `portfolio_v2`, connect it in Pages, check `*.pages.dev`, then
+move the apex DNS from the tunnel to Pages (needs owner confirmation).
+
+## [2026-11-04] Windows 11 VM on KVM, managed with Cockpit
+
+**Why:** owner wanted a Windows VM to open and use like Hyper-V.
+
+**Host check:** i5-7500T has VT-x, `kvm_intel` loaded, 31 GB RAM (~20 GB free).
+`/mnt/ssd_1tb` is the spinning HDD (and holds Immich), so the VM lives on the
+NVMe: `/home/vms` (root:libvirt, 2775). Freed space first: `docker image prune`
+(dangling only) reclaimed 46 GB, `/home` 147 -> 190 GB free.
+
+**Change (host, not Docker):**
+- `apt install libvirt-daemon-system virtinst ovmf swtpm swtpm-tools cockpit cockpit-machines`;
+  goce added to `libvirt,kvm`; `libvirtd` + `cockpit.socket` enabled.
+  Cockpit: `https://192.168.1.97:9090` (LAN only, log in as goce).
+- VM `win11`: 8 GB RAM, 2 vCPU (host-passthrough), UEFI Secure Boot + TPM 2.0
+  (swtpm), 64 GB thin qcow2 `/home/vms/win11.qcow2` on virtio, NIC = macvtap on
+  `enp0s31f6` (own LAN IP from the router; no host bridge, host network untouched).
+  ISOs in `/home/vms/iso/` (`win11.iso` consumer multi-edition, `virtio-win.iso` 0.1.302).
+  Exact virt-install flags were in the session scratchpad; `virsh dumpxml win11` is the truth.
+- Windows 11 Pro, unactivated (watermark). 40 GB disk was asked for, but Win11
+  setup refuses < 64 GB; thin qcow2 makes 64 GB cost only what is written.
+
+**Result:** Windows 11 Pro, LAN IP 192.168.1.112 (DHCP, MAC 52:54:00:a4:61:da),
+Remote Desktop enabled, autostart OFF (owner starts it from Cockpit). During
+Windows Update the VM held 2 cores at 100%, host 28% idle, CPU 66 C, swap 2 -> 3.2 GB;
+8 GB RAM is the ceiling for this box.
+
+**Gotchas:**
+- macvtap: lemongrab itself cannot reach the VM's IP (by design), and neither
+  can WireGuard clients, since wg0 ends on lemongrab. Fix for remote use: second
+  NIC on libvirt network `hostonly` (isolated, no `<forward>`, bridge `virbr-host`,
+  10.77.0.0/24, autostart; VM fixed at 10.77.0.10 via DHCP host entry for MAC
+  52:54:00:77:00:10, hot-added live). 192.168.100.0/24 was avoided: it sits inside
+  a Docker /20. From anywhere on the VPN:
+  `ssh -p 223 -N -L 3390:10.77.0.10:3389 goce@10.8.0.1`, then RDP to `localhost:3390`.
+  On the LAN, RDP straight to 192.168.1.112.
+- SSH is key-only. The work PC's key is in `~/.ssh/authorized_keys` as
+  `restrict,port-forwarding,permitopen="10.77.0.10:3389",command="/bin/false"`
+  (tunnel to the VM's RDP only, no shell). Backup of the old file:
+  `authorized_keys.bak-20261104`.
+- RDP refused the Microsoft-account login: Win11 had "only allow Windows Hello
+  sign-in" on (`HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device`
+  `DevicePasswordLessBuildVersion=2`; set to 0). Owner then switched to a local
+  account; RDP works.
+- Guest agent can run commands in Windows from the host:
+  `virsh qemu-agent-command win11 '{"execute":"guest-exec",...}'` (powershell.exe,
+  capture-output), handy when the console keyboard misbehaves.
+- i5-7500T is not on the Win11 CPU list: in setup, Shift+F10 and
+  `reg add HKLM\SYSTEM\Setup\LabConfig /v BypassCPUCheck /t REG_DWORD /d 1 /f`.
+- Setup sees no disk until `viostor` loads. Use setup's **Load driver** button
+  (Browse -> E:\viostor\w11\amd64), NOT `drvload` from Shift+F10: drvload only
+  loads it into the installer, setup does not copy it into the new Windows, and
+  the first boot loops on `INACCESSIBLE_BOOT_DEVICE` (0x7B). Recovery used here:
+  boot the ISO, Shift+F10, `drvload` viostor again so C: is visible, then
+  `dism /image:c:\ /add-driver /driver:e:\viostor\w11\amd64\viostor.inf /driver:e:\netkvm\w11\amd64\netkvm.inf`,
+  `wpeutil shutdown`, boot from disk. Injecting NetKVM too gave OOBE network.
+- Guest agent channel added after install (needs a full power-off to take
+  effect, hotplug fails without a virtio-serial controller); with
+  virtio-win-guest-tools installed, `virsh domifaddr win11 --source agent` gives the IP.
+- Boot order is `hd,cdrom` after install (`virt-xml win11 --edit --boot hd,cdrom`),
+  so the "press any key to boot from CD" prompt no longer shows on each reboot.
+- Cockpit's noVNC console did not pass arrow keys to the UEFI menu. Drive the VM
+  from the host instead: `virsh send-key win11 KEY_...` and
+  `virsh screenshot win11 x.ppm`.
+- `virsh reset` during the virt-install first boot shut the VM off (install-phase
+  `on_reboot=destroy`); saved config booted from disk only. Fixed with
+  `virt-xml win11 --edit --boot cdrom,hd` + `virsh start`.
+
+## [2026-11-04] Image updates from the weekly list (8 real bumps, 6 rebuilds skipped)
+
+**Symptom:** `update-check.sh --print` listed 14 containers with newer images.
+Resolved each moving tag to a version via the Docker Hub tags API
+(`hub.docker.com/v2/repositories/<repo>/tags/<tag>` digest matched against
+version tags), which does not spend the pull quota.
+
+**Change (live compose dirs, `up -d --no-deps <svc>`, one at a time):**
+- mattermost 12.0.0 -> 12.0.1 (security fixes), outline 1.11.0 -> 1.12.0
+  (Node security fix; migrations ran clean in ms), uptime-kuma 2.5.6 -> 2.5.9,
+  stirling-pdf 3.2.0 -> 3.2.2, cloudflared 2026.10.3 -> 2026.10.7 (4 tunnel
+  connections), nginx-vaultwarden 1.31.7 -> 1.31.8, outline-redis 7.4.11 -> 7.4.12,
+  paperless-redis 8.10.2 -> 8.10.3 (Paperless reconnected to the broker after ~2 s).
+- Skipped (same version, base image rebuilt only): caddy 2.11.7, mosquitto 2.1.2,
+  nextcloud 35.0.2, outline/mattermost/nextcloud/calcom postgres.
+
+**Backups:** `/mnt/ssd/backups/mattermost/mattermost-db-12.0.0-20261104-0857.sql.gz`,
+`/mnt/ssd/backups/outline/outline-db-1.11.0-20261104-0857.sql.gz` (both end with
+"dump complete").
+
+**Gotcha:** the one `update-check.sh` run plus the Mattermost pull used up the
+Docker Hub quota; the Outline pull got 429. Everything after came from
+`mirror.gcr.io` + `docker tag`, versions checked before `up -d`.
+
+**Verification:** each service's version + health/endpoint checked, 0 restarts;
+`verify-services.sh` all healthy; all containers up. Outline has no Caddy route
+(LAN only, port 8098), so check it with `curl localhost:8098/_health`.
+
 ## [2026-10-23] Backups: false "stale or missing" alerts for KitchenOwl
 
 **Symptom:** from 2026-10-23 early morning, every hourly health check sent

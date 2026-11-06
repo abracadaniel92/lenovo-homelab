@@ -16,6 +16,8 @@
 | 🏡 | **Home Assistant** | `http://192.168.1.97:8123` |
 | 🐳 | **Portainer** | `http://192.168.1.97:9000` |
 | 🔒 | **Portainer** *(HTTPS)* | `https://192.168.1.97:9443` |
+| 🖥️ | **Cockpit** *(VMs)* | `https://192.168.1.97:9090` |
+| 🪟 | **Windows VM** *(RDP)* | LAN: `192.168.1.112`; VPN: `ssh -p 223 -N -L 3390:10.77.0.10:3389 goce@10.8.0.1` then `localhost:3390` |
 | 🔐 | **Authentik** | `http://192.168.1.97:9091` |
 
 ---
