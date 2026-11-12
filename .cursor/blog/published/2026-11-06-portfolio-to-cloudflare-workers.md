@@ -37,4 +37,4 @@ c185242, 25a9256; lenovo-homelab 695e2fe.
 
 **Priority:** next
 
-**Published:**
+**Published:** https://gmojsoski.com/blog/portfolio-to-cloudflare-workers (2026-11-12)

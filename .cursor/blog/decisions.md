@@ -5,6 +5,8 @@ candidate.
 
 | Date | Outcome | Candidate | Note or reason |
 |------|---------|-----------|----------------|
+| 2026-11-12 | Published | portfolio-to-cloudflare-workers | Live as /blog/portfolio-to-cloudflare-workers |
+| 2026-11-12 | Published | windows-vm-on-the-homelab | Live as /blog/windows-11-vm-on-a-homelab-server |
 | 2026-11-12 | Approved (next) | portfolio-to-cloudflare-workers | Post; two Cloudflare defaults that quietly hurt SEO |
 | 2026-11-12 | Approved (next) | windows-vm-on-the-homelab | Post; lead with the drvload vs dism boot loop |
 | 2026-10-21 | Published | pihole-quietly-using-google | Live as /blog/pihole-v6-ignored-unbound-upstream |

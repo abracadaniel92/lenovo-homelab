@@ -28,4 +28,4 @@
 
 **Priority:** next
 
-**Published:**
+**Published:** https://gmojsoski.com/blog/windows-11-vm-on-a-homelab-server (2026-11-12)
