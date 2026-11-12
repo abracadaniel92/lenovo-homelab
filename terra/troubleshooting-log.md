@@ -4,6 +4,32 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-11-12 (evening): Wi-Fi power save off; firmware is already the last release
+
+**Change (live, Terra, owner ran it):** `nmcli con mod "<office SSID>"
+802-11-wireless.powersave 2` + `con up`. It stays on Wi-Fi for at least this
+week (no Ethernet yet).
+
+**Verification:** `802-11-wireless.powersave` reads `disable`; `wlo2`
+connected; 10/10 pings to `10.8.0.1`, RTT 10-115 ms.
+
+**Firmware check (read-only):** the card is PCI `8086:31dc` (sub `02a4`), the
+Gemini Lake CNVi in the 9000 series (9560/9462 family). The driver loads
+`iwlwifi-9000-pu-b0-jf-b0-46.ucode` (the crash dumps show `umac major 0x2E` =
+46). `firmware-iwlwifi` 20250410-2 is the trixie candidate, and **-46 is the
+last firmware Intel released for the 9000 series**, so no newer package
+(backports included) has newer firmware for this card. Module params:
+`iwlwifi power_save=N` (already off by default), `uapsd_disable=3`,
+`iwlmvm power_scheme=2` (balanced). Nothing in `/etc/modprobe.d/` for iwl.
+
+**Watch:** count asserts over the week with
+`sudo journalctl -k --since 2026-11-12 | grep -c SYSASSERT` (expect 0 after
+15:44 if power save was the trigger).
+
+**Reverse if** it still asserts: next step is `options iwlmvm
+power_scheme=1` in `/etc/modprobe.d/iwlwifi-terra.conf` (always-on radio),
+then a USB Ethernet adapter or the cable.
+
 ## 2026-11-12 (later): Wi-Fi firmware crashes precede each shutdown; shutdowns hang
 
 **Symptom (owner):** stuck on boot, slow and unresponsive over SSH.
