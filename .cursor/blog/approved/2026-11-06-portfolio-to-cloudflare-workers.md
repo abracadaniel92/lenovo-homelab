@@ -26,3 +26,15 @@ c185242, 25a9256; lenovo-homelab 695e2fe.
 **Public check:** Leave out: tunnel ID, workers.dev subdomain.
 
 **Outline:**
+1. Why move the one page recruiters see off the homelab
+2. Default 1: `post/index.html` makes Cloudflare redirect to a trailing slash (and why that breaks canonicals and the sitemap)
+3. Fix: prerender flat `post.html`, plus `try_files {path}.html` so the Caddy copy still works
+4. Default 2: "connect Git" builds a Worker, and a config-less `wrangler deploy` picks SPA mode, turning every 404 into a 200 homepage
+5. Fix: one committed `wrangler.jsonc` with `not_found_handling: "404-page"`, verified on workers.dev before DNS
+6. Cutover and rollback: one CNAME out, one custom domain in, Caddy kept as a warm fallback
+
+**Effort:** post
+
+**Priority:** next
+
+**Published:**

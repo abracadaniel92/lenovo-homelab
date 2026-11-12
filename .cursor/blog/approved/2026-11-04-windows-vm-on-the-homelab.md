@@ -17,9 +17,15 @@
 **Public check:** Leave out: LAN IPs, MAC address, hostname-to-IP mapping, Cockpit URL.
 
 **Outline:**
+1. Can a 4-core i5-7500T running ~30 containers host Windows 11? (VT-x, RAM, and the "SSD" that is really an HDD)
+2. Making room: 46 GB of old images, and a thin qcow2 so "64 GB" costs ~17 GB
+3. Getting past the installer: the LabConfig key for an unsupported CPU
+4. The trap: `drvload` only helps the installer; INACCESSIBLE_BOOT_DEVICE loop, fixed with `dism /add-driver`
+5. Headless driving with `virsh send-key` and `virsh screenshot` when Cockpit's console drops arrow keys; macvtap for a LAN IP without touching the host network
+6. The cost: load, temperature and swap numbers during Windows Update, and why 8 GB is the ceiling
 
-**Effort:**
+**Effort:** post
 
-**Priority:**
+**Priority:** next
 
 **Published:**

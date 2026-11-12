@@ -5,6 +5,8 @@ candidate.
 
 | Date | Outcome | Candidate | Note or reason |
 |------|---------|-----------|----------------|
+| 2026-11-12 | Approved (next) | portfolio-to-cloudflare-workers | Post; two Cloudflare defaults that quietly hurt SEO |
+| 2026-11-12 | Approved (next) | windows-vm-on-the-homelab | Post; lead with the drvload vs dism boot loop |
 | 2026-10-21 | Published | pihole-quietly-using-google | Live as /blog/pihole-v6-ignored-unbound-upstream |
 | 2026-10-21 | Approved (soon) | unplug-test-caught-dead-alerts | TIL; separate from the watchman post (alert lost on the way out, not a silent server) |
 | 2026-10-18 | Published | space-in-path-killed-backups | Already live since 2026-10-08 as /blog/space-in-path-killed-homelab-automation |
