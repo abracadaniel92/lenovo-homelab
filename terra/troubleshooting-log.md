@@ -4,6 +4,40 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-11-12: slow SSH is Wi-Fi packet loss (70-85 %), not sshd
+
+**Symptom (owner):** `ssh` to the Terra takes a long time.
+
+**Check (read-only, Terra, no sudo, ~15:00-15:10):**
+- sshd is not the cause. A local handshake to `127.0.0.1` and to
+  `10.8.0.4` reaches "Permission denied (publickey)" in ~0.3 s (no client
+  key on the Terra). `UseDNS`/GSSAPI are at their defaults (off), the motd
+  scripts and bash startup each take <0.04 s, and PAM has nothing slow in it.
+- The network is the cause. Running 60 pings at once over 40 s: `8.8.8.8` **75 %
+  loss**, `10.8.0.1` over WireGuard **72 % loss**, RTT 7 ms to **2 s**.
+  A later 1/s sample got 4 of 30 replies. The loss comes in bursts, so TCP
+  over the tunnel spends its time on retransmits. `gmojsoski.com` timed out
+  after 28 s. The gateway `10.10.20.1` answers ARP but never ICMP
+  (filtered, so that tells us nothing).
+- Radio looks fine: `wlo2` on `Intertec -Employees` 5 GHz ch 36, signal
+  -49 to -51 dBm, 0 RX/TX errors, 219 RX dropped, 98 missed beacons.
+  NM `802-11-wireless.powersave` is `default` (no override in `conf.d`),
+  so Wi-Fi power save is likely on; not confirmed (`iw` not installed).
+  `eno1` is DOWN: no cable.
+- The watchdog set `net-strike` at 15:00, so it saw the drop too.
+- Everything else is healthy: no failed units; `/mnt/offsite` mounted
+  (131 G); rest-server on `10.8.0.4:8000`; Kuma 302 on `127.0.0.1:3001`;
+  sshd on `:22`.
+
+**Also seen:** `last -x` shows another **crash** (the 10-30 boot ended
+11-11 ~19:14, no shutdown record) and then a clean reboot 11-12 11:03-11:14.
+Cause not read (needs root: `sudo journalctl -b -2 -n 30`).
+
+**Open:** either the office network or the Terra's Intel CNVi radio
+(`iwlwifi`, Gemini Lake). A laptop on the same Wi-Fi tells which. Fixes in
+order: plug in Ethernet (`Wired connection 1` is DHCP, no setup); or turn off
+power save (`802-11-wireless.powersave 2`) and recheck.
+
 ## 2026-11-06: Uptime Kuma installed for outside-in monitoring
 
 **Why:** lemongrab's and the Pi's Uptime Kuma sit behind the home line they
