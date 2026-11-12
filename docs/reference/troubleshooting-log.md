@@ -5,6 +5,37 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-06] Image updates: Vaultwarden 1.37.5 (security), HA 2026.11.0, all rebuilt images
+
+**Why:** `update-check.sh` listed 14 containers behind; Vaultwarden 1.37.5 (pinned,
+not seen by the check) fixes two security advisories.
+
+**Version bumps:** Vaultwarden 1.37.4 -> 1.37.5 (live
+`/home/docker-projects/vaultwarden` tag bumped, repo mirrored), Home Assistant
+2026.10.4 -> 2026.11.0, Stirling PDF 3.2.2 -> 3.3.0, Mattermost 12.0.1 -> 12.0.2,
+Immich v3.3.5 -> v3.3.6 (disables onnxruntime telemetry in ML), Caddy 2.11.7 -> 2.11.9.
+Nextcloud stayed 35.0.2 (rebuilt image) + drawio app 4.3.11 via `occ app:update`.
+Same-version rebuilds: all postgres (outline, mattermost, calcom, nextcloud), outline
+and paperless redis, nginx-vaultwarden, mosquitto.
+
+**Backups first:** `backup-engine.sh nextcloud` and `vaultwarden`; `pg_dumpall` to
+`/mnt/ssd/backups/{mattermost,outline,calcom}/*-db-pre-update-2026-11-06.sql.gz`;
+HA config tarball `/mnt/ssd/backups/homeassistant/ha-config-2026.10.4-2026-11-06.tar.gz`.
+
+**Gotchas hit:**
+- Docker Hub 429 after `update-check.sh`; pulled via `mirror.gcr.io` + `docker tag`.
+- Mattermost and Outline stacks need `docker compose --profile productivity up -d`
+  (plain `up -d` says "No service selected").
+- mosquitto `up -d` said Running on the old image; needed `--force-recreate`.
+- HA 2026.11 breaking changes checked: no YAML sun offsets, no YAML MQTT, no
+  proxy in front of HA, so nothing to change. Xiaomi MIoT cloud login error
+  (code 70016) predates the update (present in `home-assistant.log.1`).
+- immich_postgres/immich_redis are pinned by digest on purpose; not stale.
+
+**Verification:** `verify-services.sh` all green; Vaultwarden `/alive` 200, Immich
+API reports 3.3.6, Mattermost ping 200, Outline `/_health` 200, Nextcloud
+`occ status` clean.
+
 ## [2026-11-06] Daily check of the public links outsiders click
 
 **Why:** the Cal booking link 404'd for six weeks with every check green (entry
