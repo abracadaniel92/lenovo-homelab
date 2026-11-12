@@ -189,6 +189,23 @@ run `tmux new -A -s claude`, `claude`, and log in by pasting the URL/code it
 prints. Log out (`claude logout`) when finished, same as step 7. A logged-in
 session leaves an account token on an unencrypted disk in the office.
 
+### Uptime Kuma: the outside view (added 2026-11-06)
+
+lemongrab's and the Pi's Uptime Kuma sit behind the home line they check, so
+a dead line, tunnel or DNS looks fine to them. The Terra checks from the
+office instead. Install: `sudo bash terra/setup-uptime-kuma.sh` (Docker,
+host network, `"iptables": false` so `nftables.conf` stays the only
+firewall). Data in `/opt/uptime-kuma/data` on the OS SSD, never
+`/mnt/offsite`. The UI listens on `127.0.0.1:3001` only; no firewall change.
+Open it from your laptop (not lemongrab: its own Kuma holds 3001) with
+`ssh -J goce@<lemongrab> -L 3011:localhost:3001 goce@10.8.0.4`, then
+`http://localhost:3011`.
+
+Monitors: HTTPS on the public names in `scripts/verify-services.sh`
+`SUBDOMAINS` (accept 200/302/307). Alerts go to the Terra's own ntfy topic,
+never lemongrab's. Expect a double push on a full home outage: the watchdog's
+"lemongrab offline" and Kuma's. Update: re-run the setup script.
+
 ### Moving to another network
 
 The Terra dials out to lemongrab's DDNS name, so its local IP and network

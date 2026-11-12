@@ -4,6 +4,130 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-11-12 (evening): Wi-Fi power save off; firmware is already the last release
+
+**Change (live, Terra, owner ran it):** `nmcli con mod "<office SSID>"
+802-11-wireless.powersave 2` + `con up`. It stays on Wi-Fi for at least this
+week (no Ethernet yet).
+
+**Verification:** `802-11-wireless.powersave` reads `disable`; `wlo2`
+connected; 10/10 pings to `10.8.0.1`, RTT 10-115 ms.
+
+**Firmware check (read-only):** the card is PCI `8086:31dc` (sub `02a4`), the
+Gemini Lake CNVi in the 9000 series (9560/9462 family). The driver loads
+`iwlwifi-9000-pu-b0-jf-b0-46.ucode` (the crash dumps show `umac major 0x2E` =
+46). `firmware-iwlwifi` 20250410-2 is the trixie candidate, and **-46 is the
+last firmware Intel released for the 9000 series**, so no newer package
+(backports included) has newer firmware for this card. Module params:
+`iwlwifi power_save=N` (already off by default), `uapsd_disable=3`,
+`iwlmvm power_scheme=2` (balanced). Nothing in `/etc/modprobe.d/` for iwl.
+
+**Watch:** count asserts over the week with
+`sudo journalctl -k --since 2026-11-12 | grep -c SYSASSERT` (expect 0 after
+15:44 if power save was the trigger).
+
+**Reverse if** it still asserts: next step is `options iwlmvm
+power_scheme=1` in `/etc/modprobe.d/iwlwifi-terra.conf` (always-on radio),
+then a USB Ethernet adapter or the cable.
+
+## 2026-11-12 (later): Wi-Fi firmware crashes precede each shutdown; shutdowns hang
+
+**Symptom (owner):** stuck on boot, slow and unresponsive over SSH.
+
+**Check (read-only; system journal read via a root script the owner ran):**
+- **iwlwifi firmware crashes** (`ADVANCED_SYSASSERT`, "Start IWL Error Log
+  Dump") on 10-21 09:11, 11-04 14:13, **11-12 11:03:09** and **11-12 15:42:21**
+  (that one adds "Failing on timeout while stopping DMA channel 8"), plus
+  regular "missed beacons exceeds threshold" bursts. The two today each came
+  **~30 s before an orderly shutdown** (poweroff 11:03:42, shutdown 15:42:50).
+- The "crashes" in `last -x` are **not kernel crashes**. 11-11 19:14 was an
+  orderly `systemd-reboot` (the hardware watchdog `wdat_wdt`, 10 min, armed for
+  the final stage), and both of today's journals end at "Journal stopped" like
+  a normal shutdown. They show as `crash` because the final stage never
+  finished. At the 15:44 boot the offsite ext4 needed **"recovering journal"**
+  (21 s fsck) and the EFI FAT had its dirty bit set, so the final unmount or
+  power-off hung, most likely on the wedged Wi-Fi card. The next boots came
+  5 min (11-11) and 11 min (11-12 11:03 to 11:14) later. The offsite drive's
+  Power-Off_Retract_Count went from 8 (11-04) to 10.
+- The watchdog logged curl DNS/connect timeouts every run from 13:57 to 15:41:
+  the same Wi-Fi loss as the entry below.
+- **Healthy:** on the current boot (15:44), 0 % loss over 20 pings each to
+  `8.8.8.8` and to `10.8.0.1`; no failed units; rest-server, Kuma (it came back
+  after the reboot), wg0, nftables and ssh all up; RAM 1.6/7.4 G; `/` at 20 %;
+  CPU 56 °C, no throttling. SMART PASSED with no errors logged on both disks.
+  Toshiba: 0 realloc/pending, 38 °C, LCC 3587 (~144/day, unchanged). The
+  latest snapshot is 11-12 04:08.
+- The `iwlwifi` IRQ thread used 7-15 % of the 2-core CPU while idle.
+
+**Cause (likely):** the Intel CNVi Wi-Fi (`iwlwifi`, Gemini Lake) firmware
+crashes. The link drops or loses packets, SSH crawls, and shutdown can hang
+while the driver stops DMA. Not a disk, RAM or thermal problem.
+
+**Open / fix, in order:** (1) plug Ethernet into `eno1` (`Wired connection 1`,
+DHCP) so Wi-Fi is no longer the only link; (2) if Wi-Fi must stay, set
+`802-11-wireless.powersave 2` and consider `options iwlwifi power_save=0`
+(+ `iwlmvm power_scheme=1`); (3) check for a newer `firmware-iwlwifi`.
+
+## 2026-11-12: slow SSH is Wi-Fi packet loss (70-85 %), not sshd
+
+**Symptom (owner):** `ssh` to the Terra takes a long time.
+
+**Check (read-only, Terra, no sudo, ~15:00-15:10):**
+- sshd is not the cause. A local handshake to `127.0.0.1` and to
+  `10.8.0.4` reaches "Permission denied (publickey)" in ~0.3 s (no client
+  key on the Terra). `UseDNS`/GSSAPI are at their defaults (off), the motd
+  scripts and bash startup each take <0.04 s, and PAM has nothing slow in it.
+- The network is the cause. Running 60 pings at once over 40 s: `8.8.8.8` **75 %
+  loss**, `10.8.0.1` over WireGuard **72 % loss**, RTT 7 ms to **2 s**.
+  A later 1/s sample got 4 of 30 replies. The loss comes in bursts, so TCP
+  over the tunnel spends its time on retransmits. `gmojsoski.com` timed out
+  after 28 s. The gateway `10.10.20.1` answers ARP but never ICMP
+  (filtered, so that tells us nothing).
+- Radio looks fine: `wlo2` on `Intertec -Employees` 5 GHz ch 36, signal
+  -49 to -51 dBm, 0 RX/TX errors, 219 RX dropped, 98 missed beacons.
+  NM `802-11-wireless.powersave` is `default` (no override in `conf.d`),
+  so Wi-Fi power save is likely on; not confirmed (`iw` not installed).
+  `eno1` is DOWN: no cable.
+- The watchdog set `net-strike` at 15:00, so it saw the drop too.
+- Everything else is healthy: no failed units; `/mnt/offsite` mounted
+  (131 G); rest-server on `10.8.0.4:8000`; Kuma 302 on `127.0.0.1:3001`;
+  sshd on `:22`.
+
+**Also seen:** `last -x` shows another **crash** (the 10-30 boot ended
+11-11 ~19:14, no shutdown record) and then a clean reboot 11-12 11:03-11:14.
+Cause not read (needs root: `sudo journalctl -b -2 -n 30`).
+
+**Open:** either the office network or the Terra's Intel CNVi radio
+(`iwlwifi`, Gemini Lake). A laptop on the same Wi-Fi tells which. Fixes in
+order: plug in Ethernet (`Wired connection 1` is DHCP, no setup); or turn off
+power save (`802-11-wireless.powersave 2`) and recheck.
+
+## 2026-11-06: Uptime Kuma installed for outside-in monitoring
+
+**Why:** lemongrab's and the Pi's Uptime Kuma sit behind the home line they
+check, so a dead line, tunnel or DNS looks fine to them. The Terra checks
+from the office.
+
+**Change (live, Terra):** `sudo bash terra/setup-uptime-kuma.sh` installed
+`docker.io` + `docker-compose` (trixie), `/etc/docker/daemon.json`
+(`"iptables": false`, `"bridge": "none"`, local logs 10 MB) so Docker never
+touches `nftables.conf`, and `louislam/uptime-kuma:2` from
+`/opt/uptime-kuma/docker-compose.yml` (host network,
+`UPTIME_KUMA_HOST=127.0.0.1`, `restart: unless-stopped`). Data in
+`/opt/uptime-kuma/data` on the OS SSD (owner's choice), nothing on
+`/mnt/offsite`. No firewall change.
+
+**Verification:** `curl http://127.0.0.1:3001` gives 302 (to first-run
+setup); `ss -tln` shows `127.0.0.1:3001` only, rest-server still on
+`10.8.0.4:8000`; no `docker0` link; docker, restic-rest-server, nftables,
+wg-quick@wg0 all active.
+
+**Open:** owner creates the admin user over
+`ssh -J lemongrab -L 3001:localhost:3001 goce@10.8.0.4`, adds HTTPS
+monitors for the `verify-services.sh` SUBDOMAINS (200/302/307) and points
+alerts at the Terra's ntfy topic, not lemongrab's. Reboot survival not yet
+tested (docker enabled, container `unless-stopped`).
+
 ## 2026-11-04: no errors or failed uploads; unclean reboot on 10-30 04:31
 
 **Check (read-only, Terra, no sudo):** no failed units.

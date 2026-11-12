@@ -1,0 +1,19 @@
+# Terra's Uptime Kuma: checks the homelab from OUTSIDE the home network
+# (lemongrab's and the Pi's instances sit behind the same line they check).
+# Installed to /opt/uptime-kuma/ by terra/setup-uptime-kuma.sh; data on the
+# OS SSD, never the offsite backup drive.
+# Host networking + Docker's "iptables": false (setup script) keep Docker out
+# of terra/nftables.conf. UI on 127.0.0.1 only; reach it with
+#   ssh -J goce@<lemongrab> -L 3011:localhost:3001 goce@10.8.0.4   (from a laptop)
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TZ: 'Europe/Skopje'
+      UPTIME_KUMA_HOST: '127.0.0.1'
+      UPTIME_KUMA_PORT: '3001'
+    volumes:
+      - /opt/uptime-kuma/data:/app/data
