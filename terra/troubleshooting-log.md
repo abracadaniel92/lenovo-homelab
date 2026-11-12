@@ -4,6 +4,44 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-11-12 (later): Wi-Fi firmware crashes precede each shutdown; shutdowns hang
+
+**Symptom (owner):** stuck on boot, slow and unresponsive over SSH.
+
+**Check (read-only; system journal read via a root script the owner ran):**
+- **iwlwifi firmware crashes** (`ADVANCED_SYSASSERT`, "Start IWL Error Log
+  Dump") on 10-21 09:11, 11-04 14:13, **11-12 11:03:09** and **11-12 15:42:21**
+  (that one adds "Failing on timeout while stopping DMA channel 8"), plus
+  regular "missed beacons exceeds threshold" bursts. The two today each came
+  **~30 s before an orderly shutdown** (poweroff 11:03:42, shutdown 15:42:50).
+- The "crashes" in `last -x` are **not kernel crashes**. 11-11 19:14 was an
+  orderly `systemd-reboot` (the hardware watchdog `wdat_wdt`, 10 min, armed for
+  the final stage), and both of today's journals end at "Journal stopped" like
+  a normal shutdown. They show as `crash` because the final stage never
+  finished. At the 15:44 boot the offsite ext4 needed **"recovering journal"**
+  (21 s fsck) and the EFI FAT had its dirty bit set, so the final unmount or
+  power-off hung, most likely on the wedged Wi-Fi card. The next boots came
+  5 min (11-11) and 11 min (11-12 11:03 to 11:14) later. The offsite drive's
+  Power-Off_Retract_Count went from 8 (11-04) to 10.
+- The watchdog logged curl DNS/connect timeouts every run from 13:57 to 15:41:
+  the same Wi-Fi loss as the entry below.
+- **Healthy:** on the current boot (15:44), 0 % loss over 20 pings each to
+  `8.8.8.8` and to `10.8.0.1`; no failed units; rest-server, Kuma (it came back
+  after the reboot), wg0, nftables and ssh all up; RAM 1.6/7.4 G; `/` at 20 %;
+  CPU 56 °C, no throttling. SMART PASSED with no errors logged on both disks.
+  Toshiba: 0 realloc/pending, 38 °C, LCC 3587 (~144/day, unchanged). The
+  latest snapshot is 11-12 04:08.
+- The `iwlwifi` IRQ thread used 7-15 % of the 2-core CPU while idle.
+
+**Cause (likely):** the Intel CNVi Wi-Fi (`iwlwifi`, Gemini Lake) firmware
+crashes. The link drops or loses packets, SSH crawls, and shutdown can hang
+while the driver stops DMA. Not a disk, RAM or thermal problem.
+
+**Open / fix, in order:** (1) plug Ethernet into `eno1` (`Wired connection 1`,
+DHCP) so Wi-Fi is no longer the only link; (2) if Wi-Fi must stay, set
+`802-11-wireless.powersave 2` and consider `options iwlwifi power_save=0`
+(+ `iwlmvm power_scheme=1`); (3) check for a newer `firmware-iwlwifi`.
+
 ## 2026-11-12: slow SSH is Wi-Fi packet loss (70-85 %), not sshd
 
 **Symptom (owner):** `ssh` to the Terra takes a long time.
