@@ -5,6 +5,24 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-13] Cal.com: remaining 4 s per slot lookup was Outlook's 1601 timezone rules
+
+**Symptom:** after the ICS cache (entry below) getSchedule still took ~4 s for
+any window (1 day or 2 months alike), with Cal at 100-165% CPU throughout.
+
+**Diagnosis:** a CPU profile of `next-server` (temporary inspector via
+`kill -USR1`, closed afterwards) put 3.4 s of 4.3 s in ical.js
+`icalrecur_iterator_next`, called from the ics-feed `getAvailability`. Outlook's
+VTIMEZONE rules start `DTSTART:16010101`; Cal builds a new `ICAL.Timezone` per
+event, and ical.js replays DST transitions from 1601 each time.
+
+**Change (live = repo):** `scripts/cache-outlook-ics.sh` rewrites
+`DTSTART:1601` to `DTSTART:2020` inside VTIMEZONE blocks before saving.
+
+**Verification:** same request 5.2 s -> 0.83 s locally, 1.15 s via the public URL.
+Offered slots identical before/after: 385/385 over Nov 2026 to Jan 2027, and
+196/196 across the 2027-03-28 DST switch.
+
 ## [2026-11-13] Cal.com: booking page took 10-106 s to show free slots (Outlook ICS feed)
 
 **Symptom:** during testing, the booking page loaded instantly but the calendar

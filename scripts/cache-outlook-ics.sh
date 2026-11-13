@@ -26,6 +26,13 @@ trap 'rm -f "$tmp"' EXIT
 # Generous timeout: Microsoft has served this file at ~100 s on a bad day.
 curl -fsS -m 300 --retry 3 --retry-delay 30 -o "$tmp" "$url"
 
+# Outlook starts every VTIMEZONE rule in 1601. Cal builds a fresh ICAL.Timezone
+# per event and ical.js replays DST from DTSTART each time: 425 years x 215
+# events = 3.4 s of CPU per booking-page load. Starting the rules in 2020 gave
+# identical slots (checked across the March 2027 DST switch) in 0.8 s.
+# ponytail: assumes no booking/event before 2020 matters, which holds for a booking page.
+sed -i '/^BEGIN:VTIMEZONE/,/^END:VTIMEZONE/ s/^DTSTART:1601/DTSTART:2020/' "$tmp"
+
 # Only replace the good copy with something that looks like a whole calendar,
 # so a failed or truncated download keeps yesterday's busy times.
 if ! grep -q '^BEGIN:VCALENDAR' "$tmp" || ! grep -q '^END:VCALENDAR' "$tmp"; then
