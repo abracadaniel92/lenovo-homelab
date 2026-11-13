@@ -5,6 +5,46 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-13] Cal.com: booking page took 10-106 s to show free slots (Outlook ICS feed)
+
+**Symptom:** during testing, the booking page loaded instantly but the calendar
+of free slots took 10 s or ~106 s. Caddy access log: only
+`/api/trpc/slots/getSchedule` was slow (10.4 s / 106.7 s); everything else <0.4 s.
+
+**Cause:** Cal re-downloads every ICS feed on every getSchedule, with no cache.
+The Outlook published-calendar feed (480 KB, 215 events) failed after 10.5 s or
+took ~102 s per download during a Microsoft slowdown that day. Proof: during the
+request Cal sat at 0% CPU with no DB queries and open sockets to
+40.104.x / 52.97.x (Microsoft); a direct fetch of the feed from inside the
+container took 102 s while Google answered in 0.27 s.
+
+**Change (live = repo, owner chose a once-a-day refresh: Outlook meetings are set weeks ahead):**
+- `scripts/cache-outlook-ics.sh` downloads the feed to
+  `/home/docker-projects/calcom/ics-cache/outlook.ics`; replaces the copy only if
+  the download is a complete VCALENDAR. Feed URL lives in
+  `/home/docker-projects/calcom/outlook-ics-url` (mode 600, never in the repo).
+- User crontab: `0 6 * * * /opt/homelab/scripts/cache-outlook-ics.sh 2>&1 | logger -t cache-outlook-ics`.
+- New `ics-cache` service (busybox httpd, container `calcom-ics-cache`) in
+  `docker/calcom/docker-compose.yml`, on `calcom-net` only, no published port:
+  the feed holds private events.
+- DB: `Credential` id 11 (ics-feed) key re-encrypted to `http://ics-cache/outlook.ics`,
+  and `SelectedCalendar.externalId` for credential 11 set to the same URL (Cal
+  uses the URL as the calendar ID). Originals saved, mode 600, in
+  `/home/docker-projects/calcom/credential-11-key.orig.json` and
+  `selectedcalendar-11.orig.txt`.
+- `scripts/health.d/85-ics-cache.sh`: ntfy alert when the cache is missing or
+  older than 48 h. Self-check cases added to `scripts/test-health-modules.sh`.
+
+**Verification:** getSchedule for a 4-week window: 3.9-4.8 s (was 10-106 s), 0
+Microsoft connections during the request. 181 slots offered, none overlap the 2
+non-recurring Outlook events in that window. `bash scripts/test-health-modules.sh` PASS.
+The remaining ~4 s is Cal CPU time (100-165% during the request) plus Google/iCloud lookups, not a timeout.
+
+**Revert:** restore the two DB values from the `.orig` files, remove the cron
+line, `docker compose rm -sf ics-cache` in `docker/calcom/`.
+
+**Ceiling:** an Outlook event added today is not blocked in Cal until 06:00 tomorrow.
+
 ## [2026-11-06] Image updates: Vaultwarden 1.37.5 (security), HA 2026.11.0, all rebuilt images
 
 **Why:** `update-check.sh` listed 14 containers behind; Vaultwarden 1.37.5 (pinned,

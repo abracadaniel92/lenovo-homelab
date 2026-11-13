@@ -38,6 +38,20 @@ services:
       timeout: 5s
       retries: 5
 
+  # Serves the daily Outlook ICS copy (scripts/cache-outlook-ics.sh) to Cal as
+  # http://ics-cache/outlook.ics, so booking pages never wait on Microsoft.
+  # No published port on purpose: the feed holds private events, so only
+  # containers on calcom-net can reach it.
+  ics-cache:
+    image: busybox:1.37.0
+    container_name: calcom-ics-cache
+    restart: unless-stopped
+    command: ["httpd", "-f", "-p", "80", "-h", "/www"]
+    volumes:
+      - /home/docker-projects/calcom/ics-cache:/www:ro
+    networks:
+      - calcom-net
+
 networks:
   calcom-net:
     driver: bridge

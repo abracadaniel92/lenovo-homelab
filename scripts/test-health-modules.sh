@@ -191,6 +191,23 @@ else
     esac
 fi
 
+echo "Cal ICS cache staleness (85-ics-cache.sh):"
+
+# shellcheck disable=SC2317,SC2329  # stubs are called by the sourced module
+ics_alert() (
+    log() { :; }
+    send_slack_notification() { printf '%s' "$1"; }
+    # shellcheck disable=SC2034  # read by the sourced module
+    ICS_CACHE_FILE="$1"
+    # shellcheck source=/dev/null
+    source "$(dirname "$ENGINE")/health.d/85-ics-cache.sh"
+)
+touch "$TMP/fresh.ics"
+touch -d '3 days ago' "$TMP/stale.ics"
+assert_empty "$(ics_alert "$TMP/fresh.ics")" "ics-cache quiet on a fresh file"
+assert_set "$(ics_alert "$TMP/stale.ics")" "ics-cache alerts on a 3-day-old file"
+assert_set "$(ics_alert "$TMP/missing.ics")" "ics-cache alerts on a missing file"
+
 echo
 if [ "$fails" -eq 0 ]; then
     echo "PASS"
