@@ -27,3 +27,5 @@
 **Effort:** post
 
 **Priority:** next
+
+**Draft:** portfolio_v2 `blog/drafts/cal-com-booking-slots-outlook-1601-timezones.md` (2026-11-13)
