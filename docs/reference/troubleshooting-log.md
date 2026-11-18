@@ -5,6 +5,29 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Mattermost alert webhook was hardcoded in the public repo; moved to `.env`
+
+**Symptom:** found in the weekly review. The full Mattermost incoming-webhook URL for
+health alerts was hardcoded as a fallback default in `scripts/enhanced-health-check.sh`,
+`scripts/verify-backups.sh` and `scripts/test-mattermost-webhook.sh`, public on GitHub
+since 2026-01-11. Anyone could post into the alerts channel. `scripts/.env` held only
+26-character placeholders, so the hardcoded hook was the one actually used.
+
+**Change (live, `scripts/` is live):** new webhook created in Mattermost and stored only
+in the gitignored `scripts/.env` as `MONITORING_MATTERMOST_WEBHOOK_URL`. The hardcoded
+default is removed from all three scripts; `verify-backups.sh` now sources `scripts/.env`
+the same way the health check does. The old URL stays in git history, so the old hook
+must be deleted in Mattermost (Integrations > Incoming Webhooks); `mmctl --local` is off,
+so that is a UI step.
+
+**Verification:** `grep -rn <old hook id> --exclude-dir=.git .` finds nothing; a test
+post through the new hook returned HTTP 200; `bash -n` passes on all three scripts.
+
+**Still open:** delete the old hook in the Mattermost UI. Health-check alerts go only to
+Mattermost through the public URL, so they can't arrive when external access is down
+(4 "External Access Down" alerts failed with HTTP 530/502 between 2026-10-04 and
+2026-11-06). Needs an ntfy fallback or a LAN URL.
+
 ## [2026-11-18] Docker Hub pulls go through mirror.gcr.io; 11 low-risk containers updated
 
 **Symptom:** none. Planned. `update-check.sh --print` listed 17 containers with a

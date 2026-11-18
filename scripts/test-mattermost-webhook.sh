@@ -13,7 +13,6 @@ fi
 # Use the same webhook URL as enhanced-health-check.sh
 [ -n "$MONITORING_MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$MONITORING_MATTERMOST_WEBHOOK_URL"
 [ -n "$MONITORING_SLACK_WEBHOOK_URL" ] && [ -z "$MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$MONITORING_SLACK_WEBHOOK_URL"
-MATTERMOST_WEBHOOK_URL="${MATTERMOST_WEBHOOK_URL:-https://mattermost.gmojsoski.com/hooks/bettcnqps7ngpfp74i6zux5s8w}"
 
 echo "Testing Mattermost webhook with bot username..."
 echo "Webhook URL: $MATTERMOST_WEBHOOK_URL"
@@ -96,4 +95,3 @@ echo "In that case, you may need to:"
 echo "1. Check Mattermost version (username override might require certain permissions)"
 echo "2. Create a bot account instead of using webhooks"
 echo "3. Or configure the webhook display name in System Console (if available in your version)"
-
