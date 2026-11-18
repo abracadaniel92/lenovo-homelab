@@ -5,6 +5,8 @@ candidate.
 
 | Date | Outcome | Candidate | Note or reason |
 |------|---------|-----------|----------------|
+| 2026-11-18 | Approved (soon) | crashes-that-were-not-crashes | Post; add the one-week Wi-Fi power-save-off before/after first |
+| 2026-11-18 | Merged | hdd-parking-part-two-usb -> hdd-head-parking | USB half folded into part one as one post (TIL -> post); part one draft in portfolio_v2 covers only the SATA half |
 | 2026-11-13 | Approved (next) | cal-booking-slots-and-the-year-1601 | Post; owner asked for a draft. Draft in portfolio_v2 blog/drafts/cal-com-booking-slots-outlook-1601-timezones.md |
 | 2026-11-12 | Published | portfolio-to-cloudflare-workers | Live as /blog/portfolio-to-cloudflare-workers |
 | 2026-11-12 | Published | windows-vm-on-the-homelab | Live as /blog/windows-11-vm-on-a-homelab-server |

@@ -5,6 +5,33 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Weekly review: open items
+
+**Closed:**
+- Confirm the 2026-10-22 Terra run (from log 2026-10-21): health-check log shows a
+  fresh Terra snapshot every night 2026-11-10 to 2026-11-18; this morning's run exited 0.
+- Cloudflare Pages next step (from log 2026-11-06): superseded the same day by the
+  move to Cloudflare Workers.
+- Mattermost alert webhook in the public repo (found this review): rotated, moved to
+  `scripts/.env` (entry below).
+
+**Dropped:**
+- Mattermost email (from log 2026-10-19): owner said ignore; SMTP test still fails
+  on start (last 2026-11-06).
+
+**Carried over:**
+- Image updates for Home Assistant, Immich server + ML, Linkwarden, Mattermost,
+  Outline, Nextcloud; stirling-pdf and paperless-redis unchecked (from log 2026-11-18).
+- Health-check alerts are Mattermost-only through the public URL, so they fail when
+  external access is down (from log 2026-11-18): needs an ntfy fallback or LAN URL.
+- Terra watchdog half of the unplug test (from log 2026-10-21): for the Terra review.
+
+**Reverse conditions:** Portainer/xrdp (log 2026-10-18) can't be checked from here
+(who has LAN/VPN access); owner to confirm still family only.
+
+**Drift:** 34 containers vs README badge 33 (`calcom-ics-cache`, added 2026-11-13).
+No skill unchanged for 3+ months. Lessons: 3 applied. Blog: 1 approved, 1 merged.
+
 ## [2026-11-18] Mattermost alert webhook was hardcoded in the public repo; moved to `.env`
 
 **Symptom:** found in the weekly review. The full Mattermost incoming-webhook URL for

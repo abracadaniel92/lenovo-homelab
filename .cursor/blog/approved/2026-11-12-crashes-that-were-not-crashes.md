@@ -35,9 +35,15 @@ office location, WireGuard IPs, the DDNS name, the WireGuard peer key (it
 appears in the cron journal lines), drive serials.
 
 **Outline:**
+1. Three "crashes" in two weeks, slow SSH, a stuck boot: the obvious suspects
+2. Clearing sshd and the disk: 0.3 s local handshake, bursty 70-85 % packet loss
+3. Reading the end of each boot's journal: orderly shutdowns that never finished
+4. The Wi-Fi firmware assert ~30 s before each hang, and the proof on the disks
+5. No firmware left to upgrade: power save off, Ethernet, and the week-after numbers
+6. Before you believe `last -x`: what `crash` really means
 
-**Effort:**
+**Effort:** post (add the one-week power-save-off before/after from the Terra log before drafting)
 
-**Priority:**
+**Priority:** soon
 
 **Published:**

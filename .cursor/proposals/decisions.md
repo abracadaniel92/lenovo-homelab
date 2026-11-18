@@ -6,6 +6,9 @@ evidence.
 
 | Date | Outcome | File changed | What changed, or why rejected |
 |------|---------|---------------|-------------------------------|
+| 2026-11-18 | Applied | `CLAUDE.md`, `update-homelab-service/SKILL.md`, `troubleshoot-service-down/SKILL.md` | Verify the URL people actually use (booking page, share link), not the root; a login redirect only proves the app is up. |
+| 2026-11-18 | Applied | `CLAUDE.md` | Live portfolio is Cloudflare Workers (`my-portfolio`); `update-portfolio.sh` only refreshes the `/srv/site` fallback. |
+| 2026-11-18 | Applied | `terra/README.md`, `scripts/fix-hdd-head-parking.sh` | USB disks ignore `/etc/hdparm.conf` APM: use a udev rule on the serial; verify after a cold power cycle. |
 | 2026-10-21 | Applied | `update-homelab-service/SKILL.md` | Step 6: read the pulled image's version before `up -d`; a new major means read its upgrade notes first. |
 | 2026-10-21 | Applied | `update-homelab-service/SKILL.md` | Docker Hub paragraph: a `mirror.gcr.io` pull must be re-tagged to the plain name or Compose keeps the old image. |
 | 2026-10-21 | Applied | `update-homelab-service/SKILL.md` | Step 5: back up Home Assistant with tar inside the container; host tar misses root-owned `.storage/` files. |

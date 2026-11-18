@@ -134,6 +134,8 @@ curl -I https://<service>.gmojsoski.com    # external check
 ./scripts/verify-services.sh               # safety net
 ```
 
+After changing a service's config, verify the URL people actually use (a public booking page, a share link, a file), not just the subdomain root. A login redirect at `/` (Cal, Immich, Paperless...) proves only that the app is up.
+
 For **media servers** (Jellyfin, Plex, Navidrome): test mobile streaming after the update — the gzip rule and HTTP/2 quirks have bitten this homelab before.
 
 For **infrastructure** (Caddy, cloudflared): confirm ALL public subdomains still resolve before walking away. Restart sequence if needed:
