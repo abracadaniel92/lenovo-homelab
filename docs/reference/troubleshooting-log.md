@@ -5,6 +5,17 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Nextcloud 35.0.2 -> 35.0.3
+
+**Change (live `/home/apps/nextcloud`, tag `35-apache`):** `backup-engine.sh nextcloud`
+first (`nextcloud-20261118-132641.tar.gz`), then `docker compose pull && up -d`; the
+entrypoint ran the upgrade itself.
+
+**Verification:** `occ status` 35.0.3, maintenance false, needsDbUpgrade false;
+`https://cloud.gmojsoski.com/status.php` reports 35.0.3, `/login` 200, WebDAV
+PROPFIND 401 (auth required, as expected); `verify-services.sh` all green.
+Carried-over update list now leaves only Outline (+ stirling-pdf, paperless-redis unchecked).
+
 ## [2026-11-18] Mattermost 12.0.2 -> 12.1.0
 
 **Change (live = repo `docker/mattermost`, tag `latest`):** `pg_dumpall` first
