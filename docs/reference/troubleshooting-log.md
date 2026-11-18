@@ -5,6 +5,19 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Linkwarden 2.16.3 -> 2.17.0, Postgres 16-alpine rebuild (16.16)
+
+**Change (live `/home/docker-projects/linkwarden`, compose unchanged):**
+`backup-engine.sh linkwarden` first (`linkwarden-20261118-132056.tar.gz`), then
+`docker compose pull && up -d`. App 2.16.3 -> 2.17.0 (no breaking notes; upstream
+compose images unchanged); `linkwarden-postgres` recreated on the newer `16-alpine`
+build (16.16, same major). Meilisearch v1.13.3 unchanged.
+
+**Verification:** linkwarden healthy, all Prisma migrations applied, web ready;
+`https://linkwarden.gmojsoski.com/` and `/login` 200; 7 links in the DB;
+`verify-services.sh` all green. Carried-over update list: Linkwarden done; Home
+Assistant dropped (owner: unused for over a year).
+
 ## [2026-11-18] Immich 3.3.6 -> 3.4.1 (server + ML)
 
 **Change (live = repo `docker/immich`, tag `v3` unchanged):** `docker compose pull`
