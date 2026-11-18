@@ -122,6 +122,10 @@ backup.
    and append the same block format `scripts/fix-hdd-head-parking.sh` writes
    (`<by-id path> {`, `apm = 254`, `}` on three lines) to `/etc/hdparm.conf`. If `hdparm -B` says unsupported through the USB
    enclosure, record `Load_Cycle_Count` and recheck after a week.
+   `/etc/hdparm.conf` is not applied to USB-attached disks: Debian's hdparm
+   udev hook skips APM for `pci-*-usb-*` paths. Use a udev rule keyed on the
+   drive serial (`ENV{ID_SERIAL_SHORT}`) that runs `hdparm -B 254`. Verify
+   after a cold power cycle or replug, not a warm reboot (log 2026-10-21).
    The repo is seeded on lemongrab before the move (log 2026-10-17), so
    format nothing: just `chown -R restic-rest-server:restic-rest-server /mnt/offsite/restic`.
 3. **WireGuard client:** generate the Terra's key pair on the Terra (the private key

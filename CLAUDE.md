@@ -117,7 +117,7 @@ make status     # docker ps overview
 make logs service=<name>
 make backup     # all critical backups
 make fix        # emergency external-access recovery
-make portfolio-update   # rebuild gmojsoski.com from portfolio_v2 + sync to Caddy
+make portfolio-update   # refresh the homelab FALLBACK copy only (live site is on Cloudflare)
 ./scripts/verify-services.sh   # MANDATORY after any network change
 docker exec caddy caddy validate --config /etc/caddy/Caddyfile  # before restarting Caddy
 ```
@@ -149,10 +149,11 @@ before diagnosing anything; your incident may already be documented.
 ## Known drift / open items (as of 2026-10-17)
 
 - **`docker/caddy/site/` holds the OLD portfolio** (vanilla HTML/JS). The
-  live site is now built from the separate `portfolio_v2` repo via
-  `scripts/update-portfolio.sh` → synced to `/mnt/ssd/docker-projects/caddy/site`
-  on the server. The repo's `site/` copy is stale by design of the new
-  pipeline — don't edit it expecting to change gmojsoski.com.
+  live gmojsoski.com is served by Cloudflare Workers static assets (project
+  `my-portfolio`), deployed on every push to `portfolio_v2` `main`.
+  `scripts/update-portfolio.sh` / `make portfolio-update` only refresh the
+  homelab fallback copy in `/srv/site`. Don't edit the repo's `site/` copy
+  expecting to change gmojsoski.com.
 - **There is no SSO.** The never-run Authelia stack, its repo mirror and the
   `auth.gmojsoski.com` Caddy block were removed 2026-10-18.
 - Stacks under `/home/docker-projects/` and `/home/apps/nextcloud` run from
@@ -195,3 +196,7 @@ before diagnosing anything; your incident may already be documented.
    them with the `blog-review` skill.
 8. **Weekly review**: "weekly review" runs the `weekly-review` skill
    (lessons, blog candidates, open items and reverse conditions).
+9. **Verify the URL people actually use.** After changing a service's config,
+   check the public booking page, share link or file, not just the subdomain
+   root. A login redirect at `/` (Cal, Immich, Paperless...) proves only that
+   the app is up (log 2026-11-06).

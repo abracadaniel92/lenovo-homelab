@@ -3,6 +3,10 @@
 # 282k load cycles in 9.4k hours on 2026-10-17, rated ~600k.
 # First run: applies APM 254 (now + on boot) and saves a baseline count.
 # Later runs: show how much Load_Cycle_Count grew since the baseline.
+# /etc/hdparm.conf is not applied to USB-attached disks (Debian's hdparm udev
+# hook skips APM for pci-*-usb-* paths): for those, use a udev rule keyed on
+# ENV{ID_SERIAL_SHORT} that runs `hdparm -B 254`. Verify after a cold power
+# cycle or replug, not a warm reboot (Terra log 2026-10-21).
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || exec sudo "$0" "$@"
 

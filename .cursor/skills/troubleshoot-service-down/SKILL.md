@@ -129,6 +129,8 @@ After any fix:
 curl -I https://<subdomain>.gmojsoski.com
 ```
 
+After changing a service's config, verify the URL people actually use (a public booking page, a share link, a file), not just the subdomain root. A login redirect at `/` (Cal, Immich, Paperless...) proves only that the app is up.
+
 ## 9. Log it (if non-standard)
 
 If the fix involved anything beyond a clean container restart, log it via the `log-troubleshooting-entry` skill or directly to [the troubleshooting log](../../../docs/reference/troubleshooting-log.md).

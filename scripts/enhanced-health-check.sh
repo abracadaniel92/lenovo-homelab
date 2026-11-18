@@ -51,8 +51,7 @@ send_slack_notification() {
     [ -n "$MONITORING_MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$MONITORING_MATTERMOST_WEBHOOK_URL"
     [ -n "$MONITORING_SLACK_WEBHOOK_URL" ] && [ -z "$MATTERMOST_WEBHOOK_URL" ] && MATTERMOST_WEBHOOK_URL="$MONITORING_SLACK_WEBHOOK_URL"
 
-    # Default Mattermost webhook for uptime/health monitoring (same as slack-pi-monitoring.sh)
-    MATTERMOST_WEBHOOK_URL="${MATTERMOST_WEBHOOK_URL:-https://mattermost.gmojsoski.com/hooks/bettcnqps7ngpfp74i6zux5s8w}"
+    # Webhook lives only in the gitignored scripts/.env (the repo is public; log 2026-11-18).
 
     if [ -z "$MATTERMOST_WEBHOOK_URL" ]; then
         log "WARNING: MATTERMOST_WEBHOOK_URL not set. Cannot send Mattermost notification."

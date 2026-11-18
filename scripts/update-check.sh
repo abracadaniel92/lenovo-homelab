@@ -21,11 +21,23 @@ while read -r img name; do names[$img]+="${names[$img]:+, }$name"; done < <(dock
 for ref in $(printf '%s\n' "${!names[@]}" | sort); do
     [[ "$ref" == *:* ]] || continue                       # bare image IDs, untagged local builds
     have=$(docker image inspect -f '{{join .RepoDigests " "}}' "$ref" 2>/dev/null)
-    [ -n "$have" ] || continue                           # built locally, never pulled
+    if [ -z "$have" ]; then                              # built locally (paperless-webserver:local):
+        # compare the running image's inherited revision label with its Dockerfile FROM base's.
+        # ponytail: first FROM only, linux/amd64 only (lemongrab); a base without a revision label lands in "could not check".
+        c=${names[$ref]%%,*}
+        dir=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$c")
+        base=$(awk 'toupper($1)=="FROM" {print $2; exit}' "$dir/Dockerfile" 2>/dev/null)
+        [ -n "$base" ] || continue
+        have=$(docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$(docker inspect -f '{{.Image}}' "$c")")
+        want=$(timeout 30 docker buildx imagetools inspect "$base" --format '{{index (index .Image "linux/amd64").Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null)
+        if [ -z "$have" ] || [[ ! "$want" =~ ^[0-9a-f]{7,}$ ]]; then unchecked+=("• ${names[$ref]} (local build of ${base##*/})")
+        elif [ "$have" != "$want" ]; then newer+=("• ${names[$ref]} (local build: base ${base##*/} moved, rebuild with docker compose build --pull)"); fi
+        continue
+    fi
     want=$(timeout 30 docker buildx imagetools inspect "$ref" --format '{{json .Manifest.Digest}}' 2>&1 | tr -d '"')
     case "$want" in
         sha256:*) [[ "$have" == *"$want"* ]] || newer+=("• ${names[$ref]} (${ref##*/})") ;;
-        *"does not exist"*) ;;                           # local build (paperless-webserver:local)
+        *"does not exist"*) ;;                           # tag never pushed anywhere
         *) unchecked+=("• ${names[$ref]} (${ref##*/})") ;;   # registry down or rate-limited (Docker Hub 429)
     esac
 done

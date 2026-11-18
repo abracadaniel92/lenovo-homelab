@@ -5,6 +5,118 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Nextcloud 35.0.2 -> 35.0.3
+
+**Change (live `/home/apps/nextcloud`, tag `35-apache`):** `backup-engine.sh nextcloud`
+first (`nextcloud-20261118-132641.tar.gz`), then `docker compose pull && up -d`; the
+entrypoint ran the upgrade itself.
+
+**Verification:** `occ status` 35.0.3, maintenance false, needsDbUpgrade false;
+`https://cloud.gmojsoski.com/status.php` reports 35.0.3, `/login` 200, WebDAV
+PROPFIND 401 (auth required, as expected); `verify-services.sh` all green.
+Carried-over update list now leaves only Outline (+ stirling-pdf, paperless-redis unchecked).
+
+## [2026-11-18] Mattermost 12.0.2 -> 12.1.0
+
+**Change (live = repo `docker/mattermost`, tag `latest`):** `pg_dumpall` first
+(`/mnt/ssd/backups/mattermost/mattermost-db-12.0.2-2026-11-18-1325.sql.gz`), then
+`docker compose pull mattermost && up -d mattermost`. No 12.1 section in the upgrade
+notes. Postgres (15.20) was already rebuilt this morning.
+
+**Verification:** `mattermost version` = 12.1.0, no error lines besides the known SMTP
+test, `/api/v4/system/ping` OK, `/login` 200, alert webhook post 200.
+
+## [2026-11-18] Home Assistant stopped and removed (unused)
+
+**Why:** owner hasn't used it in over a year; last token use was the iOS app on
+2026-08-21. LAN only (host network, 8123): no Caddy block, tunnel hostname or
+`verify-services.sh` entry, so no public routing changed.
+
+**Change (live `/home/docker-projects/homeassistant`):**
+`docker compose --profile utilities down`. Kept: the 45 MB config folder and the
+backups in `/mnt/ssd/backups/homeassistant` (latest 2026-11-06, HA 2026.10.4). To bring
+it back: `docker compose --profile utilities up -d` in that folder. `mosquitto` left
+running (separate stack, no clients in 30 days).
+
+**Verification:** `docker ps -a` shows no homeassistant container; 33 containers run,
+which matches the README badge again.
+
+## [2026-11-18] Linkwarden 2.16.3 -> 2.17.0, Postgres 16-alpine rebuild (16.16)
+
+**Change (live `/home/docker-projects/linkwarden`, compose unchanged):**
+`backup-engine.sh linkwarden` first (`linkwarden-20261118-132056.tar.gz`), then
+`docker compose pull && up -d`. App 2.16.3 -> 2.17.0 (no breaking notes; upstream
+compose images unchanged); `linkwarden-postgres` recreated on the newer `16-alpine`
+build (16.16, same major). Meilisearch v1.13.3 unchanged.
+
+**Verification:** linkwarden healthy, all Prisma migrations applied, web ready;
+`https://linkwarden.gmojsoski.com/` and `/login` 200; 7 links in the DB;
+`verify-services.sh` all green. Carried-over update list: Linkwarden done; Home
+Assistant dropped (owner: unused for over a year).
+
+## [2026-11-18] Immich 3.3.6 -> 3.4.1 (server + ML)
+
+**Change (live = repo `docker/immich`, tag `v3` unchanged):** `docker compose pull`
+then `up -d immich-server immich-machine-learning`. v3.4.0/3.4.1 release notes have no
+breaking section; upstream compose keeps the same Postgres image digest. Valkey's
+upstream digest moved (rebuild only), left as is. Backup: the 02:00 DB dump in
+`/mnt/ssd_1tb/immich-library/backups/` (minor version, no extra dump).
+
+**Verification:** server healthy, migration `AddAssetOwnerIdUpdateIdIndex` succeeded,
+`https://immich.gmojsoski.com/api/server/version` = 3.4.1, ping pong, web 200, no ML
+errors, `verify-services.sh` all green. Carried-over update list (weekly review above):
+Immich done.
+
+## [2026-11-18] Weekly review: open items
+
+**Closed:**
+- Confirm the 2026-10-22 Terra run (from log 2026-10-21): health-check log shows a
+  fresh Terra snapshot every night 2026-11-10 to 2026-11-18; this morning's run exited 0.
+- Cloudflare Pages next step (from log 2026-11-06): superseded the same day by the
+  move to Cloudflare Workers.
+- Mattermost alert webhook in the public repo (found this review): rotated, moved to
+  `scripts/.env` (entry below).
+
+**Dropped:**
+- Mattermost email (from log 2026-10-19): owner said ignore; SMTP test still fails
+  on start (last 2026-11-06).
+
+**Carried over:**
+- Image updates for Home Assistant, Immich server + ML, Linkwarden, Mattermost,
+  Outline, Nextcloud; stirling-pdf and paperless-redis unchecked (from log 2026-11-18).
+- Health-check alerts are Mattermost-only through the public URL, so they fail when
+  external access is down (from log 2026-11-18): needs an ntfy fallback or LAN URL.
+- Terra watchdog half of the unplug test (from log 2026-10-21): for the Terra review.
+
+**Reverse conditions:** Portainer/xrdp (log 2026-10-18) can't be checked from here
+(who has LAN/VPN access); owner to confirm still family only.
+
+**Drift:** 34 containers vs README badge 33 (`calcom-ics-cache`, added 2026-11-13).
+No skill unchanged for 3+ months. Lessons: 3 applied. Blog: 1 approved, 1 merged.
+
+## [2026-11-18] Mattermost alert webhook was hardcoded in the public repo; moved to `.env`
+
+**Symptom:** found in the weekly review. The full Mattermost incoming-webhook URL for
+health alerts was hardcoded as a fallback default in `scripts/enhanced-health-check.sh`,
+`scripts/verify-backups.sh` and `scripts/test-mattermost-webhook.sh`, public on GitHub
+since 2026-01-11. Anyone could post into the alerts channel. `scripts/.env` held only
+26-character placeholders, so the hardcoded hook was the one actually used.
+
+**Change (live, `scripts/` is live):** new webhook created in Mattermost and stored only
+in the gitignored `scripts/.env` as `MONITORING_MATTERMOST_WEBHOOK_URL`. The hardcoded
+default is removed from all three scripts; `verify-backups.sh` now sources `scripts/.env`
+the same way the health check does. The old URL stays in git history, so the old hook
+must be deleted in Mattermost (Integrations > Incoming Webhooks); `mmctl --local` is off,
+so that is a UI step.
+
+**Verification:** `grep -rn <old hook id> --exclude-dir=.git .` finds nothing; a test
+post through the new hook returned HTTP 200; `bash -n` passes on all three scripts.
+
+**Still open:** delete the old hook in the Mattermost UI. Health-check alerts go only to
+Mattermost through the public URL, so they can't arrive when external access is down
+(4 "External Access Down" alerts failed with HTTP 530/502 between 2026-10-04 and
+2026-11-06). Needs an ntfy fallback or a LAN URL.
+
 ## [2026-11-18] Docker Hub pulls go through mirror.gcr.io; 11 low-risk containers updated
 
 **Symptom:** none. Planned. `update-check.sh --print` listed 17 containers with a
