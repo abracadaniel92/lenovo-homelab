@@ -4,6 +4,77 @@ Changes, incidents and fixes on the Terra. Newest first. Same format as the
 lemongrab log at [`docs/reference/troubleshooting-log.md`](../docs/reference/troubleshooting-log.md);
 the Pi has its own at [`pihole/troubleshooting-log.md`](../pihole/troubleshooting-log.md).
 
+## 2026-11-18: Weekly review: open items
+
+First Terra weekly review. Lessons and blog candidates were done in lemongrab's
+review the same day (3 lessons applied, `pending/` queues empty).
+
+**Closed:**
+- Uptime Kuma reboot survival (from log 11-06): Kuma answered on
+  `127.0.0.1:3001` after the owner's reboot at 10:43 today.
+- Snapshot integrity / `restic check` (from log 10-20): closed in lemongrab's
+  review; the health-check log shows a fresh Terra snapshot every night
+  11-10 to 11-18, and a weekly `restic check` now runs.
+- Nightly snapshots since 10-28 (from log 11-04): covered by the same
+  lemongrab check plus no watchdog `backup` stamp.
+- Terra watchdog half of the unplug test (carried in lemongrab's review): was
+  already done, see the 10-21 entry (backup push sent 09:11:56). lemongrab's
+  next review can close it.
+- Monthly `Load_Cycle_Count` check (from log 10-26, due ~11-26), done early
+  at owner's request: udisks2 at 13:39 reads **4448** (2389 on 11-04 09:01,
+  so ~145/day, steady); reallocated, reallocated-event, pending,
+  offline-uncorrectable and load-retry all 0; 32 C. Next check ~2026-12-18.
+- Older items (udev APM rule, `BindsTo=`, noisy wg/site alerts, parking cause,
+  10-22 run): closed by later entries.
+
+**Dropped:**
+- Cause of the 10-30 04:31 unclean reboot (from log 11-04): owner says it
+  was an office power outage.
+
+**Carried over:**
+- Ethernet into `eno1`, then `nmcli radio wifi off` (from log 11-12, decided
+  11-18): pending, the office Ethernet ports don't work for now. Wi-Fi was
+  clean at 13:35 (0 % loss to `10.8.0.1`, ~16 ms).
+- Uptime Kuma first-run setup (from log 11-06), open since 11-06: still
+  redirects to `/setup-database`; owner will create the admin user, monitors
+  and the ntfy alerts later.
+
+**Also noted:** the 10:43 reboot today was the owner's.
+
+**Reverse conditions:** the 11-12 (evening) "Reverse if it still asserts"
+triggered on 11-18; already acted on (Ethernet decision, blocked above). No
+other triggered: LCC ~145/day, reallocated/pending 0, no line drop over 10 min.
+
+**Drift:** `/mnt/offsite` mounted (131 G of 1.8 T), `restic-rest-server` and
+docker active, `terra-watchdog.timer` on its 10-min schedule, no watchdog
+stamps. Checkout on `feature/2026-11-18-terra-wifi-asserts` (main merged in).
+
+## 2026-11-18: Wi-Fi firmware asserting nonstop again; 11-16 reboot was a power loss
+
+**Check (read-only; journal and SMART via a root script the owner ran):**
+- **Packet loss is back:** 2 min of pings, **62 % loss** to both `10.8.0.1`
+  (over WireGuard) and `1.1.1.1`, RTT up to 1.2 s; signal -45 dBm, power save
+  still `disable`. The watchdog set `net-strike` at 10:08.
+- **iwlwifi `SYSASSERT` storm from 09:43 today**, still running at 10:19
+  (about 5-24 matching lines per minute, highest during the ping test). None
+  between the 11-12 15:44 boot and 09:43 today, so power save off held for
+  ~5 days and is not the fix. Start matches the first SSH session of the day;
+  heavier traffic looks like the trigger (not proven).
+- **11-16 reboot was not a hung shutdown:** the 11-12 15:44 boot's journal
+  stops mid-routine at 11-16 11:23:04 with no shutdown and no iwlwifi error;
+  new boot 11:25. Offsite Power-Off_Retract_Count 10 -> 11, so most likely a
+  power loss (or a freeze then `wdat_wdt` reset).
+- **Healthy otherwise:** load 0.17 on 2 cores, PSI ~0, RAM 1.0/7.4 G, no swap,
+  CPU 46 C, `/` 21 %, `/mnt/offsite` 131 G, no failed units, iwlwifi IRQ
+  thread negligible. SMART PASSED on both; Toshiba 0 realloc/pending/uncorr.,
+  33 C, LCC 4425 (~145/day, unchanged).
+
+**Decision (owner):** plug Ethernet into `eno1`. `Wired connection 1` (DHCP,
+autoconnect) gets route metric 100 vs Wi-Fi 600, so it wins with no config;
+nftables only matches `wg0`, so nothing else changes. Once wired is proven,
+turn the radio off (`nmcli radio wifi off`) so the asserting card can't hang
+shutdowns. Verify: `ip route | head -1` shows `dev eno1`, ~0 % loss to `10.8.0.1`.
+
 ## 2026-11-12 (evening): Wi-Fi power save off; firmware is already the last release
 
 **Change (live, Terra, owner ran it):** `nmcli con mod "<office SSID>"
