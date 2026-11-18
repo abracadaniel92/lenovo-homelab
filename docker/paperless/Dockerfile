@@ -7,13 +7,18 @@ USER root
 RUN python3 - <<'PY'
 from pathlib import Path
 
-path = Path("/usr/src/paperless/src/paperless/settings.py")
+import re
+
+# v2: settings.py + _parse_db_settings(); v3+: settings/__init__.py + parse_db_settings(DATA_DIR)
+src = Path("/usr/src/paperless/src/paperless")
+path = next(p for p in (src / "settings" / "__init__.py", src / "settings.py") if p.exists())
 text = path.read_text()
-needle = "DATABASES = _parse_db_settings()\n"
 if 'DATABASES["default"]["TIME_ZONE"]' in text:
     raise SystemExit(0)
-if needle not in text:
+m = re.search(r"^DATABASES = _?parse_db_settings\(.*\)\n", text, re.M)
+if not m:
     raise SystemExit("patch anchor not found")
+needle = m.group(0)
 
 extra = needle + """
 # Django DB backend uses DATABASES["default"]["TIME_ZONE"] for PostgreSQL SET TIME ZONE.

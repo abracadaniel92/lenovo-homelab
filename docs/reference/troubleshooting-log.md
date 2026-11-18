@@ -5,6 +5,35 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Paperless 2.20.15 -> 3.5.1 (major); local build had silently fallen behind
+
+**Symptom:** found while checking the update list. `paperless-webserver` is built
+locally (`build: .`, `FROM paperless-ngx:latest` + DB timezone patch), so
+`docker compose pull` never touched it and `update-check.sh` skipped it. It was still on
+2.20.15 while upstream was on 3.5.1.
+
+**Change (live `/home/docker-projects/paperless`, mirrored to `docker/paperless/`):**
+- Backup first to `/mnt/ssd/backups/paperless/`: `pg_dump` of DB `paperless` (in
+  nextcloud-postgres) + tar of volumes `paperless_data` and `paperless_media`
+  (`*-2.20.15-2026-11-18-1334.*`, 555 MB, archives list cleanly).
+- v3 breaking changes checked against the config: no encryption, no consume scripts,
+  no OCR/archive overrides, only core DB env vars. All clear.
+- The Dockerfile patch anchor moved in v3 (`settings.py` -> `settings/__init__.py`,
+  `_parse_db_settings()` -> `parse_db_settings(DATA_DIR)`); the patch now finds either.
+  Old copy at `Dockerfile.bak-20261118` in the live dir.
+- `docker compose build --pull webserver`, then `up -d --force-recreate` (paperless-redis
+  rebuilt on the same Redis 8.10.3).
+
+**Verification:** healthy on 3.5.1; migrations ran (SHA-256 recomputed for 43 docs);
+sanity checker "No issues detected"; 43 documents; DB session timezone `Etc/UTC`
+(patch active); API full-text search returns hits (new tantivy index);
+`https://paperless.gmojsoski.com/accounts/login/` 200.
+
+**Rollback:** restore the dump and volume tars, rebuild from `Dockerfile.bak-20261118`
+with `FROM ghcr.io/paperless-ngx/paperless-ngx:2.20.15`.
+
+**Prevention:** `update-check.sh` now checks local builds (entry above).
+
 ## [2026-11-18] Nextcloud 35.0.2 -> 35.0.3
 
 **Change (live `/home/apps/nextcloud`, tag `35-apache`):** `backup-engine.sh nextcloud`
