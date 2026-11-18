@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including Tesseract OCR and image processing libraries
 RUN apt-get update && apt-get install -y \
     gcc g++ \
     build-essential \
@@ -12,10 +12,14 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     zlib1g-dev \
     libpng-dev \
-    python3-pymupdf \
-    python3-pymupdf-tools \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    tesseract-ocr-deu \
+    libtesseract-dev \
+    libopencv-dev \
+    python3-opencv \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies

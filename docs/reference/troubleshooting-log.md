@@ -5,6 +5,98 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Docker Hub pulls go through mirror.gcr.io; 11 low-risk containers updated
+
+**Symptom:** none. Planned. `update-check.sh --print` listed 17 containers with a
+newer image, and earlier update batches kept hitting Docker Hub's anonymous limit
+(100 requests/hour per IP, `429 Too Many Requests`).
+
+**Rate-limit fix (live only, not in the repo):** `/etc/docker/daemon.json` got
+`"registry-mirrors": ["https://mirror.gcr.io"]` (backup next to it as
+`daemon.json.bak-20261118`). Applied with `systemctl reload docker` (SIGHUP;
+`registry-mirrors` is reloadable, and `live-restore` was already on), so no
+container restarted. Every Docker Hub pull, including plain `docker compose pull`,
+now goes through Google's cache and only falls back to Docker Hub on a miss. The
+September trick of pulling `mirror.gcr.io/...` and retagging is no longer needed.
+Check: `docker info --format '{{.RegistryConfig.Mirrors}}'`.
+Limit: `update-check.sh` uses `docker buildx imagetools inspect`, which talks to
+the registry directly and still spends Docker Hub quota (~15 per run).
+
+**Updated (same tags, newer builds):** caddy (now v2.11.9, Caddyfile validated
+against the new image first), cloudflared, mosquitto, homepage, nginx-vaultwarden,
+uptime-kuma, outline-redis, outline-postgres and mattermost-postgres (15.20),
+calcom-postgres and nextcloud-postgres (16.16). Databases kept their data volumes;
+no dumps taken for a same-major rebuild.
+
+**Gotcha:** `docker compose up -d --no-deps <svc>` reported caddy and
+nginx-vaultwarden as `Running` and kept the old containers although the new image
+was pulled. `--force-recreate` swapped them. Check `docker ps` uptime after an update.
+
+**Not done yet (have data, one at a time with backups):** Home Assistant, Immich
+server + ML, Linkwarden, Mattermost, Outline, Nextcloud. Not checked (registry
+timeout): stirling-pdf, paperless-redis.
+
+**Verification:** all recreated containers up/healthy, no DB connection errors in
+outline/mattermost/calcom/nextcloud logs, `verify-services.sh` all green.
+
+## [2026-11-13] Cal.com: remaining 4 s per slot lookup was Outlook's 1601 timezone rules
+
+**Symptom:** after the ICS cache (entry below) getSchedule still took ~4 s for
+any window (1 day or 2 months alike), with Cal at 100-165% CPU throughout.
+
+**Diagnosis:** a CPU profile of `next-server` (temporary inspector via
+`kill -USR1`, closed afterwards) put 3.4 s of 4.3 s in ical.js
+`icalrecur_iterator_next`, called from the ics-feed `getAvailability`. Outlook's
+VTIMEZONE rules start `DTSTART:16010101`; Cal builds a new `ICAL.Timezone` per
+event, and ical.js replays DST transitions from 1601 each time.
+
+**Change (live = repo):** `scripts/cache-outlook-ics.sh` rewrites
+`DTSTART:1601` to `DTSTART:2020` inside VTIMEZONE blocks before saving.
+
+**Verification:** same request 5.2 s -> 0.83 s locally, 1.15 s via the public URL.
+Offered slots identical before/after: 385/385 over Nov 2026 to Jan 2027, and
+196/196 across the 2027-03-28 DST switch.
+
+## [2026-11-13] Cal.com: booking page took 10-106 s to show free slots (Outlook ICS feed)
+
+**Symptom:** during testing, the booking page loaded instantly but the calendar
+of free slots took 10 s or ~106 s. Caddy access log: only
+`/api/trpc/slots/getSchedule` was slow (10.4 s / 106.7 s); everything else <0.4 s.
+
+**Cause:** Cal re-downloads every ICS feed on every getSchedule, with no cache.
+The Outlook published-calendar feed (480 KB, 215 events) failed after 10.5 s or
+took ~102 s per download during a Microsoft slowdown that day. Proof: during the
+request Cal sat at 0% CPU with no DB queries and open sockets to
+40.104.x / 52.97.x (Microsoft); a direct fetch of the feed from inside the
+container took 102 s while Google answered in 0.27 s.
+
+**Change (live = repo, owner chose a once-a-day refresh: Outlook meetings are set weeks ahead):**
+- `scripts/cache-outlook-ics.sh` downloads the feed to
+  `/home/docker-projects/calcom/ics-cache/outlook.ics`; replaces the copy only if
+  the download is a complete VCALENDAR. Feed URL lives in
+  `/home/docker-projects/calcom/outlook-ics-url` (mode 600, never in the repo).
+- User crontab: `0 6 * * * /opt/homelab/scripts/cache-outlook-ics.sh 2>&1 | logger -t cache-outlook-ics`.
+- New `ics-cache` service (busybox httpd, container `calcom-ics-cache`) in
+  `docker/calcom/docker-compose.yml`, on `calcom-net` only, no published port:
+  the feed holds private events.
+- DB: `Credential` id 11 (ics-feed) key re-encrypted to `http://ics-cache/outlook.ics`,
+  and `SelectedCalendar.externalId` for credential 11 set to the same URL (Cal
+  uses the URL as the calendar ID). Originals saved, mode 600, in
+  `/home/docker-projects/calcom/credential-11-key.orig.json` and
+  `selectedcalendar-11.orig.txt`.
+- `scripts/health.d/85-ics-cache.sh`: ntfy alert when the cache is missing or
+  older than 48 h. Self-check cases added to `scripts/test-health-modules.sh`.
+
+**Verification:** getSchedule for a 4-week window: 3.9-4.8 s (was 10-106 s), 0
+Microsoft connections during the request. 181 slots offered, none overlap the 2
+non-recurring Outlook events in that window. `bash scripts/test-health-modules.sh` PASS.
+The remaining ~4 s is Cal CPU time (100-165% during the request) plus Google/iCloud lookups, not a timeout.
+
+**Revert:** restore the two DB values from the `.orig` files, remove the cron
+line, `docker compose rm -sf ics-cache` in `docker/calcom/`.
+
+**Ceiling:** an Outlook event added today is not blocked in Cal until 06:00 tomorrow.
+
 ## [2026-11-06] Image updates: Vaultwarden 1.37.5 (security), HA 2026.11.0, all rebuilt images
 
 **Why:** `update-check.sh` listed 14 containers behind; Vaultwarden 1.37.5 (pinned,

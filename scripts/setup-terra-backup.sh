@@ -3,7 +3,8 @@
 #   sudo bash /opt/homelab/scripts/setup-terra-backup.sh
 # Writes /root/.config/restic/terra.repo (rest-server URL with the `lemongrab`
 # password from Vaultwarden), proves restic can read the repo, installs
-# backup-immich-terra.{service,timer}, enables the timer and starts a first run.
+# backup-immich-terra.{service,timer} + the weekly check-terra-restic.{service,timer},
+# enables both timers and starts a first backup run.
 # Safe to re-run.
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "run with sudo"; exit 1; }
@@ -23,8 +24,8 @@ RESTIC_PASSWORD_FILE="$cfg/terra.pass" RESTIC_REPOSITORY_FILE="$cfg/terra.repo" 
     restic snapshots --no-lock --latest 1 \
     || { echo "restic could not read the repo; fix $cfg/terra.repo (delete it to re-enter the password)"; exit 1; }
 
-install -m 0644 /opt/homelab/systemd/backup-immich-terra.service /opt/homelab/systemd/backup-immich-terra.timer /etc/systemd/system/
+install -m 0644 /opt/homelab/systemd/{backup-immich-terra,check-terra-restic}.{service,timer} /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now backup-immich-terra.timer
+systemctl enable --now backup-immich-terra.timer check-terra-restic.timer
 systemctl start --no-block backup-immich-terra.service
 echo "OK. First run started: journalctl -fu backup-immich-terra"

@@ -1,0 +1,20 @@
+[Unit]
+Description=Weekly integrity check of the Terra restic repo (reads 5% of data)
+Wants=network-online.target wg-quick@wg0.service
+After=network-online.target wg-quick@wg0.service
+OnFailure=notify-failure@%n.service
+
+[Service]
+Type=oneshot
+# Same credentials as backup-immich-terra.service. HOME for restic's cache (log 2026-10-20).
+Environment=HOME=/root
+Environment=RESTIC_PASSWORD_FILE=/root/.config/restic/terra.pass
+Environment=RESTIC_REPOSITORY_FILE=/root/.config/restic/terra.repo
+# ponytail: a random 5% each week (~7 GB of the ~131 GiB repo over the home line), so a damaged
+# blob is found within weeks, not at once. Ceiling: full coverage takes ~20
+# runs. Upgrade path: raise the % if the Terra link allows, or a yearly full
+# --read-data run with the drive plugged into lemongrab.
+# --retry-lock waits out a nightly backup that overruns into this slot.
+ExecStart=/usr/bin/restic check --read-data-subset=5% --retry-lock 2h
+Nice=10
+IOSchedulingClass=idle

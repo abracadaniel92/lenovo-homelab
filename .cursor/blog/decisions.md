@@ -5,6 +5,11 @@ candidate.
 
 | Date | Outcome | Candidate | Note or reason |
 |------|---------|-----------|----------------|
+| 2026-11-13 | Approved (next) | cal-booking-slots-and-the-year-1601 | Post; owner asked for a draft. Draft in portfolio_v2 blog/drafts/cal-com-booking-slots-outlook-1601-timezones.md |
+| 2026-11-12 | Published | portfolio-to-cloudflare-workers | Live as /blog/portfolio-to-cloudflare-workers |
+| 2026-11-12 | Published | windows-vm-on-the-homelab | Live as /blog/windows-11-vm-on-a-homelab-server |
+| 2026-11-12 | Approved (next) | portfolio-to-cloudflare-workers | Post; two Cloudflare defaults that quietly hurt SEO |
+| 2026-11-12 | Approved (next) | windows-vm-on-the-homelab | Post; lead with the drvload vs dism boot loop |
 | 2026-10-21 | Published | pihole-quietly-using-google | Live as /blog/pihole-v6-ignored-unbound-upstream |
 | 2026-10-21 | Approved (soon) | unplug-test-caught-dead-alerts | TIL; separate from the watchman post (alert lost on the way out, not a silent server) |
 | 2026-10-18 | Published | space-in-path-killed-backups | Already live since 2026-10-08 as /blog/space-in-path-killed-homelab-automation |

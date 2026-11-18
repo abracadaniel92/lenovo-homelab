@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the Terra restic repo weekly (Sunday 06:00)
+
+[Timer]
+# Two hours after the 04:00 nightly backup.
+OnCalendar=Sun *-*-* 06:00:00
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target
