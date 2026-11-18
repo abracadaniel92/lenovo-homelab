@@ -5,6 +5,40 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Docker Hub pulls go through mirror.gcr.io; 11 low-risk containers updated
+
+**Symptom:** none. Planned. `update-check.sh --print` listed 17 containers with a
+newer image, and earlier update batches kept hitting Docker Hub's anonymous limit
+(100 requests/hour per IP, `429 Too Many Requests`).
+
+**Rate-limit fix (live only, not in the repo):** `/etc/docker/daemon.json` got
+`"registry-mirrors": ["https://mirror.gcr.io"]` (backup next to it as
+`daemon.json.bak-20261118`). Applied with `systemctl reload docker` (SIGHUP;
+`registry-mirrors` is reloadable, and `live-restore` was already on), so no
+container restarted. Every Docker Hub pull, including plain `docker compose pull`,
+now goes through Google's cache and only falls back to Docker Hub on a miss. The
+September trick of pulling `mirror.gcr.io/...` and retagging is no longer needed.
+Check: `docker info --format '{{.RegistryConfig.Mirrors}}'`.
+Limit: `update-check.sh` uses `docker buildx imagetools inspect`, which talks to
+the registry directly and still spends Docker Hub quota (~15 per run).
+
+**Updated (same tags, newer builds):** caddy (now v2.11.9, Caddyfile validated
+against the new image first), cloudflared, mosquitto, homepage, nginx-vaultwarden,
+uptime-kuma, outline-redis, outline-postgres and mattermost-postgres (15.20),
+calcom-postgres and nextcloud-postgres (16.16). Databases kept their data volumes;
+no dumps taken for a same-major rebuild.
+
+**Gotcha:** `docker compose up -d --no-deps <svc>` reported caddy and
+nginx-vaultwarden as `Running` and kept the old containers although the new image
+was pulled. `--force-recreate` swapped them. Check `docker ps` uptime after an update.
+
+**Not done yet (have data, one at a time with backups):** Home Assistant, Immich
+server + ML, Linkwarden, Mattermost, Outline, Nextcloud. Not checked (registry
+timeout): stirling-pdf, paperless-redis.
+
+**Verification:** all recreated containers up/healthy, no DB connection errors in
+outline/mattermost/calcom/nextcloud logs, `verify-services.sh` all green.
+
 ## [2026-11-13] Cal.com: remaining 4 s per slot lookup was Outlook's 1601 timezone rules
 
 **Symptom:** after the ICS cache (entry below) getSchedule still took ~4 s for

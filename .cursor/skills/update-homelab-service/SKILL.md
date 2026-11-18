@@ -18,7 +18,7 @@ Watchtower was removed on 2026-09-25 and nothing replaced it on purpose: every u
 
 The weekly check cannot tell a patch from a major jump (Jellyfin `:latest` moved 10.x → 12.x), and it never sees newer releases of pinned tags. Check release notes before every pull.
 
-Docker Hub allows 100 anonymous requests per hour per IP, and each pull and each check counts. A big batch of updates hits `429 Too Many Requests`; it refills within the hour. `update-check.sh` spends about 30 of them per run, so run it once, not repeatedly, right before pulling. If a pull hits 429, wait for the refill or pull via `mirror.gcr.io`. Compose won't see it under that name: `docker pull mirror.gcr.io/library/<img>:<tag> && docker tag mirror.gcr.io/library/<img>:<tag> <img>:<tag>` (non-official images drop `library/`, e.g. `mirror.gcr.io/cloudflare/cloudflared`), then `up -d`.
+Docker Hub allows 100 anonymous requests per hour per IP. Since 2026-11-18 the daemon pulls Docker Hub images through `mirror.gcr.io` (`registry-mirrors` in `/etc/docker/daemon.json`), so normal `docker pull` / `docker compose pull` no longer burns that quota; no retagging needed. `update-check.sh` still queries Docker Hub directly (~15-30 requests per run), so run it once, not repeatedly. If Compose says a service is `Running` after a pull, use `up -d --force-recreate <svc>`.
 
 ## Workflow
 
