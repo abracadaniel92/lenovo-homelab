@@ -5,6 +5,21 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Home Assistant stopped and removed (unused)
+
+**Why:** owner hasn't used it in over a year; last token use was the iOS app on
+2026-08-21. LAN only (host network, 8123): no Caddy block, tunnel hostname or
+`verify-services.sh` entry, so no public routing changed.
+
+**Change (live `/home/docker-projects/homeassistant`):**
+`docker compose --profile utilities down`. Kept: the 45 MB config folder and the
+backups in `/mnt/ssd/backups/homeassistant` (latest 2026-11-06, HA 2026.10.4). To bring
+it back: `docker compose --profile utilities up -d` in that folder. `mosquitto` left
+running (separate stack, no clients in 30 days).
+
+**Verification:** `docker ps -a` shows no homeassistant container; 33 containers run,
+which matches the README badge again.
+
 ## [2026-11-18] Linkwarden 2.16.3 -> 2.17.0, Postgres 16-alpine rebuild (16.16)
 
 **Change (live `/home/docker-projects/linkwarden`, compose unchanged):**
