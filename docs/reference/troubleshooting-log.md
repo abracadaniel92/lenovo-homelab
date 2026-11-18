@@ -5,6 +5,19 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Immich 3.3.6 -> 3.4.1 (server + ML)
+
+**Change (live = repo `docker/immich`, tag `v3` unchanged):** `docker compose pull`
+then `up -d immich-server immich-machine-learning`. v3.4.0/3.4.1 release notes have no
+breaking section; upstream compose keeps the same Postgres image digest. Valkey's
+upstream digest moved (rebuild only), left as is. Backup: the 02:00 DB dump in
+`/mnt/ssd_1tb/immich-library/backups/` (minor version, no extra dump).
+
+**Verification:** server healthy, migration `AddAssetOwnerIdUpdateIdIndex` succeeded,
+`https://immich.gmojsoski.com/api/server/version` = 3.4.1, ping pong, web 200, no ML
+errors, `verify-services.sh` all green. Carried-over update list (weekly review above):
+Immich done.
+
 ## [2026-11-18] Weekly review: open items
 
 **Closed:**
