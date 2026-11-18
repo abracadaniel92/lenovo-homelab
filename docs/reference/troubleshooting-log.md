@@ -5,6 +5,16 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] Mattermost 12.0.2 -> 12.1.0
+
+**Change (live = repo `docker/mattermost`, tag `latest`):** `pg_dumpall` first
+(`/mnt/ssd/backups/mattermost/mattermost-db-12.0.2-2026-11-18-1325.sql.gz`), then
+`docker compose pull mattermost && up -d mattermost`. No 12.1 section in the upgrade
+notes. Postgres (15.20) was already rebuilt this morning.
+
+**Verification:** `mattermost version` = 12.1.0, no error lines besides the known SMTP
+test, `/api/v4/system/ping` OK, `/login` 200, alert webhook post 200.
+
 ## [2026-11-18] Home Assistant stopped and removed (unused)
 
 **Why:** owner hasn't used it in over a year; last token use was the iOS app on
