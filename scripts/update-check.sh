@@ -18,26 +18,31 @@ newer=() unchecked=()
 declare -A names                                         # image ref -> its container names
 while read -r img name; do names[$img]+="${names[$img]:+, }$name"; done < <(docker ps --format '{{.Image}} {{.Names}}')
 
-for ref in $(printf '%s\n' "${!names[@]}" | sort); do
-    [[ "$ref" == *:* ]] || continue                       # bare image IDs, untagged local builds
+# Locally built image (paperless-webserver:local): compare the running container's
+# inherited revision label with the registry's for its Dockerfile's FROM base.
+# ponytail: first FROM only, linux/amd64 only (lemongrab); a base without a revision
+# label lands in "could not check".
+check_local_build() {
+    local ref=$1 c=${names[$1]%%,*} dir base have want
+    dir=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$c")
+    base=$(awk 'toupper($1)=="FROM" {print $2; exit}' "$dir/Dockerfile" 2>/dev/null)
+    [ -n "$base" ] || return 0
+    have=$(docker inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$c")
+    want=$(timeout 30 docker buildx imagetools inspect "$base" --format '{{index (index .Image "linux/amd64").Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null)
+    if [ -z "$have" ] || [[ ! "$want" =~ ^[0-9a-f]{7,}$ ]]; then unchecked+=("• ${names[$ref]} (local build of ${base##*/})")
+    elif [ "$have" != "$want" ]; then newer+=("• ${names[$ref]} (local build: base ${base##*/} moved, rebuild with docker compose build --pull)"); fi
+}
+
+for ref in $(printf '%s
+' "${!names[@]}" | sort); do
+    # bare image ID: its tag moved to a newer pulled/built image, the container wasn't recreated
+    [[ "$ref" == *:* ]] || { newer+=("• ${names[$ref]} (newer image already here: docker compose up -d --force-recreate)"); continue; }
     have=$(docker image inspect -f '{{join .RepoDigests " "}}' "$ref" 2>/dev/null)
-    if [ -z "$have" ]; then                              # built locally (paperless-webserver:local):
-        # compare the running image's inherited revision label with its Dockerfile FROM base's.
-        # ponytail: first FROM only, linux/amd64 only (lemongrab); a base without a revision label lands in "could not check".
-        c=${names[$ref]%%,*}
-        dir=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$c")
-        base=$(awk 'toupper($1)=="FROM" {print $2; exit}' "$dir/Dockerfile" 2>/dev/null)
-        [ -n "$base" ] || continue
-        have=$(docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$(docker inspect -f '{{.Image}}' "$c")")
-        want=$(timeout 30 docker buildx imagetools inspect "$base" --format '{{index (index .Image "linux/amd64").Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null)
-        if [ -z "$have" ] || [[ ! "$want" =~ ^[0-9a-f]{7,}$ ]]; then unchecked+=("• ${names[$ref]} (local build of ${base##*/})")
-        elif [ "$have" != "$want" ]; then newer+=("• ${names[$ref]} (local build: base ${base##*/} moved, rebuild with docker compose build --pull)"); fi
-        continue
-    fi
+    [ -n "$have" ] || { check_local_build "$ref"; continue; }   # built locally, never pulled
     want=$(timeout 30 docker buildx imagetools inspect "$ref" --format '{{json .Manifest.Digest}}' 2>&1 | tr -d '"')
     case "$want" in
         sha256:*) [[ "$have" == *"$want"* ]] || newer+=("• ${names[$ref]} (${ref##*/})") ;;
-        *"does not exist"*) ;;                           # tag never pushed anywhere
+        *"does not exist"*) check_local_build "$ref" ;;   # local build that got a digest (buildx)
         *) unchecked+=("• ${names[$ref]} (${ref##*/})") ;;   # registry down or rate-limited (Docker Hub 429)
     esac
 done

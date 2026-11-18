@@ -5,6 +5,25 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-18] update-check.sh: catch stale local builds and not-recreated containers
+
+**Symptom:** Paperless sat a major version behind (entry below) because the weekly
+update check skipped every locally built image.
+
+**Change (live, `scripts/` is live):** `scripts/update-check.sh` now
+- for a local build (no registry digest, or the registry says the tag doesn't exist):
+  reads the first `FROM` in the stack's Dockerfile and compares the running container's
+  inherited `org.opencontainers.image.revision` label with the registry's for that base;
+  different means "rebuild with docker compose build --pull";
+- lists containers running a bare image ID (their tag already moved to a newer pulled or
+  built image) as needing `up -d --force-recreate`.
+Limits (ponytail comment in the script): first `FROM` only, linux/amd64 only; a base
+without a revision label shows under "could not check".
+
+**Verification:** run against the still-running v2 container, the check reported
+"paperless-webserver (local build: base paperless-ngx:latest moved...)". `shellcheck -S
+warning` clean.
+
 ## [2026-11-18] Paperless 2.20.15 -> 3.5.1 (major); local build had silently fallen behind
 
 **Symptom:** found while checking the update list. `paperless-webserver` is built
