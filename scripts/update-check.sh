@@ -36,7 +36,7 @@ check_local_build() {
 for ref in $(printf '%s
 ' "${!names[@]}" | sort); do
     # bare image ID: its tag moved to a newer pulled/built image, the container wasn't recreated
-    [[ "$ref" == *:* ]] || { newer+=("• ${names[$ref]} (newer image already here: docker compose up -d --force-recreate)"); continue; }
+    [[ ! "$ref" =~ ^[0-9a-f]{12,}$ ]] || { newer+=("• ${names[$ref]} (newer image already here: docker compose up -d --force-recreate)"); continue; }
     have=$(docker image inspect -f '{{join .RepoDigests " "}}' "$ref" 2>/dev/null)
     [ -n "$have" ] || { check_local_build "$ref"; continue; }   # built locally, never pulled
     want=$(timeout 30 docker buildx imagetools inspect "$ref" --format '{{json .Manifest.Digest}}' 2>&1 | tr -d '"')

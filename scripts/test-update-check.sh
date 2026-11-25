@@ -11,7 +11,7 @@ cat > "$TMP/bin/docker" <<'EOF'
 #!/bin/bash
 # ps -> running images; image inspect -> local digests; buildx -> registry digests
 case "$1" in
-    ps) printf '%s\n' ${STUB_IMAGES} ;;
+    ps) printf '%s\n' "$STUB_IMAGES" ;;   # "image name" per line
     image) case "${@: -1}" in
         caddy:latest) echo "caddy@sha256:old" ;;
         postgres:16) echo "postgres@sha256:same" ;;
@@ -35,11 +35,19 @@ check() {
 }
 
 echo "update-check:"
-STUB_IMAGES="postgres:16 cf78e76683b9 local-build:dev"
-check "nothing moved = no push" "$("$CHECK" --print)" "all up to date"
+NEXT=$'\n\nNext: one at a time, read release notes, follow the update-homelab-service runbook. Pinned versions are not checked.'
+STUB_IMAGES=$'postgres:16 db\nlocal-build:dev lb\ntravelsync-app ts'
+check "nothing moved, untagged local build not flagged" "$("$CHECK" --print)" "all up to date"
 
-STUB_IMAGES="caddy:latest postgres:16 postgres:16 cf78e76683b9 local-build:dev mine:local ghcr.io/x/app:1"
-check "moved tag listed, same digest and local builds skipped, 429 reported" \
-    "$("$CHECK" --print)" "📦 Image updates: caddy:latest | could not check: app:1"
+STUB_IMAGES=$'caddy:latest caddy\npostgres:16 db1\npostgres:16 db2\ncf78e76683b9 stale\nmine:local m\nghcr.io/x/app:1 app\ntravelsync-app ts'
+check "moved tag + bare image ID listed, same digest and local builds skipped, 429 reported" \
+    "$("$CHECK" --print)" "📦 2 container(s) have a newer image
+
+Update:
+• caddy (caddy:latest)
+• stale (newer image already here: docker compose up -d --force-recreate)
+
+Could not check (registry busy, retry with update-check.sh --print):
+• app (app:1)$NEXT"
 
 if [ "$fail" -eq 0 ]; then echo "PASS"; else echo "FAILED"; exit 1; fi
