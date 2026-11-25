@@ -5,6 +5,42 @@ This log documents specific issues encountered on the server and their fixes.
 This is lemongrab's log. The other devices keep their own in their folders:
 [Pi](../../pihole/troubleshooting-log.md), [Terra](../../terra/troubleshooting-log.md).
 
+## [2026-11-25] Update round: 12 containers, update-check false positive fixed, 24.7 GB pruned
+
+**Symptom:** `update-check.sh --print` listed 12 containers with newer images, plus
+`documents-to-calendar` as "newer image already here". That one was a false positive:
+its image is `travelsync-app` (no `:tag`), and the check treated any ref without a `:`
+as a bare image ID.
+
+**Change (live; each from its live compose dir, `up -d --no-deps <svc>`):**
+- Backups first, all in `/mnt/ssd/backups/<svc>/*2026-11-25*`: `pg_dumpall` of every
+  Postgres touched, FreshRSS/Portainer data tars, Outline files tar, Nextcloud
+  `backup-engine.sh nextcloud`. Immich: the 02:00 dump (v3.4.1) was used.
+- FreshRSS 1.30.4 -> 1.31.0; Portainer 2.45.3 -> 2.45.4; nginx-vaultwarden nginx
+  1.31.8 -> 1.31.10 (`nginx -t` against the new image first).
+- Postgres (mattermost, outline, nextcloud, linkwarden, calcom): same versions
+  (15.20 / 16.16), base-layer rebuilds only.
+- Immich server + ML v3.4.1 -> v3.4.2 (bug fixes only).
+- Nextcloud 35.0.3 unchanged, image rebuild (PHP 8.5.12 -> 8.5.13).
+- Outline 1.12.0 -> 1.13.0 (9 small migrations, Node 26 in image).
+- cloudflared 2026.11.1 -> 2026.11.2, done last.
+- `scripts/update-check.sh`: only a hex ref (`^[0-9a-f]{12,}$`) counts as a bare image
+  ID; untagged local images go to the local-build check. `scripts/test-update-check.sh`
+  had been failing since 2026-11-18 (stub `ps` lacked names, old message format);
+  rewritten, now covers this case and fails on the old line.
+- `docker image prune -f` (dangling only): 24.72 GB reclaimed, `/home` 67% -> 61%.
+
+**Verification:** per service: version + logs + app URL (Cal booking page 200,
+Mattermost ping `status:OK`, Nextcloud `status.php` + cron, Immich `/api/server/version`
+3.4.2, Outline `/_health` 200, Vaultwarden `/api/alive` 200). cloudflared: 4 tunnel
+connections registered, no ERR. `verify-services.sh` all healthy after cloudflared and
+after the prune; 33 containers up.
+
+**Open:** the closing `update-check.sh` re-run hit Docker Hub rate limits (pulls +
+two check runs in one hour), so `paperless-redis` and `stirling-pdf` stay unchecked;
+the weekly timer will cover them. Pinned tags (calcom v6.2.0, meilisearch v1.13.3,
+goatcounter 2.7.0) are never checked.
+
 ## [2026-11-18] update-check.sh: catch stale local builds and not-recreated containers
 
 **Symptom:** Paperless sat a major version behind (entry below) because the weekly
